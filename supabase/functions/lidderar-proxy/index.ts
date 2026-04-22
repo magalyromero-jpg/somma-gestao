@@ -8,6 +8,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const tokenPreview = (token: string | null | undefined) => {
+  if (!token) return null;
+  return token.slice(0, 20);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -19,14 +24,30 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    console.log("[lidderar-proxy] buscando token em configuracoes...");
+
     const { data: config, error: configError } = await supabase
       .from("configuracoes")
       .select("valor")
       .eq("chave", "lidderar_bearer_token")
       .maybeSingle();
 
+    console.log(
+      "[lidderar-proxy] resultado configuracoes:",
+      JSON.stringify({
+        encontrouRegistro: !!config,
+        possuiValor: !!config?.valor,
+        tokenPrimeiros20: tokenPreview(config?.valor),
+      }),
+    );
+
     if (configError) throw configError;
     const token = config?.valor;
+    console.log(
+      "[lidderar-proxy] token utilizado (primeiros 20):",
+      tokenPreview(token),
+    );
+
     if (!token) {
       return new Response(
         JSON.stringify({
@@ -76,6 +97,12 @@ serve(async (req) => {
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
     });
+
+    console.log(
+      "[lidderar-proxy] status Lidderar:",
+      response.status,
+      response.statusText,
+    );
 
     const text = await response.text();
     let data: unknown;
