@@ -4,13 +4,22 @@ import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/StatusBadge";
-import { familias, imoveisPorFamilia, kpisFamilia, type Classificacao } from "@/data/mock";
+import { useFamilias, useImoveis } from "@/hooks/useApiData";
+import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
+import type { Classificacao } from "@/data/mock";
 import { formatBRL, formatPct, pctClass } from "@/lib/format";
-import { Building2, Wallet, TrendingUp, Users } from "lucide-react";
+import { Building2, Wallet, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 
 export default function FamiliaDetalhe() {
   const { id = "" } = useParams();
+  const { familias, isLoading: lf, error: ef } = useFamilias();
+  const { imoveis, isLoading: li, error: ei } = useImoveis();
+
+  if (lf || li) return <LoadingSkeleton rows={8} />;
+  if (ef || ei) return <ErrorState error={ef || ei} />;
+
   const familia = familias.find((f) => f.id === id);
   if (!familia)
     return (
@@ -20,8 +29,8 @@ export default function FamiliaDetalhe() {
       </div>
     );
 
-  const k = kpisFamilia(familia.id);
-  const lista = imoveisPorFamilia(familia.id);
+  const k = computeFamiliaKpis(imoveis, familia.id);
+  const lista = imoveis.filter((i) => i.familia_id === familia.id);
 
   const tabs: { key: "todos" | Classificacao; label: string }[] = [
     { key: "todos", label: "Todos" },
@@ -47,30 +56,8 @@ export default function FamiliaDetalhe() {
         <KpiCard label="Imóveis" value={String(k.total)} icon={<Building2 className="h-4 w-4" />} />
         <KpiCard label="Valor de mercado" value={formatBRL(k.valor_mercado, { compact: true })} icon={<TrendingUp className="h-4 w-4" />} delta={k.valorizacao} />
         <KpiCard label="Receita mensal" value={formatBRL(k.receita_mensal, { compact: true })} icon={<Wallet className="h-4 w-4" />} hint={`${k.locados} locados`} />
-        <KpiCard label="Membros" value={String(familia.membros.length)} icon={<Users className="h-4 w-4" />} />
+        <KpiCard label="Locados" value={`${k.locados}/${k.total}`} icon={<Building2 className="h-4 w-4" />} />
       </div>
-
-      <Card className="shadow-card mb-6">
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Membros</h3>
-          <div className="flex flex-wrap gap-2">
-            {familia.membros.map((m) => (
-              <span
-                key={m.id}
-                className={cn(
-                  "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border",
-                  m.tipo === "empresa"
-                    ? "bg-primary/5 border-primary/20 text-primary"
-                    : "bg-muted/40 border-border",
-                )}
-              >
-                <span className="text-xs uppercase tracking-wider opacity-60">{m.tipo}</span>
-                {m.nome}
-              </span>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="todos" className="w-full">
         <TabsList className="bg-muted/50">
