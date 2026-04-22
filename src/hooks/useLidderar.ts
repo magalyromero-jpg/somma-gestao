@@ -23,7 +23,21 @@ export function useLidderar<T = unknown>(
         body: { endpoint, params: stringParams },
       });
       if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+
+      // Envelope: { ok, upstream_status, upstream_url, data }
+      if (data && typeof data === "object" && "ok" in data) {
+        if (!data.ok) {
+          const upstream = (data as any).data;
+          const msg =
+            (upstream && typeof upstream === "object" &&
+              (upstream.MSG || upstream.error || upstream.message)) ||
+            `Lidderar respondeu ${(data as any).upstream_status}`;
+          throw new Error(String(msg));
+        }
+        return (data as any).data as T;
+      }
+
+      if ((data as any)?.error) throw new Error((data as any).error);
       return data as T;
     },
   });

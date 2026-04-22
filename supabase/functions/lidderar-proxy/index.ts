@@ -63,11 +63,17 @@ serve(async (req) => {
 
     const url = `https://sistema.lidderar.com.br/api${endpoint}${qs}`;
 
+    console.log("[lidderar-proxy] →", url);
+
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        Accept: "application/json, text/plain, */*",
         "X-Requested-With": "XMLHttpRequest",
+        Referer: "https://sistema.lidderar.com.br/",
+        Origin: "https://sistema.lidderar.com.br",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
     });
 
@@ -79,10 +85,21 @@ serve(async (req) => {
       data = { raw: text };
     }
 
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log("[lidderar-proxy] ←", response.status, text.slice(0, 300));
+
+    // Sempre 200 para o cliente conseguir ler o corpo + diagnóstico
+    return new Response(
+      JSON.stringify({
+        ok: response.ok,
+        upstream_status: response.status,
+        upstream_url: url,
+        data,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("[lidderar-proxy] erro:", error);
     return new Response(
