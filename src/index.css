@@ -1,96 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;700&display=swap');
 @import 'leaflet/dist/leaflet.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Somma MFO — Design System
+/* Somma MFO — Brand Book Oficial
    Cores oficiais Somma. Todas em HSL. */
 
 @layer base {
   :root {
-    --background: 210 17% 98%;          /* #F8F9FA */
-    --foreground: 218 56% 14%;          /* near sidebar */
+    /* Página */
+    --background: 222 16% 93%;          /* #E9EBF0 */
+    --foreground: 180 1% 23%;           /* #373C3C */
 
+    /* Cards / superfícies */
     --card: 0 0% 100%;
-    --card-foreground: 218 56% 14%;
-
+    --card-foreground: 180 1% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 218 56% 14%;
+    --popover-foreground: 180 1% 23%;
 
-    /* Somma navy #0F1F3D */
-    --primary: 219 60% 15%;
+    /* Somma dark #2E3E44 — primary */
+    --primary: 197 19% 22%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 17% 95%;
-    --secondary-foreground: 218 56% 14%;
+    /* Somma mid #4D6571 — secondary */
+    --secondary: 200 19% 37%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 17% 95%;
-    --muted-foreground: 220 9% 46%;
+    /* Muted / subtle */
+    --muted: 222 16% 96%;
+    --muted-foreground: 197 17% 53%;    /* #6F8E9A */
 
-    /* Somma gold #C9A84C */
-    --accent: 43 53% 54%;
-    --accent-foreground: 219 60% 15%;
-    --gold: 43 53% 54%;
-    --gold-foreground: 219 60% 15%;
+    /* Somma gold #CC8B15 — accent */
+    --accent: 38 80% 44%;
+    --accent-foreground: 0 0% 100%;
+    --gold: 38 80% 44%;
+    --gold-foreground: 0 0% 100%;
+    --gold-light: 39 73% 58%;           /* #E2A849 */
 
-    --destructive: 0 84% 60%;            /* #EF4444 */
+    /* Status — semânticos do Brand Book */
+    --destructive: 6 70% 49%;           /* #C0392B */
     --destructive-foreground: 0 0% 100%;
+    --destructive-bg: 0 92% 96%;        /* #FEECEC */
 
-    --success: 142 71% 45%;              /* #22C55E */
+    --success: 145 47% 33%;             /* #2D7A4F */
     --success-foreground: 0 0% 100%;
+    --success-bg: 138 47% 93%;          /* #E8F5ED */
 
-    --warning: 45 93% 47%;               /* #EAB308 */
-    --warning-foreground: 219 60% 15%;
+    --warning: 39 88% 33%;              /* #9A6B0A */
+    --warning-foreground: 0 0% 100%;
+    --warning-bg: 41 93% 95%;           /* #FEF6E4 */
 
-    --info: 217 91% 60%;                 /* #3B82F6 */
+    --info: 211 75% 37%;                /* #185FA5 */
     --info-foreground: 0 0% 100%;
+    --info-bg: 215 92% 96%;             /* #EBF3FE */
 
-    --neutral: 220 9% 46%;               /* #6B7280 */
+    --neutral: 220 9% 46%;              /* #6B7280 */
     --neutral-foreground: 0 0% 100%;
+    --neutral-bg: 220 10% 95%;          /* #F0F1F3 */
 
-    --border: 214 20% 89%;
-    --input: 214 20% 89%;
-    --ring: 43 53% 54%;
+    /* Bordas / inputs */
+    --border: 240 2% 77%;               /* #C3C4C6 */
+    --input: 240 2% 77%;
+    --ring: 38 80% 44%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;                   /* 8px brand */
 
-    /* Sidebar — sempre escura (Somma navy) */
-    --sidebar-background: 219 60% 15%;
-    --sidebar-foreground: 210 30% 88%;
-    --sidebar-primary: 43 53% 54%;
-    --sidebar-primary-foreground: 219 60% 15%;
-    --sidebar-accent: 219 50% 22%;
+    /* Sidebar — escura Somma */
+    --sidebar-background: 197 19% 22%;  /* #2E3E44 */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 38 80% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 197 19% 28%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 219 45% 25%;
-    --sidebar-ring: 43 53% 54%;
+    --sidebar-border: 197 19% 32%;
+    --sidebar-ring: 38 80% 44%;
 
     /* Gradients & shadows */
-    --gradient-gold: linear-gradient(135deg, hsl(43 53% 54%), hsl(43 60% 64%));
-    --gradient-navy: linear-gradient(135deg, hsl(219 60% 15%), hsl(219 55% 22%));
-    --shadow-card: 0 1px 3px 0 hsl(218 30% 14% / 0.06), 0 1px 2px -1px hsl(218 30% 14% / 0.06);
-    --shadow-elevated: 0 10px 30px -12px hsl(218 60% 15% / 0.18);
+    --gradient-gold: linear-gradient(135deg, hsl(38 80% 44%), hsl(39 73% 58%));
+    --gradient-navy: linear-gradient(135deg, hsl(197 19% 18%), hsl(200 19% 30%));
+    --shadow-card: 0 1px 3px 0 hsl(197 19% 22% / 0.06), 0 1px 2px -1px hsl(197 19% 22% / 0.06);
+    --shadow-elevated: 0 10px 30px -12px hsl(197 19% 22% / 0.18);
   }
 
   .dark {
-    --background: 219 60% 8%;
-    --foreground: 0 0% 98%;
-    --card: 219 55% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 219 55% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 43 53% 54%;
-    --primary-foreground: 219 60% 15%;
-    --secondary: 219 50% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 219 50% 18%;
-    --muted-foreground: 215 20% 70%;
-    --accent: 43 53% 54%;
-    --accent-foreground: 219 60% 15%;
-    --border: 219 45% 22%;
-    --input: 219 45% 22%;
-    --ring: 43 53% 54%;
+    --background: 197 19% 12%;
+    --foreground: 0 0% 96%;
+    --card: 197 19% 16%;
+    --card-foreground: 0 0% 96%;
+    --popover: 197 19% 16%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 38 80% 44%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 19% 25%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 200 19% 22%;
+    --muted-foreground: 197 17% 65%;
+    --accent: 38 80% 44%;
+    --accent-foreground: 0 0% 100%;
+    --border: 200 19% 25%;
+    --input: 200 19% 25%;
+    --ring: 38 80% 44%;
   }
 }
 
@@ -99,14 +110,21 @@
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground;
-    font-family: 'DM Sans', system-ui, sans-serif;
-    font-feature-settings: 'ss01', 'cv11';
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 300;                     /* Inter Light default */
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 { font-family: 'DM Sans', system-ui, sans-serif; letter-spacing: -0.01em; }
+  h1, h2, h3, h4 {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 200;                     /* Inter ExtraLight para títulos */
+    letter-spacing: -0.015em;
+  }
+  strong, b { font-weight: 700; }         /* Inter Bold para destaques */
 }
 
 @layer components {
-  .num-positive { @apply text-success font-medium; }
-  .num-negative { @apply text-destructive font-medium; }
+  .num-positive { color: hsl(var(--success)); font-weight: 500; }
+  .num-negative { color: hsl(var(--destructive)); font-weight: 500; }
   .leaflet-container { border-radius: var(--radius); }
 }
