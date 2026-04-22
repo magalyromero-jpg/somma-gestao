@@ -40,11 +40,11 @@ export default function Mercado() {
 
   const metricas = useMemo(() => {
     const valores = filtrados.map((i) => i.valor_mercado).filter(Boolean);
-    const alugueis = filtrados.map((i) => i.aluguel_mensal ?? 0).filter(Boolean);
+    const alugueis = filtrados.map((i) => i.valor_aluguel_mensal ?? 0).filter(Boolean);
     const media = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
     const yields = filtrados
-      .filter((i) => i.aluguel_mensal && i.valor_mercado)
-      .map((i) => ((i.aluguel_mensal! * 12) / i.valor_mercado) * 100);
+      .filter((i) => i.valor_aluguel_mensal && i.valor_mercado)
+      .map((i) => ((i.valor_aluguel_mensal! * 12) / i.valor_mercado) * 100);
     return {
       qtd: filtrados.length,
       mediaValor: media(valores),
