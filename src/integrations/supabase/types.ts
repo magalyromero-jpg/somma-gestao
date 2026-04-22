@@ -14,16 +14,310 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      configuracoes: {
+        Row: {
+          chave: string
+          updated_at: string
+          valor: string | null
+        }
+        Insert: {
+          chave: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Update: {
+          chave?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Relationships: []
+      }
+      familia_membros: {
+        Row: {
+          created_at: string
+          familia_id: string
+          id: string
+          lidderar_entity_id: number
+          nome: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          familia_id: string
+          id?: string
+          lidderar_entity_id: number
+          nome?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          familia_id?: string
+          id?: string
+          lidderar_entity_id?: number
+          nome?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "familia_membros_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      familias: {
+        Row: {
+          cor_avatar: string
+          created_at: string
+          id: string
+          lidderar_conta_id: number | null
+          nome: string
+        }
+        Insert: {
+          cor_avatar?: string
+          created_at?: string
+          id?: string
+          lidderar_conta_id?: number | null
+          nome: string
+        }
+        Update: {
+          cor_avatar?: string
+          created_at?: string
+          id?: string
+          lidderar_conta_id?: number | null
+          nome?: string
+        }
+        Relationships: []
+      }
+      fipezap_indices: {
+        Row: {
+          cidade: string
+          created_at: string
+          criado_por: string | null
+          id: string
+          periodo: string
+          tipo_imovel: string | null
+          valor_m2: number | null
+          variacao_anual: number | null
+          variacao_mensal: number | null
+        }
+        Insert: {
+          cidade: string
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          periodo: string
+          tipo_imovel?: string | null
+          valor_m2?: number | null
+          variacao_anual?: number | null
+          variacao_mensal?: number | null
+        }
+        Update: {
+          cidade?: string
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          periodo?: string
+          tipo_imovel?: string | null
+          valor_m2?: number | null
+          variacao_anual?: number | null
+          variacao_mensal?: number | null
+        }
+        Relationships: []
+      }
+      historico_valores: {
+        Row: {
+          cod_imovel: number | null
+          cod_interno: string | null
+          criado_por: string | null
+          data_atualizacao: string
+          fonte: string | null
+          id: string
+          justificativa: string | null
+          valor_anterior: number | null
+          valor_novo: number | null
+          variacao_pct: number | null
+        }
+        Insert: {
+          cod_imovel?: number | null
+          cod_interno?: string | null
+          criado_por?: string | null
+          data_atualizacao?: string
+          fonte?: string | null
+          id?: string
+          justificativa?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          variacao_pct?: number | null
+        }
+        Update: {
+          cod_imovel?: number | null
+          cod_interno?: string | null
+          criado_por?: string | null
+          data_atualizacao?: string
+          fonte?: string | null
+          id?: string
+          justificativa?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          variacao_pct?: number | null
+        }
+        Relationships: []
+      }
+      imoveis_cache: {
+        Row: {
+          cod_imovel: number
+          cod_interno: string | null
+          dados_json: Json | null
+          familia_id: string | null
+          ultima_sync: string
+        }
+        Insert: {
+          cod_imovel: number
+          cod_interno?: string | null
+          dados_json?: Json | null
+          familia_id?: string | null
+          ultima_sync?: string
+        }
+        Update: {
+          cod_imovel?: number
+          cod_interno?: string | null
+          dados_json?: Json | null
+          familia_id?: string | null
+          ultima_sync?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imoveis_cache_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pesquisas_mercado: {
+        Row: {
+          area_m2: number | null
+          bairro: string | null
+          cidade: string | null
+          created_at: string
+          criado_por: string | null
+          data_pesquisa: string | null
+          fonte: string | null
+          id: string
+          observacoes: string | null
+          tipo_imovel: string | null
+          url: string | null
+          valor: number | null
+        }
+        Insert: {
+          area_m2?: number | null
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_pesquisa?: string | null
+          fonte?: string | null
+          id?: string
+          observacoes?: string | null
+          tipo_imovel?: string | null
+          url?: string | null
+          valor?: number | null
+        }
+        Update: {
+          area_m2?: number | null
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_pesquisa?: string | null
+          fonte?: string | null
+          id?: string
+          observacoes?: string | null
+          tipo_imovel?: string | null
+          url?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          familia_id: string | null
+          id: string
+          nome: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          familia_id?: string | null
+          id?: string
+          nome?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          familia_id?: string | null
+          id?: string
+          nome?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_familia: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "gestor" | "familia"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +444,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["gestor", "familia"],
+    },
   },
 } as const
