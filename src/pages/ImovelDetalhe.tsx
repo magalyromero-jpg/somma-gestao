@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -9,11 +9,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { KpiCard } from "@/components/KpiCard";
-import { imoveis, familias } from "@/data/mock";
+import { useImovel, useContratos, useFamilias } from "@/hooks/useApiData";
+import { adaptImovel, extractList } from "@/lib/lidderar-adapters";
+import { parseBRL } from "@/hooks/useLidderar";
 import { formatBRL, formatPct, pctClass } from "@/lib/format";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ExternalLink, MapPin, TrendingUp, Wallet, Building2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 
 // Fix default Leaflet icon paths in Vite
 // @ts-ignore
@@ -22,14 +23,29 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 export default function ImovelDetalhe() {
   const { codImovel = "" } = useParams();
-  const imovel = imoveis.find((i) => String(i.cod_imovel) === codImovel);
+  const { data, isLoading, error } = useImovel(codImovel);
+  const { data: contratosData } = useContratos(codImovel);
+  const { familias } = useFamilias();
 
   useEffect(() => {
-    // ensure leaflet recalculates size after mount
     setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
   }, []);
 
-  if (!imovel)
+  const imovel = useMemo(() => {
+    if (!data) return null;
+    // /imoveis/get may return single object or {data:{}}
+    const raw = (data as any)?.data ?? data;
+    return adaptImovel(raw);
+  }, [data]);
+
+  const activeContract = useMemo(() => {
+    const list = extractList(contratosData);
+    return list.find((c: any) => String(c?.status ?? "").toLowerCase().includes("ativ")) ?? list[0] ?? null;
+  }, [contratosData]);
+
+  if (isLoading) return <LoadingSkeleton rows={10} />;
+  if (error) return <ErrorState error={error} />;
+  if (!imovel || imovel.cod_imovel === 0)
     return (
       <div className="p-8">
         <p className="text-muted-foreground">Imóvel não encontrado.</p>
@@ -38,18 +54,13 @@ export default function ImovelDetalhe() {
     );
 
   const familia = familias.find((f) => f.id === imovel.familia_id);
-  const monthlyChart =
-    imovel.contrato_ativo?.pagamentos.map((p) => ({
-      mes: p.mes.slice(5),
-      bruto: p.bruto,
-      liquido: p.liquido,
-    })) ?? [];
+  const valorContrato = activeContract ? parseBRL(activeContract.valor_aluguel ?? activeContract.valor_bruto) : 0;
 
   return (
     <>
       <div className="text-sm text-muted-foreground mb-2">
-        <Link to="/imoveis" className="hover:text-gold">Imóveis</Link> ·{" "}
-        <Link to={`/familias/${familia?.id}`} className="hover:text-gold">{familia?.nome}</Link>
+        <Link to="/imoveis" className="hover:text-gold">Imóveis</Link>
+        {familia && <> · <Link to={`/familias/${familia.id}`} className="hover:text-gold">{familia.nome}</Link></>}
       </div>
       <PageHeader
         title={imovel.endereco}
@@ -65,16 +76,18 @@ export default function ImovelDetalhe() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        {/* Left column */}
         <div className="lg:col-span-2 space-y-5">
           <Card className="shadow-card overflow-hidden">
-            <div className="aspect-[4/3] bg-gradient-navy grid place-items-center text-white/60">
-              <div className="text-center">
-                <Building2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <div className="text-sm">Galeria de fotos</div>
-                <div className="text-xs opacity-70">Sincronizar com Lidderar</div>
+            {imovel.fotos.length > 0 ? (
+              <img src={imovel.fotos[0]} alt={imovel.endereco} className="w-full aspect-[4/3] object-cover" />
+            ) : (
+              <div className="aspect-[4/3] bg-gradient-navy grid place-items-center text-white/60">
+                <div className="text-center">
+                  <Building2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-sm">Sem fotos disponíveis</div>
+                </div>
               </div>
-            </div>
+            )}
           </Card>
 
           <Card className="shadow-card overflow-hidden">
@@ -85,10 +98,7 @@ export default function ImovelDetalhe() {
                 style={{ height: "100%", width: "100%" }}
                 scrollWheelZoom={false}
               >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; OpenStreetMap'
-                />
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
                 <Marker position={[imovel.lat, imovel.lng]}>
                   <Popup>{imovel.endereco}</Popup>
                 </Marker>
@@ -110,7 +120,6 @@ export default function ImovelDetalhe() {
           </Card>
         </div>
 
-        {/* Right column */}
         <div className="lg:col-span-3 space-y-5">
           <Card className="shadow-card">
             <CardHeader className="pb-2"><CardTitle className="text-base">Dados do imóvel</CardTitle></CardHeader>
@@ -126,74 +135,20 @@ export default function ImovelDetalhe() {
             </CardContent>
           </Card>
 
-          {imovel.contrato_ativo && (
+          {activeContract && (
             <Card className="shadow-card">
               <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Contrato ativo</CardTitle>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">ATIVO</span>
+                <CardTitle className="text-base">Contrato</CardTitle>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
+                  {String(activeContract.status ?? "ATIVO").toUpperCase()}
+                </span>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <Field label="Locatário(s)" value={imovel.contrato_ativo.locatarios.join(", ")} />
-                <Field label="Valor" value={formatBRL(imovel.contrato_ativo.valor_aluguel)} />
-                <Field label="Início" value={new Date(imovel.contrato_ativo.inicio).toLocaleDateString("pt-BR")} />
-                <Field label="Fim" value={new Date(imovel.contrato_ativo.fim).toLocaleDateString("pt-BR")} />
+                <Field label="Locatário(s)" value={String(activeContract.locatario ?? activeContract.nome ?? "—")} />
+                <Field label="Valor" value={valorContrato ? formatBRL(valorContrato) : "—"} />
+                <Field label="Início" value={String(activeContract.data_inicio ?? activeContract.inicio ?? "—")} />
+                <Field label="Fim" value={String(activeContract.data_fim ?? activeContract.fim ?? "—")} />
               </CardContent>
-            </Card>
-          )}
-
-          {monthlyChart.length > 0 && (
-            <Card className="shadow-card">
-              <CardHeader className="pb-2"><CardTitle className="text-base">Histórico financeiro (12 meses)</CardTitle></CardHeader>
-              <CardContent className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyChart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip
-                      formatter={(v: number) => formatBRL(v)}
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                    />
-                    <Bar dataKey="bruto" name="Bruto" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
-                    <Bar dataKey="liquido" name="Líquido" fill="hsl(var(--gold))" radius={[4,4,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {imovel.contrato_ativo && (
-            <Card className="shadow-card overflow-hidden">
-              <CardHeader className="pb-2"><CardTitle className="text-base">Pagamentos</CardTitle></CardHeader>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-xs uppercase text-muted-foreground bg-muted/30 border-y">
-                    <tr>
-                      <th className="text-left px-4 py-2">Mês</th>
-                      <th className="text-right px-4 py-2">Bruto</th>
-                      <th className="text-right px-4 py-2">Líquido</th>
-                      <th className="text-left px-4 py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...imovel.contrato_ativo.pagamentos].reverse().map((p) => (
-                      <tr key={p.mes} className="border-b last:border-0">
-                        <td className="px-4 py-2">{p.mes}</td>
-                        <td className="px-4 py-2 text-right">{formatBRL(p.bruto)}</td>
-                        <td className="px-4 py-2 text-right text-muted-foreground">{formatBRL(p.liquido)}</td>
-                        <td className="px-4 py-2">
-                          <span className={cn(
-                            "inline-flex items-center text-[11px] px-2 py-0.5 rounded-full border",
-                            p.status === "Pago"
-                              ? "bg-success/10 text-success border-success/30"
-                              : "bg-warning/10 text-warning border-warning/30"
-                          )}>{p.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </Card>
           )}
         </div>
