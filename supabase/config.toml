@@ -1,4 +1,4 @@
 project_id = "bftzfisrcivhgiejxtla"
 
 [functions.lidderar-proxy]
-verify_jwt = true
+verify_jwt = false
