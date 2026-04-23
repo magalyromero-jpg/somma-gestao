@@ -89,6 +89,42 @@ export default function Dashboard() {
     <>
       <PageHeader title="Dashboard" subtitle="Visão consolidada do portfólio Somma" />
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setPerfilFilter(null)}
+          className={cn(
+            "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+            !perfilFilter
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-muted-foreground border-border hover:border-foreground/40",
+          )}
+        >
+          Todos
+        </button>
+        {PERFIS.map((p) => {
+          const active = perfilFilter === p;
+          return (
+            <button
+              key={p}
+              onClick={() => setPerfilFilter(active ? null : p)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                active
+                  ? "bg-gold text-background border-gold"
+                  : "bg-background text-muted-foreground border-border hover:border-gold/60",
+              )}
+            >
+              {p}
+            </button>
+          );
+        })}
+        {perfilFilter && (
+          <Badge variant="outline" className="ml-2">
+            {imoveis.length} de {allImoveis.length} imóveis
+          </Badge>
+        )}
+      </div>
+
       {error && <ErrorState error={error} hint="Verifique o token Lidderar em /configuracoes." />}
       {isLoading && <LoadingSkeleton rows={6} />}
 
