@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLidderar } from "@/hooks/useLidderar";
-import { adaptFamilia, adaptImovel, extractList } from "@/lib/lidderar-adapters";
+import { adaptFamilia, adaptImovel, deriveFamiliasFromImoveis, extractList } from "@/lib/lidderar-adapters";
 import type { Familia, Imovel } from "@/data/mock";
 
 /** All properties from Lidderar, normalized. */
