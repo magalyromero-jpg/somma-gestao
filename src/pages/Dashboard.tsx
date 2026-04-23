@@ -30,7 +30,13 @@ const CLASS_COLORS = ["hsl(var(--primary))", "hsl(var(--gold))", "hsl(var(--info
 
 export default function Dashboard() {
   const { familias, isLoading: lf, error: ef } = useFamilias();
-  const { imoveis, isLoading: li, error: ei } = useImoveis();
+  const { imoveis: allImoveis, isLoading: li, error: ei } = useImoveis();
+  const [perfilFilter, setPerfilFilter] = useState<Perfil | null>(null);
+
+  const imoveis = useMemo(
+    () => (perfilFilter ? allImoveis.filter((i) => i.perfis?.includes(perfilFilter)) : allImoveis),
+    [allImoveis, perfilFilter],
+  );
 
   const isLoading = lf || li;
   const error = ef || ei;
