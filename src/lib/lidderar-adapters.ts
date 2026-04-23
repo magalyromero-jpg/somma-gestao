@@ -73,11 +73,14 @@ export const adaptImovel = (raw: any): Imovel => {
   const fotos: string[] = Array.isArray(raw?.fotos_imovel)
     ? raw.fotos_imovel.map((f: any) => f?.url || f?.foto || f).filter(Boolean)
     : [];
-  const familiaRaw = raw?.participacoes?.[0];
-  const familia_id = String(
-    pick(familiaRaw ?? {}, ["cod_conta", "id_conta", "conta_id"]) ??
-      pick(raw, ["cod_conta", "conta_id"], "sem-familia"),
-  );
+  const participacoes: Array<{ nome: string; valor_part: number }> = Array.isArray(raw?.participacoes)
+    ? raw.participacoes.map((p: any) => ({
+        nome: String(pick(p, ["nome", "razao_social", "fantasia", "cliente", "nome_conta"], "—")),
+        valor_part: parseBRL(pick(p, ["valormercado_part", "valor_mercado_part", "valor_part"])),
+      }))
+    : [];
+  const familiaNome = participacoes[0]?.nome || "Sem família";
+  const familia_id = slugify(familiaNome) || "sem-familia";
 
   return {
     cod_imovel,
@@ -100,7 +103,22 @@ export const adaptImovel = (raw: any): Imovel => {
     lng,
     fotos,
     familia_id,
+    familia_nome: familiaNome,
   };
+};
+
+/** Derive families dynamically from imoveis (group by participacoes[0].nome). */
+export const deriveFamiliasFromImoveis = (imoveis: Imovel[]): Familia[] => {
+  const map = new Map<string, string>();
+  for (const i of imoveis) {
+    if (!map.has(i.familia_id)) {
+      map.set(i.familia_id, i.familia_nome || "Sem família");
+    }
+  }
+  return Array.from(map.entries()).map(([id, nome]) => {
+    const colorIdx = Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % FAMILY_PALETTE.length;
+    return { id, nome, cor_avatar: FAMILY_PALETTE[colorIdx], membros: [] };
+  });
 };
 
 /** Group properties by family and compute KPIs (replaces mock helpers). */

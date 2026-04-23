@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLidderar } from "@/hooks/useLidderar";
-import { adaptFamilia, adaptImovel, extractList } from "@/lib/lidderar-adapters";
+import { adaptFamilia, adaptImovel, deriveFamiliasFromImoveis, extractList } from "@/lib/lidderar-adapters";
 import type { Familia, Imovel } from "@/data/mock";
 
 /** All properties from Lidderar, normalized. */
@@ -13,13 +13,13 @@ export function useImoveis() {
   return { ...query, imoveis };
 }
 
-/** All families/accounts from Lidderar, normalized + augmented with property counts. */
+/** Families derived dynamically from /imoveis/getall (groups by participacoes[0].nome). */
 export function useFamilias() {
-  const query = useLidderar<unknown>("/cadastros/conta/getall");
-  const familias = useMemo<Familia[]>(
-    () => extractList(query.data).map(adaptFamilia),
-    [query.data],
-  );
+  const query = useLidderar<unknown>("/imoveis/getall");
+  const familias = useMemo<Familia[]>(() => {
+    const imoveis = extractList(query.data).map(adaptImovel).filter((i) => i.cod_imovel > 0);
+    return deriveFamiliasFromImoveis(imoveis);
+  }, [query.data]);
   return { ...query, familias };
 }
 
