@@ -112,12 +112,7 @@ export const deriveFamiliasFromImoveis = (imoveis: Imovel[]): Familia[] => {
   const map = new Map<string, string>();
   for (const i of imoveis) {
     if (!map.has(i.familia_id)) {
-      const nome = i.familia_id
-        .split("-")
-        .filter(Boolean)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ") || "Sem família";
-      map.set(i.familia_id, nome);
+      map.set(i.familia_id, i.familia_nome || "Sem família");
     }
   }
   return Array.from(map.entries()).map(([id, nome]) => {
