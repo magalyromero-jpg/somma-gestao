@@ -24,6 +24,8 @@ export function useLidderar<T = unknown>(
       });
       if (error) throw new Error(error.message);
 
+      console.log("[useLidderar] raw response", endpoint, data);
+
       // Envelope: { ok, upstream_status, upstream_url, data }
       if (data && typeof data === "object" && "ok" in data) {
         if (!data.ok) {
