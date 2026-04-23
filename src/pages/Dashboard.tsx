@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useFamilias, useImoveis } from "@/hooks/useApiData";
 import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
 import { formatBRL } from "@/lib/format";
@@ -11,6 +12,10 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
+import { cn } from "@/lib/utils";
+
+const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
+type Perfil = (typeof PERFIS)[number];
 
 const STATUS_COLORS: Record<string, string> = {
   Locado: "hsl(var(--success))",
