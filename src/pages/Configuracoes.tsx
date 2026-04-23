@@ -6,13 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 
 export default function Configuracoes() {
   const [token, setToken] = useState("");
+  const [usuario, setUsuario] = useState("");
+  const [senha, setSenha] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [showSenha, setShowSenha] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingCreds, setSavingCreds] = useState(false);
+  const [renewing, setRenewing] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
 
@@ -20,10 +25,13 @@ export default function Configuracoes() {
     (async () => {
       const { data } = await supabase
         .from("configuracoes")
-        .select("valor")
-        .eq("chave", "lidderar_bearer_token")
-        .maybeSingle();
-      if (data?.valor) setToken(data.valor);
+        .select("chave, valor")
+        .in("chave", ["lidderar_bearer_token", "lidderar_usuario", "lidderar_senha"]);
+      data?.forEach((row) => {
+        if (row.chave === "lidderar_bearer_token" && row.valor) setToken(row.valor);
+        if (row.chave === "lidderar_usuario" && row.valor) setUsuario(row.valor);
+        if (row.chave === "lidderar_senha" && row.valor) setSenha(row.valor);
+      });
       setLoading(false);
     })();
   }, []);
@@ -40,6 +48,47 @@ export default function Configuracoes() {
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("Token salvo com segurança");
+  };
+
+  const handleSaveCredentials = async () => {
+    if (!usuario.trim() || !senha.trim()) {
+      toast.error("Informe usuário e senha");
+      return;
+    }
+    setSavingCreds(true);
+    const { error } = await supabase.from("configuracoes").upsert([
+      { chave: "lidderar_usuario", valor: usuario.trim() },
+      { chave: "lidderar_senha", valor: senha },
+    ]);
+    setSavingCreds(false);
+    if (error) toast.error(error.message);
+    else toast.success("Credenciais salvas — renovação automática habilitada");
+  };
+
+  const handleRenewNow = async () => {
+    setRenewing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lidderar-auth", {
+        body: { usuario: usuario.trim(), senha },
+      });
+      if (error || (data as any)?.error) {
+        throw new Error(error?.message ?? (data as any).error);
+      }
+      const preview = (data as any)?.token_preview;
+      const ep = (data as any)?.endpoint_usado;
+      toast.success(`Token renovado via ${ep} (${preview}…)`);
+      // recarrega o token exibido
+      const { data: row } = await supabase
+        .from("configuracoes")
+        .select("valor")
+        .eq("chave", "lidderar_bearer_token")
+        .maybeSingle();
+      if (row?.valor) setToken(row.valor);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao renovar");
+    } finally {
+      setRenewing(false);
+    }
   };
 
   const handleTest = async () => {
