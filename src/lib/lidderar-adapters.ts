@@ -103,6 +103,7 @@ export const adaptImovel = (raw: any): Imovel => {
     lng,
     fotos,
     familia_id,
+    familia_nome: familiaNome,
   };
 };
 
