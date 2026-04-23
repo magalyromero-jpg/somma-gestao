@@ -106,6 +106,25 @@ export const adaptImovel = (raw: any): Imovel => {
   };
 };
 
+/** Derive families dynamically from imoveis (group by participacoes[0].nome). */
+export const deriveFamiliasFromImoveis = (imoveis: Imovel[]): Familia[] => {
+  const map = new Map<string, string>();
+  for (const i of imoveis) {
+    if (!map.has(i.familia_id)) {
+      const nome = i.familia_id
+        .split("-")
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ") || "Sem família";
+      map.set(i.familia_id, nome);
+    }
+  }
+  return Array.from(map.entries()).map(([id, nome]) => {
+    const colorIdx = Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % FAMILY_PALETTE.length;
+    return { id, nome, cor_avatar: FAMILY_PALETTE[colorIdx], membros: [] };
+  });
+};
+
 /** Group properties by family and compute KPIs (replaces mock helpers). */
 export const computeFamiliaKpis = (imoveis: Imovel[], familiaId: string) => {
   const list = imoveis.filter((i) => i.familia_id === familiaId);
