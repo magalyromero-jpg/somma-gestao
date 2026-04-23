@@ -40,9 +40,11 @@ const normalizeClassificacao = (raw: unknown): Classificacao => {
   return "Residencial";
 };
 
-/** Extract list from common Lidderar envelopes ({data:[]}, {imoveis:[]}, []). */
+/** Extract list from common Lidderar envelopes ({DADOS:[]}, {data:[]}, []). */
 export const extractList = (payload: any): any[] => {
   if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.DADOS)) return payload.DADOS;
+  if (Array.isArray(payload?.dados)) return payload.dados;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.imoveis)) return payload.imoveis;
   if (Array.isArray(payload?.contas)) return payload.contas;
