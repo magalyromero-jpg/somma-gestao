@@ -45,9 +45,14 @@ export function useLidderar<T = unknown>(
   });
 }
 
-/** Parser de valores brasileiros vindos da API Lidderar. */
-export const parseBRL = (val: string | number | null | undefined): number => {
-  if (val === null || val === undefined || val === "") return 0;
-  if (typeof val === "number") return val;
-  return parseFloat(String(val).replace(/\./g, "").replace(",", ".")) || 0;
+/** Parser de valores brasileiros vindos da API Lidderar (ex: "1.250.000,00"). */
+export const parseBRL = (val: unknown): number => {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === "number") return Number.isFinite(val) ? val : 0;
+  const str = String(val).trim();
+  if (str === "" || str === "0" || str.toLowerCase() === "null") return 0;
+  // Remove milhares (.) e converte vírgula decimal em ponto.
+  const normalized = str.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(normalized);
+  return Number.isFinite(n) ? n : 0;
 };

@@ -1,26 +1,59 @@
 import { useMemo } from "react";
 import { useLidderar } from "@/hooks/useLidderar";
-import { adaptFamilia, adaptImovel, deriveFamiliasFromImoveis, extractList } from "@/lib/lidderar-adapters";
+import {
+  adaptFamiliaConta,
+  adaptImovel,
+  buildFamiliaIndex,
+  deriveFamiliasFromImoveis,
+  extractList,
+  type FamiliaConta,
+  type FamiliaIndex,
+} from "@/lib/lidderar-adapters";
 import type { Familia, Imovel } from "@/data/mock";
 
-/** All properties from Lidderar, normalized. */
-export function useImoveis() {
-  const query = useLidderar<unknown>("/imoveis/getall");
-  const imoveis = useMemo<Imovel[]>(
-    () => extractList(query.data).map(adaptImovel).filter((i) => i.cod_imovel > 0),
+/** Contas (famílias) reais vindas de /cadastros/conta/getall. */
+export function useContas() {
+  const query = useLidderar<unknown>("/cadastros/conta/getall");
+  const contas = useMemo<FamiliaConta[]>(
+    () => extractList(query.data).map((raw) => adaptFamiliaConta(raw)),
     [query.data],
   );
-  return { ...query, imoveis };
+  const index = useMemo<FamiliaIndex>(() => buildFamiliaIndex(contas), [contas]);
+  return { ...query, contas, index };
 }
 
-/** Families derived dynamically from /imoveis/getall (groups by participacoes[0].nome). */
+/** All properties from Lidderar, normalized and linked to family accounts. */
+export function useImoveis() {
+  const imoveisQuery = useLidderar<unknown>("/imoveis/getall");
+  const { contas, index, isLoading: loadingContas, error: errorContas } = useContas();
+
+  const imoveis = useMemo<Imovel[]>(
+    () =>
+      extractList(imoveisQuery.data)
+        .map((raw) => adaptImovel(raw, index))
+        .filter((i) => i.cod_imovel > 0),
+    [imoveisQuery.data, index],
+  );
+
+  return {
+    ...imoveisQuery,
+    imoveis,
+    contas,
+    isLoading: imoveisQuery.isLoading || loadingContas,
+    error: imoveisQuery.error || errorContas,
+  };
+}
+
+/** Famílias = contas reais (com fallback à derivação via participações se a API falhar). */
 export function useFamilias() {
-  const query = useLidderar<unknown>("/imoveis/getall");
+  const { imoveis, contas, isLoading, error } = useImoveis();
   const familias = useMemo<Familia[]>(() => {
-    const imoveis = extractList(query.data).map(adaptImovel).filter((i) => i.cod_imovel > 0);
+    if (contas && contas.length > 0) {
+      return contas.map(({ cliente_ids, empresa_ids, ...rest }) => rest);
+    }
     return deriveFamiliasFromImoveis(imoveis);
-  }, [query.data]);
-  return { ...query, familias };
+  }, [contas, imoveis]);
+  return { familias, imoveis, isLoading, error };
 }
 
 /** Single property detail. */
