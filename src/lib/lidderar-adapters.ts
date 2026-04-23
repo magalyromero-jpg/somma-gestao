@@ -12,6 +12,11 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+const colorFor = (id: string) => {
+  const idx = Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % FAMILY_PALETTE.length;
+  return FAMILY_PALETTE[idx];
+};
+
 const pick = <T = unknown>(obj: any, keys: string[], fallback?: T): T => {
   for (const k of keys) {
     const v = obj?.[k];
@@ -52,37 +57,156 @@ export const extractList = (payload: any): any[] => {
   return [];
 };
 
+// ──────────────────────────────────────────────────────────────────────────
+// Família (conta) adapter — from /cadastros/conta/getall
+// ──────────────────────────────────────────────────────────────────────────
+export interface FamiliaConta extends Familia {
+  cliente_ids: number[];
+  empresa_ids: number[];
+}
+
+const toIdList = (raw: any): number[] => {
+  if (raw === null || raw === undefined || raw === "") return [];
+  if (Array.isArray(raw)) return raw.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0);
+  // Allow CSV strings like "12,34,56"
+  return String(raw)
+    .split(/[,;|]/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+};
+
+export const adaptFamiliaConta = (raw: any): FamiliaConta => {
+  const id = String(
+    pick(raw, ["id_conta", "id", "cod_conta", "codigo", "chave"], slugify(String(pick(raw, ["nome_conta", "nome"], "familia")))),
+  );
+  const nomeRaw = String(pick(raw, ["nome_conta", "nome", "razao_social", "fantasia"], "Família"));
+  const nome = /^fam[ií]lia/i.test(nomeRaw) ? nomeRaw : `Família ${nomeRaw}`;
+
+  // Try common shapes: arrays of ids, arrays of objects with id, or csv.
+  const clientesRaw =
+    raw?.clientes ?? raw?.cliente_ids ?? raw?.cliente_part ?? raw?.id_clientes ?? raw?.clientes_part;
+  const empresasRaw =
+    raw?.empresas ?? raw?.empresa_ids ?? raw?.empresa_part ?? raw?.id_empresas ?? raw?.empresas_part;
+
+  const flatten = (v: any): any[] =>
+    Array.isArray(v)
+      ? v.flatMap((x) =>
+          x && typeof x === "object" ? [x.id_cliente ?? x.id_empresa ?? x.id ?? x.chave] : [x],
+        )
+      : [v];
+
+  const cliente_ids = toIdList(flatten(clientesRaw));
+  const empresa_ids = toIdList(flatten(empresasRaw));
+
+  return {
+    id,
+    nome,
+    cor_avatar: colorFor(id),
+    membros: [],
+    cliente_ids,
+    empresa_ids,
+  };
+};
+
+/** Build lookup: entity id (cliente or empresa) → familia_id. */
+export const buildFamiliaIndex = (contas: FamiliaConta[]) => {
+  const clienteToFamilia = new Map<number, string>();
+  const empresaToFamilia = new Map<number, string>();
+  const byId = new Map<string, FamiliaConta>();
+  for (const c of contas) {
+    byId.set(c.id, c);
+    c.cliente_ids.forEach((id) => clienteToFamilia.set(id, c.id));
+    c.empresa_ids.forEach((id) => empresaToFamilia.set(id, c.id));
+  }
+  return { clienteToFamilia, empresaToFamilia, byId };
+};
+
+export type FamiliaIndex = ReturnType<typeof buildFamiliaIndex>;
+
+// ──────────────────────────────────────────────────────────────────────────
+// Imóvel adapter
+// ──────────────────────────────────────────────────────────────────────────
 export const adaptFamilia = (raw: any): Familia => {
   const id = String(pick(raw, ["id", "cod_conta", "codigo", "chave"], slugify(pick(raw, ["nome", "razao_social"], "familia"))));
   const nome = String(pick(raw, ["nome", "razao_social", "fantasia"], "Família"));
-  const colorIdx = Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % FAMILY_PALETTE.length;
   return {
     id,
     nome: nome.startsWith("Família") ? nome : `Família ${nome}`,
-    cor_avatar: FAMILY_PALETTE[colorIdx],
+    cor_avatar: colorFor(id),
     membros: [],
   };
 };
 
-export const adaptImovel = (raw: any): Imovel => {
+/**
+ * Adapt a Lidderar property record. Sums monetary fields across ALL participacoes
+ * (because each participação represents a fractional ownership).
+ * If a `familiaIndex` is provided, links the property to a real family account
+ * via cliente_part / empresa_part ids.
+ */
+export const adaptImovel = (raw: any, familiaIndex?: FamiliaIndex): Imovel => {
   const cod_imovel = Number(pick(raw, ["cod_imovel", "codigo", "id", "chave"], 0));
-  const valor_compra = parseBRL(pick(raw, ["valor_aquisitivo", "valor_compra", "valor_aquisicao"]));
-  const valor_mercado = parseBRL(pick(raw, ["valor_mercado", "valor_venda", "valorMercado"])) || valor_compra;
-  const aluguel = parseBRL(pick(raw, ["valor_aluguel_mercado", "valor_aluguel", "aluguel"]));
-  const status = normalizeStatus(pick(raw, ["statusImovel.status", "status_imovel", "status"]) ?? raw?.statusImovel?.status);
+
+  // Property-level fallbacks (some endpoints return values at root too)
+  const rootValorMercado = parseBRL(pick(raw, ["valor_mercado", "valor_venda", "valorMercado"]));
+  const rootValorCompra = parseBRL(pick(raw, ["valor_aquisitivo", "valor_compra", "valor_aquisicao"]));
+  const rootAluguel = parseBRL(pick(raw, ["valor_aluguel_mercado", "valor_aluguel", "aluguel"]));
+
+  const participacoesRaw: any[] = Array.isArray(raw?.participacoes) ? raw.participacoes : [];
+
+  // Sum participation values and resolve family from ids when possible.
+  let sumMercado = 0;
+  let sumCompra = 0;
+  let sumAluguel = 0;
+  const participacoes: Array<{ nome: string; valor_part: number }> = [];
+  const familiaCandidates = new Map<string, number>();
+
+  for (const p of participacoesRaw) {
+    const valor_part = parseBRL(pick(p, ["valormercado_part", "valor_mercado_part", "valor_part"]));
+    const compra_part = parseBRL(pick(p, ["valoraquisitivo_part", "valor_aquisitivo_part", "valor_aquisicao_part"]));
+    const aluguel_part = parseBRL(pick(p, ["valormercadoaluguel_part", "valor_aluguel_part", "valor_aluguel_mercado_part"]));
+    sumMercado += valor_part;
+    sumCompra += compra_part;
+    sumAluguel += aluguel_part;
+
+    const nome = String(pick(p, ["nome", "razao_social", "fantasia", "cliente", "nome_conta"], "—"));
+    participacoes.push({ nome, valor_part });
+
+    if (familiaIndex) {
+      const cid = Number(pick(p, ["cliente_part", "id_cliente", "cliente_id", "cod_cliente"], 0));
+      const eid = Number(pick(p, ["empresa_part", "id_empresa", "empresa_id", "cod_empresa"], 0));
+      const fid =
+        (cid && familiaIndex.clienteToFamilia.get(cid)) ||
+        (eid && familiaIndex.empresaToFamilia.get(eid)) ||
+        null;
+      if (fid) familiaCandidates.set(fid, (familiaCandidates.get(fid) ?? 0) + (valor_part || 1));
+    }
+  }
+
+  const valor_mercado = sumMercado || rootValorMercado;
+  const valor_compra = sumCompra || rootValorCompra;
+  const aluguel = sumAluguel || rootAluguel;
+
+  const status = normalizeStatus(
+    pick(raw, ["statusImovel.status", "status_imovel", "status"]) ?? raw?.statusImovel?.status,
+  );
   const lat = Number(pick(raw, ["latitude", "lat"], 0)) || -30.0346;
   const lng = Number(pick(raw, ["longitude", "lng"], 0)) || -51.2177;
   const fotos: string[] = Array.isArray(raw?.fotos_imovel)
     ? raw.fotos_imovel.map((f: any) => f?.url || f?.foto || f).filter(Boolean)
     : [];
-  const participacoes: Array<{ nome: string; valor_part: number }> = Array.isArray(raw?.participacoes)
-    ? raw.participacoes.map((p: any) => ({
-        nome: String(pick(p, ["nome", "razao_social", "fantasia", "cliente", "nome_conta"], "—")),
-        valor_part: parseBRL(pick(p, ["valormercado_part", "valor_mercado_part", "valor_part"])),
-      }))
-    : [];
-  const familiaNome = participacoes[0]?.nome || "Sem família";
-  const familia_id = slugify(familiaNome) || "sem-familia";
+
+  // Determine family: prefer linked account; fall back to first participação name.
+  let familia_id = "sem-familia";
+  let familia_nome = "Sem família";
+  if (familiaCandidates.size > 0 && familiaIndex) {
+    // Pick the family with the largest aggregated participação value.
+    const [winnerId] = Array.from(familiaCandidates.entries()).sort((a, b) => b[1] - a[1])[0];
+    familia_id = winnerId;
+    familia_nome = familiaIndex.byId.get(winnerId)?.nome ?? familia_nome;
+  } else if (participacoes[0]?.nome && participacoes[0].nome !== "—") {
+    familia_nome = participacoes[0].nome;
+    familia_id = slugify(familia_nome) || "sem-familia";
+  }
 
   return {
     cod_imovel,
@@ -105,11 +229,11 @@ export const adaptImovel = (raw: any): Imovel => {
     lng,
     fotos,
     familia_id,
-    familia_nome: familiaNome,
+    familia_nome,
   };
 };
 
-/** Derive families dynamically from imoveis (group by participacoes[0].nome). */
+/** Derive families dynamically from imoveis (fallback when no contas endpoint). */
 export const deriveFamiliasFromImoveis = (imoveis: Imovel[]): Familia[] => {
   const map = new Map<string, string>();
   for (const i of imoveis) {
@@ -117,13 +241,15 @@ export const deriveFamiliasFromImoveis = (imoveis: Imovel[]): Familia[] => {
       map.set(i.familia_id, i.familia_nome || "Sem família");
     }
   }
-  return Array.from(map.entries()).map(([id, nome]) => {
-    const colorIdx = Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % FAMILY_PALETTE.length;
-    return { id, nome, cor_avatar: FAMILY_PALETTE[colorIdx], membros: [] };
-  });
+  return Array.from(map.entries()).map(([id, nome]) => ({
+    id,
+    nome,
+    cor_avatar: colorFor(id),
+    membros: [],
+  }));
 };
 
-/** Group properties by family and compute KPIs (replaces mock helpers). */
+/** Group properties by family and compute KPIs. */
 export const computeFamiliaKpis = (imoveis: Imovel[], familiaId: string) => {
   const list = imoveis.filter((i) => i.familia_id === familiaId);
   const valor_mercado = list.reduce((s, i) => s + i.valor_mercado, 0);
