@@ -45,17 +45,66 @@ const normalizeClassificacao = (raw: unknown): Classificacao => {
   return "Residencial";
 };
 
-/** Extract list from common Lidderar envelopes ({DADOS:[]}, {data:[]}, []). */
+/** Extract list from common Lidderar envelopes (handles nested {DADOS:{DADOS:[]}}). */
 export const extractList = (payload: any): any[] => {
+  if (!payload) return [];
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.DADOS)) return payload.DADOS;
+  // Nested: { TYPE, DADOS: { DADOS: [...] } }
+  if (payload?.DADOS && typeof payload.DADOS === "object" && Array.isArray(payload.DADOS.DADOS)) {
+    return payload.DADOS.DADOS;
+  }
   if (Array.isArray(payload?.dados)) return payload.dados;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.imoveis)) return payload.imoveis;
   if (Array.isArray(payload?.contas)) return payload.contas;
+  if (Array.isArray(payload?.clientes)) return payload.clientes;
   if (Array.isArray(payload?.results)) return payload.results;
   return [];
 };
+
+// ──────────────────────────────────────────────────────────────────────────
+// Cliente adapter — from /cadastros/clientes/getall
+// ──────────────────────────────────────────────────────────────────────────
+export type PerfilCliente = "Family Office" | "Banco de Dados" | "Lidderar" | "Outro";
+
+export interface Cliente {
+  id: number;
+  nome: string;
+  perfil: PerfilCliente;
+  tipo: "cliente" | "empresa";
+}
+
+const normalizePerfil = (raw: unknown): PerfilCliente => {
+  const s = String(raw ?? "").toLowerCase().trim();
+  if (s.includes("family")) return "Family Office";
+  if (s.includes("banco")) return "Banco de Dados";
+  if (s.includes("lidderar")) return "Lidderar";
+  return "Outro";
+};
+
+export const adaptCliente = (raw: any): Cliente => {
+  const id = Number(pick(raw, ["id_cliente", "id_empresa", "id", "cod_cliente", "chave"], 0));
+  const nome = String(pick(raw, ["nome", "razao_social", "fantasia", "nome_cliente"], "—"));
+  const perfil = normalizePerfil(pick(raw, ["perfil", "perfil_cliente", "tipo_perfil", "categoria"]));
+  const tipoRaw = String(pick(raw, ["tipo", "tipo_pessoa"], "")).toLowerCase();
+  const tipo: "cliente" | "empresa" =
+    tipoRaw.includes("empresa") || tipoRaw.includes("juridic") || raw?.id_empresa ? "empresa" : "cliente";
+  return { id, nome, perfil, tipo };
+};
+
+/** Build lookup: id → perfil (separate maps for clientes and empresas). */
+export const buildPerfilIndex = (clientes: Cliente[]) => {
+  const clienteToPerfil = new Map<number, PerfilCliente>();
+  const empresaToPerfil = new Map<number, PerfilCliente>();
+  for (const c of clientes) {
+    if (!c.id) continue;
+    if (c.tipo === "empresa") empresaToPerfil.set(c.id, c.perfil);
+    else clienteToPerfil.set(c.id, c.perfil);
+  }
+  return { clienteToPerfil, empresaToPerfil };
+};
+export type PerfilIndex = ReturnType<typeof buildPerfilIndex>;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Família (conta) adapter — from /cadastros/conta/getall
