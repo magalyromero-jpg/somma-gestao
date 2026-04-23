@@ -13,13 +13,13 @@ export function useImoveis() {
   return { ...query, imoveis };
 }
 
-/** All families/accounts from Lidderar, normalized + augmented with property counts. */
+/** Families derived dynamically from /imoveis/getall (groups by participacoes[0].nome). */
 export function useFamilias() {
-  const query = useLidderar<unknown>("/cadastros/conta/getall");
-  const familias = useMemo<Familia[]>(
-    () => extractList(query.data).map(adaptFamilia),
-    [query.data],
-  );
+  const query = useLidderar<unknown>("/imoveis/getall");
+  const familias = useMemo<Familia[]>(() => {
+    const imoveis = extractList(query.data).map(adaptImovel).filter((i) => i.cod_imovel > 0);
+    return deriveFamiliasFromImoveis(imoveis);
+  }, [query.data]);
   return { ...query, familias };
 }
 
