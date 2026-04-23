@@ -14,8 +14,8 @@ const tokenPreview = (token: string | null | undefined) =>
 const BROWSER_HEADERS = {
   Accept: "application/json, text/plain, */*",
   "X-Requested-With": "XMLHttpRequest",
-  Referer: "https://sistema.lidderar.com.br/",
-  Origin: "https://sistema.lidderar.com.br",
+    Referer: "https://sistema.sommamfo.com.br/",
+  Origin: "https://sistema.sommamfo.com.br",
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 };
