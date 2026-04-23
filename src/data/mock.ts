@@ -50,6 +50,7 @@ export interface Imovel {
   contratos_anteriores?: Contrato[];
   familia_id: string;
   familia_nome?: string;
+  perfis?: string[];
 }
 
 export interface Familia {

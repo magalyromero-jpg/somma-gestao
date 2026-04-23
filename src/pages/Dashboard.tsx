@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useFamilias, useImoveis } from "@/hooks/useApiData";
 import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
 import { formatBRL } from "@/lib/format";
@@ -11,6 +12,10 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
+import { cn } from "@/lib/utils";
+
+const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
+type Perfil = (typeof PERFIS)[number];
 
 const STATUS_COLORS: Record<string, string> = {
   Locado: "hsl(var(--success))",
@@ -25,7 +30,13 @@ const CLASS_COLORS = ["hsl(var(--primary))", "hsl(var(--gold))", "hsl(var(--info
 
 export default function Dashboard() {
   const { familias, isLoading: lf, error: ef } = useFamilias();
-  const { imoveis, isLoading: li, error: ei } = useImoveis();
+  const { imoveis: allImoveis, isLoading: li, error: ei } = useImoveis();
+  const [perfilFilter, setPerfilFilter] = useState<Perfil | null>(null);
+
+  const imoveis = useMemo(
+    () => (perfilFilter ? allImoveis.filter((i) => i.perfis?.includes(perfilFilter)) : allImoveis),
+    [allImoveis, perfilFilter],
+  );
 
   const isLoading = lf || li;
   const error = ef || ei;
@@ -77,6 +88,42 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title="Dashboard" subtitle="Visão consolidada do portfólio Somma" />
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setPerfilFilter(null)}
+          className={cn(
+            "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+            !perfilFilter
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-muted-foreground border-border hover:border-foreground/40",
+          )}
+        >
+          Todos
+        </button>
+        {PERFIS.map((p) => {
+          const active = perfilFilter === p;
+          return (
+            <button
+              key={p}
+              onClick={() => setPerfilFilter(active ? null : p)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                active
+                  ? "bg-gold text-background border-gold"
+                  : "bg-background text-muted-foreground border-border hover:border-gold/60",
+              )}
+            >
+              {p}
+            </button>
+          );
+        })}
+        {perfilFilter && (
+          <Badge variant="outline" className="ml-2">
+            {imoveis.length} de {allImoveis.length} imóveis
+          </Badge>
+        )}
+      </div>
 
       {error && <ErrorState error={error} hint="Verifique o token Lidderar em /configuracoes." />}
       {isLoading && <LoadingSkeleton rows={6} />}
