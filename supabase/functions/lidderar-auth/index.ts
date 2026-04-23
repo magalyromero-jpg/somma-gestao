@@ -8,32 +8,27 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const LOGIN_URL = "https://sistema.sommamfo.com.br/api/auth/login";
+
 const BROWSER_HEADERS = {
   Accept: "application/json, text/plain, */*",
   "Content-Type": "application/json",
   "X-Requested-With": "XMLHttpRequest",
-  Referer: "https://sistema.lidderar.com.br/",
-  Origin: "https://sistema.lidderar.com.br",
+  Referer: "https://sistema.sommamfo.com.br/",
+  Origin: "https://sistema.sommamfo.com.br",
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 };
 
-/**
- * Tenta extrair um token de uma resposta heterogênea.
- * Lidderar pode retornar token em diversos campos — testamos os mais comuns.
- */
 function extractToken(data: unknown, headers: Headers): string | null {
-  // 1. Header Authorization
   const auth = headers.get("authorization") || headers.get("Authorization");
   if (auth) {
     const m = auth.match(/Bearer\s+(.+)/i);
     if (m) return m[1].trim();
     return auth.trim();
   }
-
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, any>;
-
   const candidates = [
     obj.token,
     obj.TOKEN,
@@ -46,8 +41,6 @@ function extractToken(data: unknown, headers: Headers): string | null {
     obj?.DADOS?.TOKEN,
     obj?.DADOS?.access_token,
     obj?.dados?.token,
-    obj?.user?.token,
-    obj?.usuario?.token,
   ];
   for (const c of candidates) {
     if (typeof c === "string" && c.length > 10) return c;
@@ -55,79 +48,38 @@ function extractToken(data: unknown, headers: Headers): string | null {
   return null;
 }
 
-/** Endpoints candidatos — Lidderar não tem doc pública, então tentamos vários. */
-const LOGIN_ENDPOINTS = [
-  "/auth/login",
-  "/login",
-  "/usuarios/login",
-  "/usuario/login",
-  "/cadastros/usuario/login",
-];
-
-/** Variações de payload que diferentes APIs aceitam. */
-function payloadVariants(usuario: string, senha: string): Array<Record<string, string>> {
-  return [
-    { usuario, senha },
-    { email: usuario, senha },
-    { email: usuario, password: senha },
-    { login: usuario, senha },
-    { login: usuario, password: senha },
-    { user: usuario, password: senha },
-  ];
-}
-
 export async function attemptLogin(
   usuario: string,
   senha: string,
-): Promise<{ token: string; endpoint: string; payloadKeys: string[] } | null> {
-  for (const endpoint of LOGIN_ENDPOINTS) {
-    const url = `https://sistema.lidderar.com.br/api${endpoint}`;
-    for (const payload of payloadVariants(usuario, senha)) {
-      try {
-        console.log(
-          "[lidderar-auth] tentando",
-          url,
-          "com chaves:",
-          Object.keys(payload).join(","),
-        );
-        const res = await fetch(url, {
-          method: "POST",
-          headers: BROWSER_HEADERS,
-          body: JSON.stringify(payload),
-        });
-        const text = await res.text();
-        console.log(
-          "[lidderar-auth] resposta",
-          res.status,
-          "body[:300]:",
-          text.slice(0, 300),
-        );
+): Promise<{ token: string; raw: unknown } | null> {
+  try {
+    console.log("[lidderar-auth] POST", LOGIN_URL, "usuario:", usuario);
+    const res = await fetch(LOGIN_URL, {
+      method: "POST",
+      headers: BROWSER_HEADERS,
+      body: JSON.stringify({ usuario, senha }),
+    });
+    const text = await res.text();
+    console.log("[lidderar-auth] status", res.status, "body[:500]:", text.slice(0, 500));
+    if (!res.ok) return null;
 
-        if (!res.ok) continue;
-
-        let data: unknown;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          continue;
-        }
-
-        const token = extractToken(data, res.headers);
-        if (token) {
-          console.log(
-            "[lidderar-auth] token encontrado em",
-            endpoint,
-            "(primeiros 20):",
-            token.slice(0, 20),
-          );
-          return { token, endpoint, payloadKeys: Object.keys(payload) };
-        }
-      } catch (e) {
-        console.error("[lidderar-auth] erro em", url, e);
-      }
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return null;
     }
+    const token = extractToken(data, res.headers);
+    if (token) {
+      console.log("[lidderar-auth] token obtido (20):", token.slice(0, 20));
+      return { token, raw: data };
+    }
+    console.warn("[lidderar-auth] login OK mas token não encontrado na resposta");
+    return null;
+  } catch (e) {
+    console.error("[lidderar-auth] erro:", e);
+    return null;
   }
-  return null;
 }
 
 serve(async (req) => {
@@ -144,7 +96,6 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     let { usuario, senha } = body as { usuario?: string; senha?: string };
 
-    // Se não vieram no body, busca em configuracoes (modo automático).
     if (!usuario || !senha) {
       const [{ data: u }, { data: s }] = await Promise.all([
         supabase.from("configuracoes").select("valor").eq("chave", "lidderar_usuario").maybeSingle(),
@@ -158,7 +109,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error:
-            "Credenciais Lidderar não configuradas. Salve usuário e senha em /configuracoes.",
+            "Credenciais não configuradas. Salve usuário e senha em /configuracoes.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -169,13 +120,12 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error:
-            "Falha ao autenticar na Lidderar. Verifique usuário/senha ou veja os logs da função para o endpoint correto.",
+            "Falha ao autenticar. Verifique usuário/senha ou veja os logs da função.",
         }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Persiste token + credenciais (upsert).
     await supabase.from("configuracoes").upsert([
       { chave: "lidderar_bearer_token", valor: result.token },
       { chave: "lidderar_usuario", valor: usuario },
@@ -186,8 +136,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ok: true,
-        endpoint_usado: result.endpoint,
-        payload_keys: result.payloadKeys,
+        endpoint_usado: LOGIN_URL,
         token_preview: result.token.slice(0, 20),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
