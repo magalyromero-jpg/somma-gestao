@@ -73,11 +73,14 @@ export const adaptImovel = (raw: any): Imovel => {
   const fotos: string[] = Array.isArray(raw?.fotos_imovel)
     ? raw.fotos_imovel.map((f: any) => f?.url || f?.foto || f).filter(Boolean)
     : [];
-  const familiaRaw = raw?.participacoes?.[0];
-  const familia_id = String(
-    pick(familiaRaw ?? {}, ["cod_conta", "id_conta", "conta_id"]) ??
-      pick(raw, ["cod_conta", "conta_id"], "sem-familia"),
-  );
+  const participacoes: Array<{ nome: string; valor_part: number }> = Array.isArray(raw?.participacoes)
+    ? raw.participacoes.map((p: any) => ({
+        nome: String(pick(p, ["nome", "razao_social", "fantasia", "cliente", "nome_conta"], "—")),
+        valor_part: parseBRL(pick(p, ["valormercado_part", "valor_mercado_part", "valor_part"])),
+      }))
+    : [];
+  const familiaNome = participacoes[0]?.nome || "Sem família";
+  const familia_id = slugify(familiaNome) || "sem-familia";
 
   return {
     cod_imovel,
