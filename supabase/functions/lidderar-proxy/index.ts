@@ -108,7 +108,7 @@ serve(async (req) => {
       params && Object.keys(params).length > 0
         ? "?" + new URLSearchParams(params).toString()
         : "";
-    const url = `https://sistema.lidderar.com.br/api${endpoint}${qs}`;
+    const url = `https://sistema.sommamfo.com.br/api${endpoint}${qs}`;
 
     console.log("[lidderar-proxy] →", url);
     let response = await fetchLidderar(url, token!);
