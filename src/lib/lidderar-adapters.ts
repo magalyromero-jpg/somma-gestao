@@ -187,27 +187,34 @@ export const adaptFamilia = (raw: any): Familia => {
 };
 
 /**
- * Adapt a Lidderar property record. Sums monetary fields across ALL participacoes
- * (because each participação represents a fractional ownership).
- * If a `familiaIndex` is provided, links the property to a real family account
- * via cliente_part / empresa_part ids.
+ * Adapt a Lidderar property record. Sums monetary fields across ALL participacoes.
+ * Family resolution priority:
+ *   1. Lidderar conta index (cliente_part / empresa_part → conta)
+ *   2. Supabase familia_membros mapping (lidderar_entity_id → familia_id)
+ *   3. Fallback to first participação name
+ * Also tags the property with the set of perfis (Family Office / Banco de Dados / Lidderar)
+ * derived from its participantes.
  */
-export const adaptImovel = (raw: any, familiaIndex?: FamiliaIndex): Imovel => {
+export const adaptImovel = (
+  raw: any,
+  familiaIndex?: FamiliaIndex,
+  perfilIndex?: PerfilIndex,
+  membrosIndex?: { clienteToFamilia: Map<number, string>; empresaToFamilia: Map<number, string> },
+): Imovel => {
   const cod_imovel = Number(pick(raw, ["cod_imovel", "codigo", "id", "chave"], 0));
 
-  // Property-level fallbacks (some endpoints return values at root too)
   const rootValorMercado = parseBRL(pick(raw, ["valor_mercado", "valor_venda", "valorMercado"]));
   const rootValorCompra = parseBRL(pick(raw, ["valor_aquisitivo", "valor_compra", "valor_aquisicao"]));
   const rootAluguel = parseBRL(pick(raw, ["valor_aluguel_mercado", "valor_aluguel", "aluguel"]));
 
   const participacoesRaw: any[] = Array.isArray(raw?.participacoes) ? raw.participacoes : [];
 
-  // Sum participation values and resolve family from ids when possible.
   let sumMercado = 0;
   let sumCompra = 0;
   let sumAluguel = 0;
   const participacoes: Array<{ nome: string; valor_part: number }> = [];
   const familiaCandidates = new Map<string, number>();
+  const perfisSet = new Set<string>();
 
   for (const p of participacoesRaw) {
     const valor_part = parseBRL(pick(p, ["valormercado_part", "valor_mercado_part", "valor_part"]));
@@ -220,14 +227,32 @@ export const adaptImovel = (raw: any, familiaIndex?: FamiliaIndex): Imovel => {
     const nome = String(pick(p, ["nome", "razao_social", "fantasia", "cliente", "nome_conta"], "—"));
     participacoes.push({ nome, valor_part });
 
+    const cid = Number(pick(p, ["cliente_part", "id_cliente", "cliente_id", "cod_cliente"], 0));
+    const eid = Number(pick(p, ["empresa_part", "id_empresa", "empresa_id", "cod_empresa"], 0));
+
+    // 1. Lidderar conta mapping
     if (familiaIndex) {
-      const cid = Number(pick(p, ["cliente_part", "id_cliente", "cliente_id", "cod_cliente"], 0));
-      const eid = Number(pick(p, ["empresa_part", "id_empresa", "empresa_id", "cod_empresa"], 0));
       const fid =
         (cid && familiaIndex.clienteToFamilia.get(cid)) ||
         (eid && familiaIndex.empresaToFamilia.get(eid)) ||
         null;
       if (fid) familiaCandidates.set(fid, (familiaCandidates.get(fid) ?? 0) + (valor_part || 1));
+    }
+    // 2. Supabase familia_membros override (manual mapping)
+    if (membrosIndex) {
+      const fid =
+        (cid && membrosIndex.clienteToFamilia.get(cid)) ||
+        (eid && membrosIndex.empresaToFamilia.get(eid)) ||
+        null;
+      if (fid) familiaCandidates.set(fid, (familiaCandidates.get(fid) ?? 0) + (valor_part || 1) + 1000);
+    }
+    // 3. Perfil tagging
+    if (perfilIndex) {
+      const perfil =
+        (cid && perfilIndex.clienteToPerfil.get(cid)) ||
+        (eid && perfilIndex.empresaToPerfil.get(eid)) ||
+        null;
+      if (perfil) perfisSet.add(perfil);
     }
   }
 
@@ -244,14 +269,12 @@ export const adaptImovel = (raw: any, familiaIndex?: FamiliaIndex): Imovel => {
     ? raw.fotos_imovel.map((f: any) => f?.url || f?.foto || f).filter(Boolean)
     : [];
 
-  // Determine family: prefer linked account; fall back to first participação name.
   let familia_id = "sem-familia";
   let familia_nome = "Sem família";
-  if (familiaCandidates.size > 0 && familiaIndex) {
-    // Pick the family with the largest aggregated participação value.
+  if (familiaCandidates.size > 0) {
     const [winnerId] = Array.from(familiaCandidates.entries()).sort((a, b) => b[1] - a[1])[0];
     familia_id = winnerId;
-    familia_nome = familiaIndex.byId.get(winnerId)?.nome ?? familia_nome;
+    familia_nome = familiaIndex?.byId.get(winnerId)?.nome ?? winnerId;
   } else if (participacoes[0]?.nome && participacoes[0].nome !== "—") {
     familia_nome = participacoes[0].nome;
     familia_id = slugify(familia_nome) || "sem-familia";
@@ -279,6 +302,7 @@ export const adaptImovel = (raw: any, familiaIndex?: FamiliaIndex): Imovel => {
     fotos,
     familia_id,
     familia_nome,
+    perfis: Array.from(perfisSet),
   };
 };
 
