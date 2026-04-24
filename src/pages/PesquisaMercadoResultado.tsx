@@ -1,23 +1,24 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, SearchX } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import MarketResultsDashboard from "@/components/market/MarketResultsDashboard";
 import MarketMapView from "@/components/market/MarketMapView";
 import { LoadingSkeleton } from "@/components/LoadingState";
-import { mockSearchResult, type MarketSearchResult, type Finalidade } from "@/data/marketSearchMock";
+import type { MarketSearchParams, MarketSearchResult, Finalidade } from "@/data/marketSearchMock";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function PesquisaMercadoResultado() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [params, setParams] = useState<MarketSearchParams | null>(null);
   const [result, setResult] = useState<MarketSearchResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isMock, setIsMock] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -37,12 +38,12 @@ export default function PesquisaMercadoResultado() {
       const data = searchRes.data;
       if (searchRes.error || !data) {
         toast.error("Pesquisa não encontrada");
-        setResult(null);
+        setNotFound(true);
         setLoading(false);
         return;
       }
 
-      const params = {
+      const p: MarketSearchParams = {
         uf: data.uf,
         cidade: data.cidade,
         bairro: data.bairro ?? "",
@@ -55,6 +56,7 @@ export default function PesquisaMercadoResultado() {
         finalidade: (data.finalidade as Finalidade) ?? "venda",
         raio: data.raio ?? 500,
       };
+      setParams(p);
 
       const listings = listingsRes.data ?? [];
       const hasRealData = listings.length > 0 && metricsRes.data && conclusionsRes.data;
@@ -64,7 +66,7 @@ export default function PesquisaMercadoResultado() {
         const c = conclusionsRes.data!;
         setResult({
           id: data.id,
-          params,
+          params: p,
           listings: listings.map((l) => ({
             id: l.id,
             titulo: l.titulo ?? "",
@@ -97,12 +99,9 @@ export default function PesquisaMercadoResultado() {
             competitividade: c.competitividade ?? "",
             estimativaAtivo: Number(c.estimativa_ativo ?? 0),
           },
-
         });
-        setIsMock(false);
       } else {
-        setResult({ ...mockSearchResult, id: data.id, params });
-        setIsMock(true);
+        setResult(null);
       }
       setLoading(false);
     })();
@@ -113,7 +112,8 @@ export default function PesquisaMercadoResultado() {
   }, [id]);
 
   if (loading) return <LoadingSkeleton rows={6} />;
-  if (!result) {
+
+  if (notFound || !params) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground font-light">Pesquisa não encontrada.</p>
@@ -123,8 +123,6 @@ export default function PesquisaMercadoResultado() {
       </div>
     );
   }
-
-  const { params } = result;
 
   return (
     <>
@@ -145,17 +143,6 @@ export default function PesquisaMercadoResultado() {
         }`}
       />
 
-      {isMock && (
-        <Alert className="mb-6 border-warning/40 bg-warning/5">
-          <Info className="h-4 w-4 text-warning" strokeWidth={1.75} />
-          <AlertDescription className="font-light text-sm">
-            <strong className="font-medium">Dados de exemplo.</strong> A busca real
-            não retornou anúncios — verifique se a Custom Search JSON API está
-            habilitada no projeto Google Cloud associado à chave configurada.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="mb-6 flex flex-wrap gap-2">
         {params.tipologias.map((t) => (
           <Badge key={t} variant="secondary" className="font-light">{t}</Badge>
@@ -169,10 +156,35 @@ export default function PesquisaMercadoResultado() {
         ))}
       </div>
 
-      <div className="space-y-6">
-        <MarketMapView result={result} />
-        <MarketResultsDashboard result={result} />
-      </div>
+      {result ? (
+        <div className="space-y-6">
+          <MarketMapView result={result} />
+          <MarketResultsDashboard result={result} />
+        </div>
+      ) : (
+        <Card className="border-border/60">
+          <CardContent className="py-16 flex flex-col items-center text-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-muted grid place-items-center">
+              <SearchX className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-light tracking-tight text-foreground">
+              Nenhum anúncio encontrado
+            </h3>
+            <p className="text-sm font-light text-muted-foreground max-w-md">
+              Não localizamos anúncios para os parâmetros informados. Tente
+              ajustar a metragem, o bairro ou os portais selecionados.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => navigate("/pesquisa-mercado")}
+            >
+              Ajustar pesquisa
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
