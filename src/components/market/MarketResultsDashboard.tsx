@@ -5,7 +5,8 @@ import type { MarketSearchResult } from "@/data/marketSearchMock";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmtM2 = (v: number) => `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/m²`;
+const fmtM2 = (v: number | null | undefined) =>
+  v == null ? "—" : `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/m²`;
 
 const Metric = ({
   label,
