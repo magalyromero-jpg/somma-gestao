@@ -5,7 +5,8 @@ import type { MarketSearchResult } from "@/data/marketSearchMock";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmtM2 = (v: number) => `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/m²`;
+const fmtM2 = (v: number | null | undefined) =>
+  v == null ? "—" : `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/m²`;
 
 const Metric = ({
   label,
@@ -75,7 +76,7 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
   return (
     <div className="space-y-6">
       {/* Métricas principais */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
         <Metric label="Média R$/m²" value={fmtM2(metricas.media)} />
         <Metric label="Mediana R$/m²" value={fmtM2(metricas.mediana)} />
         <Metric
@@ -90,6 +91,11 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
         />
         <Metric label="Anúncios" value={String(metricas.total)} />
         <Metric label="Desvio padrão" value={fmtM2(metricas.desvioPadrao)} />
+        <Metric
+          label="Tempo médio no mercado"
+          value={metricas.tempoMedioMercado != null ? `${metricas.tempoMedioMercado} dias` : "—"}
+          hint={metricas.tempoMedioMercado == null ? "Sem dados nos snippets" : undefined}
+        />
       </div>
 
       {/* Range strip */}
@@ -196,8 +202,11 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-light">
-                    Origem: {l.portal}
+                  <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground font-light">
+                    <span>Origem: {l.portal}</span>
+                    {l.diasNoMercado != null && (
+                      <span className="text-foreground/70">· {l.diasNoMercado} dias no mercado</span>
+                    )}
                   </div>
                   {l.url && (
                     <a

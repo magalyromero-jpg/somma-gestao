@@ -239,6 +239,7 @@ export type Database = {
       market_listings: {
         Row: {
           created_at: string
+          dias_no_mercado: number | null
           dorms: number | null
           endereco: string | null
           id: string
@@ -256,6 +257,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dias_no_mercado?: number | null
           dorms?: number | null
           endereco?: string | null
           id?: string
@@ -273,6 +275,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dias_no_mercado?: number | null
           dorms?: number | null
           endereco?: string | null
           id?: string
@@ -312,6 +315,7 @@ export type Database = {
           minimo_valor: number | null
           portais: Json | null
           search_id: string
+          tempo_medio_mercado: number | null
           tipologias: Json | null
           total: number | null
         }
@@ -328,6 +332,7 @@ export type Database = {
           minimo_valor?: number | null
           portais?: Json | null
           search_id: string
+          tempo_medio_mercado?: number | null
           tipologias?: Json | null
           total?: number | null
         }
@@ -344,6 +349,7 @@ export type Database = {
           minimo_valor?: number | null
           portais?: Json | null
           search_id?: string
+          tempo_medio_mercado?: number | null
           tipologias?: Json | null
           total?: number | null
         }

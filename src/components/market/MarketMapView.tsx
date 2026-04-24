@@ -69,7 +69,7 @@ export default function MarketMapView({ result }: { result: MarketSearchResult }
                   strokeWidth={1.5}
                 />
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-foreground text-background rounded px-2 py-1 text-[10px] whitespace-nowrap font-light">
-                  {l.tipologia} · {l.m2}m² · R$ {l.precoM2.toLocaleString("pt-BR")}/m²
+                  {l.tipologia} · {l.m2}m² · {l.precoM2 != null ? `R$ ${l.precoM2.toLocaleString("pt-BR")}/m²` : "—"}
                 </div>
               </div>
             );

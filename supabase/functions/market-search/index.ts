@@ -41,6 +41,37 @@ interface ListingDraft {
   url: string;
   lat: number | null;
   lng: number | null;
+  dias_no_mercado: number | null;
+}
+
+// ---- Filtros para distinguir anúncio individual de página de listagem ----
+const URL_LISTAGEM = /\/(busca|search|resultado|resultados|lista|listagem)(\/|\?|$)/i;
+const URL_ANUNCIO = /(\/imovel\/|\/imoveis\/|\/anuncio\/|\/id-|\/ap-|\/casa-|\/apartamento-|\/MLB-|\/imovel-|\/p\/|\/property\/|-id-\d+)/i;
+// Títulos como "29 Kitnets à venda em Centro" ou "48 Apartamentos ..."
+const TITULO_LISTAGEM = /^\s*\d+\s+[A-Za-zÀ-ÿ]+/;
+
+function isUrlAnuncioIndividual(url: string): boolean {
+  if (!url) return false;
+  if (URL_LISTAGEM.test(url)) return false;
+  return URL_ANUNCIO.test(url);
+}
+
+function isTituloListagem(titulo: string): boolean {
+  return TITULO_LISTAGEM.test(titulo);
+}
+
+function parseDiasNoMercado(text: string): number | null {
+  // "Publicado há 3 dias", "Atualizado há 12 dias", "há 1 mês", "há 2 meses"
+  const dias = text.match(/h[aá]\s+(\d+)\s*dias?/i);
+  if (dias) return parseInt(dias[1], 10);
+  const meses = text.match(/h[aá]\s+(\d+)\s*meses?|h[aá]\s+(um|1)\s*m[eê]s/i);
+  if (meses) {
+    const n = meses[1] ? parseInt(meses[1], 10) : 1;
+    return n * 30;
+  }
+  const horas = text.match(/h[aá]\s+(\d+)\s*horas?/i);
+  if (horas) return 0;
+  return null;
 }
 
 // ---------- Mapeamento Portal -> domínio ----------
@@ -338,9 +369,11 @@ async function fetchListings(
 
   const listings: ListingDraft[] = [];
   let descartadosSemPreco = 0;
-  let descartadosPrecoM2 = 0;
   let descartadosForaLocal = 0;
   let descartadosDominio = 0;
+  let descartadosUrlListagem = 0;
+  let descartadosTituloListagem = 0;
+  let descartadosPrecoM2Invalido = 0;
 
   for (const { portal, domain } of portaisResolvidos) {
     for (const tipologia of tipologias) {
@@ -350,26 +383,43 @@ async function fetchListings(
       const baseQuery = `${termo} ${sufixoFinalidade} ${localQuery}`
         .replace(/\s+/g, " ")
         .trim();
-      const query = `${baseQuery} site:${domain}`;
+      // Forçar páginas de anúncio individual (não listagem)
+      const query = `${baseQuery} site:${domain} (inurl:imovel OR inurl:anuncio OR inurl:imoveis)`;
       console.log("Query:", query);
 
       const items = await googleSearch(apiKey, cx, query);
       for (const item of items) {
-        const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
+        const titulo = item.title ?? "";
+        const text = `${titulo} ${item.snippet ?? ""}`;
         const link = item.link ?? "";
 
-        // Reforço: link DEVE ser do domínio do portal selecionado
+        // 1. Domínio do portal selecionado
         if (link && !link.includes(domain)) {
           descartadosDominio++;
           continue;
         }
 
-        // Filtro local (bairro / endereço alvo)
+        // 2. URL deve ser de anúncio individual, não listagem
+        if (!isUrlAnuncioIndividual(link)) {
+          descartadosUrlListagem++;
+          console.log(`[parser] descartado URL listagem/inválida: ${link}`);
+          continue;
+        }
+
+        // 3. Título não pode começar com "N <plural>" (página de listagem)
+        if (isTituloListagem(titulo)) {
+          descartadosTituloListagem++;
+          console.log(`[parser] descartado título listagem: "${titulo}"`);
+          continue;
+        }
+
+        // 4. Filtro local (bairro / endereço alvo)
         if (!snippetMatchesLocal(text, s.bairro, s.endereco_alvo)) {
           descartadosForaLocal++;
           continue;
         }
 
+        // 5. Preço deve estar presente e parseável
         const preco = parsePreco(text, finalidade);
         const m2 = parseM2(text) ?? m2Mid;
         if (!preco) {
@@ -377,18 +427,25 @@ async function fetchListings(
           continue;
         }
 
-        const precoM2 = Math.round((preco / m2) * 100) / 100;
-        if (precoM2 < limits.precoM2Min || precoM2 > limits.precoM2Max) {
-          descartadosPrecoM2++;
-          console.log(
-            `[parser/${finalidade}] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
-          );
-          continue;
+        // 6. preco_m2 sempre calculado; se fora do range, salva null
+        let precoM2: number | null = m2 > 0 ? Math.round(preco / m2) : null;
+        const valido =
+          precoM2 != null &&
+          precoM2 >= limits.precoM2Min &&
+          precoM2 <= limits.precoM2Max;
+        if (!valido) {
+          descartadosPrecoM2Invalido++;
+          precoM2 = null;
         }
+        console.log(
+          `[listing] ${titulo.slice(0, 80)} | preco_total=${preco} | m2=${m2} | preco_m2=${precoM2} | válido=${valido}`,
+        );
+
+        const dias = parseDiasNoMercado(text);
 
         listings.push({
           search_id: s.id,
-          titulo: (item.title ?? "").slice(0, 280),
+          titulo: titulo.slice(0, 280),
           endereco: `${s.endereco_alvo ? s.endereco_alvo + " — " : ""}${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
           m2,
           dorms: cat === "residencial" ? parseDorms(text) : 0,
@@ -400,13 +457,14 @@ async function fetchListings(
           url: link,
           lat: null,
           lng: null,
+          dias_no_mercado: dias,
         });
       }
     }
   }
 
   console.log(
-    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2} descartados_fora_local=${descartadosForaLocal} descartados_dominio=${descartadosDominio}`,
+    `[parser/${finalidade}] aceitos=${listings.length} sem_preco=${descartadosSemPreco} fora_local=${descartadosForaLocal} dominio=${descartadosDominio} url_listagem=${descartadosUrlListagem} titulo_listagem=${descartadosTituloListagem} preco_m2_invalido=${descartadosPrecoM2Invalido}`,
   );
   return listings;
 }
@@ -429,8 +487,15 @@ function stddev(values: number[]): number {
 }
 
 function computeMetrics(search_id: string, listings: ListingDraft[]) {
+  // Para média/mediana de R$/m² ignoramos preco_m2=null (fora de range)
+  const precosM2Validos = listings
+    .map((l) => l.preco_m2)
+    .filter((v): v is number => v != null && v > 0);
   const precos = listings.map((l) => l.preco);
-  const media = precos.reduce((a, b) => a + b, 0) / (precos.length || 1);
+  const media = precosM2Validos.length
+    ? precosM2Validos.reduce((a, b) => a + b, 0) / precosM2Validos.length
+    : 0;
+  const mediana = median(precosM2Validos);
 
   const min = listings.reduce((a, b) => (a.preco < b.preco ? a : b));
   const max = listings.reduce((a, b) => (a.preco > b.preco ? a : b));
@@ -440,10 +505,17 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
   const portalMap = new Map<string, number>();
   for (const l of listings) portalMap.set(l.portal, (portalMap.get(l.portal) ?? 0) + 1);
 
+  const dias = listings
+    .map((l) => l.dias_no_mercado)
+    .filter((v): v is number => v != null && v >= 0);
+  const tempoMedioMercado = dias.length
+    ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length)
+    : null;
+
   return {
     search_id,
     media: Math.round(media),
-    mediana: Math.round(median(precos)),
+    mediana: Math.round(mediana),
     minimo_valor: min.preco,
     minimo_m2: min.m2,
     minimo_tipologia: min.tipologia,
@@ -452,6 +524,7 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
     maximo_tipologia: max.tipologia,
     total: listings.length,
     desvio_padrao: Math.round(stddev(precos)),
+    tempo_medio_mercado: tempoMedioMercado,
     tipologias: Array.from(tipoMap, ([tipo, count]) => ({
       tipo,
       count,
@@ -462,13 +535,17 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
 }
 
 function computeConclusions(search_id: string, listings: ListingDraft[]) {
-  const precosM2 = listings.map((l) => l.preco_m2);
-  const mediaM2 = precosM2.reduce((a, b) => a + b, 0) / (precosM2.length || 1);
+  const precosM2 = listings
+    .map((l) => l.preco_m2)
+    .filter((v): v is number => v != null && v > 0);
+  const mediaM2 = precosM2.length
+    ? precosM2.reduce((a, b) => a + b, 0) / precosM2.length
+    : 0;
   const tipoMap = new Map<string, number>();
   for (const l of listings) tipoMap.set(l.tipologia, (tipoMap.get(l.tipologia) ?? 0) + 1);
   const dominante = [...tipoMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
   const m2Medio = listings.reduce((a, b) => a + b.m2, 0) / (listings.length || 1);
-  const estimativa = Math.round(m2Medio * median(precosM2));
+  const estimativa = precosM2.length ? Math.round(m2Medio * median(precosM2)) : 0;
 
   return {
     search_id,
