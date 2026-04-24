@@ -268,6 +268,9 @@ async function fetchListings(
   const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
   const m2Mid =
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
+  const finalidade = normalizeFinalidade(s.finalidade);
+  const limits = LIMITS[finalidade];
+  console.log(`[parser] finalidade=${finalidade} limites=`, limits);
 
   const listings: ListingDraft[] = [];
   let descartadosSemPreco = 0;
@@ -278,7 +281,8 @@ async function fetchListings(
     for (const tipologia of tipologias) {
       const cat = categoriaDe(tipologia);
       const termo = termoBusca(tipologia, cat);
-      const baseQuery = `${termo} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
+      const sufixoFinalidade = finalidade === "locacao" ? "aluguel" : "venda";
+      const baseQuery = `${termo} ${sufixoFinalidade} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
         .replace(/\s+/g, " ")
         .trim();
       const query = `${baseQuery} site:${domain}`;
@@ -287,18 +291,18 @@ async function fetchListings(
       const items = await googleSearch(apiKey, cx, query);
       for (const item of items) {
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
-        const preco = parsePreco(text);
+        const preco = parsePreco(text, finalidade);
         const m2 = parseM2(text) ?? m2Mid;
         if (!preco) {
           descartadosSemPreco++;
           continue;
         }
 
-        const precoM2 = Math.round(preco / m2);
-        if (precoM2 < PRECO_M2_MIN || precoM2 > PRECO_M2_MAX) {
+        const precoM2 = Math.round((preco / m2) * 100) / 100;
+        if (precoM2 < limits.precoM2Min || precoM2 > limits.precoM2Max) {
           descartadosPrecoM2++;
           console.log(
-            `[parser] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
+            `[parser/${finalidade}] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
           );
           continue;
         }
@@ -323,7 +327,7 @@ async function fetchListings(
   }
 
   console.log(
-    `[parser] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
+    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
   );
   return listings;
 }
