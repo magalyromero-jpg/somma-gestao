@@ -44,20 +44,30 @@ interface ListingDraft {
 }
 
 // ---------- Mapeamento Portal -> domínio ----------
+// Chaves normalizadas (lowercase, sem acento, sem espaços).
 const PORTAL_DOMAINS: Record<string, string> = {
-  "Viva Real": "vivareal.com.br",
-  "VivaReal": "vivareal.com.br",
-  "ZAP Imóveis": "zapimoveis.com.br",
-  "ZAP": "zapimoveis.com.br",
-  "QuintoAndar": "quintoandar.com.br",
-  "Imovelweb": "imovelweb.com.br",
-  "OLX": "olx.com.br",
-  "Loft": "loft.com.br",
-  "Chaves na Mão": "chavesnamao.com.br",
+  "vivareal": "vivareal.com.br",
+  "zap": "zapimoveis.com.br",
+  "zapimoveis": "zapimoveis.com.br",
+  "quintoandar": "quintoandar.com.br",
+  "imovelweb": "imovelweb.com.br",
+  "olx": "olx.com.br",
+  "loft": "loft.com.br",
+  "chavesnamao": "chavesnamao.com.br",
+  "mercadolivre": "mercadolivre.com.br",
 };
 
-function portalDomain(portal: string): string {
-  return PORTAL_DOMAINS[portal] ?? portal.toLowerCase().replace(/\s+/g, "") + ".com.br";
+function normKey(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function portalDomain(portal: string): string | null {
+  const key = normKey(portal);
+  return PORTAL_DOMAINS[key] ?? null;
 }
 
 // ---------- Parsers ----------
