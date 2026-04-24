@@ -369,9 +369,11 @@ async function fetchListings(
 
   const listings: ListingDraft[] = [];
   let descartadosSemPreco = 0;
-  let descartadosPrecoM2 = 0;
   let descartadosForaLocal = 0;
   let descartadosDominio = 0;
+  let descartadosUrlListagem = 0;
+  let descartadosTituloListagem = 0;
+  let descartadosPrecoM2Invalido = 0;
 
   for (const { portal, domain } of portaisResolvidos) {
     for (const tipologia of tipologias) {
@@ -381,26 +383,43 @@ async function fetchListings(
       const baseQuery = `${termo} ${sufixoFinalidade} ${localQuery}`
         .replace(/\s+/g, " ")
         .trim();
-      const query = `${baseQuery} site:${domain}`;
+      // Forçar páginas de anúncio individual (não listagem)
+      const query = `${baseQuery} site:${domain} (inurl:imovel OR inurl:anuncio OR inurl:imoveis)`;
       console.log("Query:", query);
 
       const items = await googleSearch(apiKey, cx, query);
       for (const item of items) {
-        const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
+        const titulo = item.title ?? "";
+        const text = `${titulo} ${item.snippet ?? ""}`;
         const link = item.link ?? "";
 
-        // Reforço: link DEVE ser do domínio do portal selecionado
+        // 1. Domínio do portal selecionado
         if (link && !link.includes(domain)) {
           descartadosDominio++;
           continue;
         }
 
-        // Filtro local (bairro / endereço alvo)
+        // 2. URL deve ser de anúncio individual, não listagem
+        if (!isUrlAnuncioIndividual(link)) {
+          descartadosUrlListagem++;
+          console.log(`[parser] descartado URL listagem/inválida: ${link}`);
+          continue;
+        }
+
+        // 3. Título não pode começar com "N <plural>" (página de listagem)
+        if (isTituloListagem(titulo)) {
+          descartadosTituloListagem++;
+          console.log(`[parser] descartado título listagem: "${titulo}"`);
+          continue;
+        }
+
+        // 4. Filtro local (bairro / endereço alvo)
         if (!snippetMatchesLocal(text, s.bairro, s.endereco_alvo)) {
           descartadosForaLocal++;
           continue;
         }
 
+        // 5. Preço deve estar presente e parseável
         const preco = parsePreco(text, finalidade);
         const m2 = parseM2(text) ?? m2Mid;
         if (!preco) {
@@ -408,18 +427,25 @@ async function fetchListings(
           continue;
         }
 
-        const precoM2 = Math.round((preco / m2) * 100) / 100;
-        if (precoM2 < limits.precoM2Min || precoM2 > limits.precoM2Max) {
-          descartadosPrecoM2++;
-          console.log(
-            `[parser/${finalidade}] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
-          );
-          continue;
+        // 6. preco_m2 sempre calculado; se fora do range, salva null
+        let precoM2: number | null = m2 > 0 ? Math.round(preco / m2) : null;
+        const valido =
+          precoM2 != null &&
+          precoM2 >= limits.precoM2Min &&
+          precoM2 <= limits.precoM2Max;
+        if (!valido) {
+          descartadosPrecoM2Invalido++;
+          precoM2 = null;
         }
+        console.log(
+          `[listing] ${titulo.slice(0, 80)} | preco_total=${preco} | m2=${m2} | preco_m2=${precoM2} | válido=${valido}`,
+        );
+
+        const dias = parseDiasNoMercado(text);
 
         listings.push({
           search_id: s.id,
-          titulo: (item.title ?? "").slice(0, 280),
+          titulo: titulo.slice(0, 280),
           endereco: `${s.endereco_alvo ? s.endereco_alvo + " — " : ""}${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
           m2,
           dorms: cat === "residencial" ? parseDorms(text) : 0,
@@ -431,13 +457,14 @@ async function fetchListings(
           url: link,
           lat: null,
           lng: null,
+          dias_no_mercado: dias,
         });
       }
     }
   }
 
   console.log(
-    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2} descartados_fora_local=${descartadosForaLocal} descartados_dominio=${descartadosDominio}`,
+    `[parser/${finalidade}] aceitos=${listings.length} sem_preco=${descartadosSemPreco} fora_local=${descartadosForaLocal} dominio=${descartadosDominio} url_listagem=${descartadosUrlListagem} titulo_listagem=${descartadosTituloListagem} preco_m2_invalido=${descartadosPrecoM2Invalido}`,
   );
   return listings;
 }
