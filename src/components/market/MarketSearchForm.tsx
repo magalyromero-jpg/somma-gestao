@@ -28,12 +28,20 @@ const defaults: MarketSearchParams = {
   bairro: "Itaim Bibi",
   enderecoAlvo: "",
   tipologias: ["2 dorm", "3 dorm"],
-  m2Min: 60,
-  m2Max: 120,
+  m2Min: 90,
+  m2Max: 110,
   margem: 10,
   portais: ["Viva Real", "ZAP Imóveis"],
   finalidade: "venda",
   raio: 500,
+};
+
+const computeRange = (m2: number, margem: number) => {
+  const factor = margem / 100;
+  return {
+    min: Math.max(0, Math.round(m2 * (1 - factor))),
+    max: Math.round(m2 * (1 + factor)),
+  };
 };
 
 const Chip = ({
