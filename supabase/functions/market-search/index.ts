@@ -487,8 +487,15 @@ function stddev(values: number[]): number {
 }
 
 function computeMetrics(search_id: string, listings: ListingDraft[]) {
+  // Para média/mediana de R$/m² ignoramos preco_m2=null (fora de range)
+  const precosM2Validos = listings
+    .map((l) => l.preco_m2)
+    .filter((v): v is number => v != null && v > 0);
   const precos = listings.map((l) => l.preco);
-  const media = precos.reduce((a, b) => a + b, 0) / (precos.length || 1);
+  const media = precosM2Validos.length
+    ? precosM2Validos.reduce((a, b) => a + b, 0) / precosM2Validos.length
+    : 0;
+  const mediana = median(precosM2Validos);
 
   const min = listings.reduce((a, b) => (a.preco < b.preco ? a : b));
   const max = listings.reduce((a, b) => (a.preco > b.preco ? a : b));
@@ -498,10 +505,17 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
   const portalMap = new Map<string, number>();
   for (const l of listings) portalMap.set(l.portal, (portalMap.get(l.portal) ?? 0) + 1);
 
+  const dias = listings
+    .map((l) => l.dias_no_mercado)
+    .filter((v): v is number => v != null && v >= 0);
+  const tempoMedioMercado = dias.length
+    ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length)
+    : null;
+
   return {
     search_id,
     media: Math.round(media),
-    mediana: Math.round(median(precos)),
+    mediana: Math.round(mediana),
     minimo_valor: min.preco,
     minimo_m2: min.m2,
     minimo_tipologia: min.tipologia,
@@ -510,6 +524,7 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
     maximo_tipologia: max.tipologia,
     total: listings.length,
     desvio_padrao: Math.round(stddev(precos)),
+    tempo_medio_mercado: tempoMedioMercado,
     tipologias: Array.from(tipoMap, ([tipo, count]) => ({
       tipo,
       count,
@@ -520,13 +535,17 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
 }
 
 function computeConclusions(search_id: string, listings: ListingDraft[]) {
-  const precosM2 = listings.map((l) => l.preco_m2);
-  const mediaM2 = precosM2.reduce((a, b) => a + b, 0) / (precosM2.length || 1);
+  const precosM2 = listings
+    .map((l) => l.preco_m2)
+    .filter((v): v is number => v != null && v > 0);
+  const mediaM2 = precosM2.length
+    ? precosM2.reduce((a, b) => a + b, 0) / precosM2.length
+    : 0;
   const tipoMap = new Map<string, number>();
   for (const l of listings) tipoMap.set(l.tipologia, (tipoMap.get(l.tipologia) ?? 0) + 1);
   const dominante = [...tipoMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
   const m2Medio = listings.reduce((a, b) => a + b.m2, 0) / (listings.length || 1);
-  const estimativa = Math.round(m2Medio * median(precosM2));
+  const estimativa = precosM2.length ? Math.round(m2Medio * median(precosM2)) : 0;
 
   return {
     search_id,
