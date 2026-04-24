@@ -38,7 +38,7 @@ export default function PesquisaMercado() {
       };
       const { data, error } = await supabase
         .from("market_searches")
-        .insert(payload)
+        .insert([payload])
         .select("id")
         .single();
 
