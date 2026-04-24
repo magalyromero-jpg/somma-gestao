@@ -146,8 +146,8 @@ export default function PesquisaMercadoResultado() {
       />
 
       {isMock && (
-        <Alert className="mb-6 border-amber-500/40 bg-amber-500/5">
-          <Info className="h-4 w-4 text-amber-600" strokeWidth={1.75} />
+        <Alert className="mb-6 border-warning/40 bg-warning/5">
+          <Info className="h-4 w-4 text-warning" strokeWidth={1.75} />
           <AlertDescription className="font-light text-sm">
             <strong className="font-medium">Dados de exemplo.</strong> A busca real
             não retornou anúncios — verifique se a Custom Search JSON API está
