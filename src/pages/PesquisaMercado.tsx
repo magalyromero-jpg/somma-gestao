@@ -1,28 +1,60 @@
 import { useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/PageHeader";
-import MarketSearchForm from "@/components/market/MarketSearchForm";
-import { mockSearchResult, type MarketSearchParams } from "@/data/marketSearchMock";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import MarketSearchForm from "@/components/market/MarketSearchForm";
+import { type MarketSearchParams } from "@/data/marketSearchMock";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PesquisaMercado() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (params: MarketSearchParams) => {
+  const handleSubmit = async (params: MarketSearchParams) => {
+    if (!user) {
+      toast.error("Sessão expirada", { description: "Faça login novamente." });
+      return;
+    }
+
     setLoading(true);
-    // Simula chamada à Edge Function — por ora retorna mock
-    setTimeout(() => {
-      // Persiste params no sessionStorage para que a página de resultado leia
-      const id = mockSearchResult.id;
-      const merged = { ...mockSearchResult, params };
-      sessionStorage.setItem(`market-search:${id}`, JSON.stringify(merged));
-      setLoading(false);
-      toast.success("Pesquisa concluída", {
-        description: `${mockSearchResult.metricas.total} anúncios encontrados em raio de ${params.raio < 1000 ? params.raio + "m" : params.raio / 1000 + "km"}.`,
+    try {
+      const payload = {
+        user_id: user.id,
+        status: "pendente",
+        uf: params.uf,
+        cidade: params.cidade,
+        bairro: params.bairro,
+        endereco_alvo: params.enderecoAlvo,
+        tipologias: params.tipologias,
+        m2_min: params.m2Min,
+        m2_max: params.m2Max,
+        margem: params.margem,
+        portais: params.portais,
+        finalidade: params.finalidade,
+        raio: params.raio,
+        params: params as unknown as Json,
+      };
+      const { data, error } = await supabase
+        .from("market_searches")
+        .insert([payload])
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      toast.success("Pesquisa registrada", {
+        description: "Processando dados de mercado…",
       });
-      navigate(`/pesquisa-mercado/resultado/${id}`);
-    }, 700);
+      navigate(`/pesquisa-mercado/resultado/${data.id}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Falha ao salvar pesquisa", { description: message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
