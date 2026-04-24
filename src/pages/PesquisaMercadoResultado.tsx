@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import MarketResultsDashboard from "@/components/market/MarketResultsDashboard";
 import MarketMapView from "@/components/market/MarketMapView";
-import { LoadingState } from "@/components/LoadingState";
+import { LoadingSkeleton } from "@/components/LoadingState";
 import { mockSearchResult, type MarketSearchResult, type Finalidade } from "@/data/marketSearchMock";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
