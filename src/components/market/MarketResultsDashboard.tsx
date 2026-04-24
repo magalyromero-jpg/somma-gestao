@@ -202,8 +202,11 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-light">
-                    Origem: {l.portal}
+                  <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground font-light">
+                    <span>Origem: {l.portal}</span>
+                    {l.diasNoMercado != null && (
+                      <span className="text-foreground/70">· {l.diasNoMercado} dias no mercado</span>
+                    )}
                   </div>
                   {l.url && (
                     <a
