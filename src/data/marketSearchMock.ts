@@ -53,7 +53,60 @@ export interface MarketSearchResult {
   };
 }
 
-export const UFS = ["SP", "RJ", "MG", "SC", "RS", "PR", "BA", "DF"];
+export const UFS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+];
+
+// Principais cidades por UF (lista predefinida; pesquisa livre via combobox)
+export const CIDADES_POR_UF: Record<string, string[]> = {
+  AC: ["Rio Branco", "Cruzeiro do Sul"],
+  AL: ["Maceió", "Arapiraca"],
+  AP: ["Macapá", "Santana"],
+  AM: ["Manaus", "Parintins"],
+  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Ilhéus", "Porto Seguro"],
+  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Sobral"],
+  DF: ["Brasília", "Taguatinga", "Ceilândia", "Águas Claras"],
+  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Guarapari"],
+  GO: ["Goiânia", "Aparecida de Goiânia", "Anápolis", "Caldas Novas"],
+  MA: ["São Luís", "Imperatriz"],
+  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis"],
+  MS: ["Campo Grande", "Dourados", "Três Lagoas"],
+  MG: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim", "Nova Lima", "Uberaba", "Montes Claros"],
+  PA: ["Belém", "Ananindeua", "Santarém"],
+  PB: ["João Pessoa", "Campina Grande"],
+  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel", "Foz do Iguaçu"],
+  PE: ["Recife", "Olinda", "Jaboatão dos Guararapes", "Caruaru", "Petrolina"],
+  PI: ["Teresina", "Parnaíba"],
+  RJ: ["Rio de Janeiro", "Niterói", "São Gonçalo", "Duque de Caxias", "Nova Iguaçu", "Petrópolis", "Cabo Frio", "Búzios"],
+  RN: ["Natal", "Mossoró", "Parnamirim"],
+  RS: ["Porto Alegre", "Caxias do Sul", "Canoas", "Pelotas", "Gravataí", "Novo Hamburgo"],
+  RO: ["Porto Velho", "Ji-Paraná"],
+  RR: ["Boa Vista"],
+  SC: ["Florianópolis", "Joinville", "Blumenau", "Balneário Camboriú", "Itajaí", "Chapecó", "Criciúma"],
+  SP: ["São Paulo", "Campinas", "Santos", "São José dos Campos", "Ribeirão Preto", "Sorocaba", "Guarulhos", "Santo André", "São Bernardo do Campo", "Osasco", "São Caetano do Sul", "Jundiaí", "Bauru", "Piracicaba"],
+  SE: ["Aracaju", "Nossa Senhora do Socorro"],
+  TO: ["Palmas", "Araguaína"],
+};
+
+// Bairros principais por cidade (subset curado das maiores capitais; pesquisa livre)
+export const BAIRROS_POR_CIDADE: Record<string, string[]> = {
+  "São Paulo": ["Itaim Bibi", "Vila Olímpia", "Pinheiros", "Vila Madalena", "Jardins", "Jardim Paulista", "Moema", "Brooklin", "Campo Belo", "Vila Nova Conceição", "Higienópolis", "Perdizes", "Vila Mariana", "Morumbi", "Tatuapé", "Mooca", "Santana", "Lapa", "Bela Vista", "Consolação", "Liberdade", "Itaquera", "Santo Amaro"],
+  "Rio de Janeiro": ["Ipanema", "Leblon", "Copacabana", "Botafogo", "Flamengo", "Barra da Tijuca", "Recreio dos Bandeirantes", "Tijuca", "Jardim Botânico", "Lagoa", "Gávea", "Laranjeiras", "Humaitá", "Urca", "Vila Isabel", "Méier"],
+  "Belo Horizonte": ["Savassi", "Lourdes", "Funcionários", "Belvedere", "Buritis", "Sion", "Cidade Jardim", "Anchieta", "Santo Agostinho", "Pampulha", "Castelo", "Serra"],
+  "Curitiba": ["Batel", "Água Verde", "Bigorrilho", "Centro", "Cabral", "Mercês", "Ahú", "Juvevê", "Ecoville", "Champagnat"],
+  "Porto Alegre": ["Moinhos de Vento", "Bela Vista", "Petrópolis", "Mont Serrat", "Auxiliadora", "Higienópolis", "Menino Deus", "Cidade Baixa", "Centro Histórico", "Tristeza"],
+  "Florianópolis": ["Centro", "Trindade", "Córrego Grande", "Lagoa da Conceição", "Jurerê Internacional", "Canasvieiras", "Ingleses", "Campeche", "Itacorubi", "Santa Mônica"],
+  "Brasília": ["Asa Sul", "Asa Norte", "Lago Sul", "Lago Norte", "Sudoeste", "Noroeste", "Águas Claras", "Park Sul"],
+  "Salvador": ["Barra", "Ondina", "Pituba", "Itaigara", "Caminho das Árvores", "Graça", "Vitória", "Horto Florestal", "Rio Vermelho", "Stiep"],
+  "Fortaleza": ["Meireles", "Aldeota", "Mucuripe", "Cocó", "Varjota", "Praia de Iracema", "Edson Queiroz", "Guararapes"],
+  "Recife": ["Boa Viagem", "Pina", "Casa Forte", "Espinheiro", "Graças", "Aflitos", "Madalena", "Parnamirim"],
+  "Campinas": ["Cambuí", "Nova Campinas", "Castelo", "Taquaral", "Mansões Santo Antônio", "Jardim Guanabara", "Barão Geraldo"],
+  "Santos": ["Gonzaga", "Boqueirão", "Pompeia", "Aparecida", "Embaré", "José Menino", "Ponta da Praia"],
+  "Balneário Camboriú": ["Centro", "Barra Sul", "Barra Norte", "Pioneiros", "Nova Esperança"],
+  "Goiânia": ["Setor Bueno", "Setor Marista", "Setor Oeste", "Jardim Goiás", "Setor Sul", "Alto da Glória"],
+};
 export const TIPOLOGIAS_RESIDENCIAL = [
   "Studio", "1 dorm", "2 dorm", "3 dorm", "4+ dorm",
   "Cobertura", "Garden", "Duplex", "Casa", "Sobrado",
