@@ -91,12 +91,11 @@ function parseVagas(text: string): number {
   return m ? parseInt(m[1], 10) : 1;
 }
 
-// ---------- Google Custom Search ----------
-interface GoogleItem {
+// ---------- SerpAPI ----------
+interface SerpItem {
   title?: string;
   snippet?: string;
   link?: string;
-  pagemap?: Record<string, unknown>;
 }
 
 function mask(v: string): string {
@@ -107,43 +106,51 @@ function mask(v: string): string {
 
 async function googleSearch(
   apiKey: string,
-  cx: string,
+  _cx: string,
   query: string,
-): Promise<GoogleItem[]> {
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.set("key", apiKey);
-  url.searchParams.set("cx", cx);
+): Promise<SerpItem[]> {
+  const url = new URL("https://serpapi.com/search.json");
   url.searchParams.set("q", query);
+  url.searchParams.set("api_key", apiKey);
   url.searchParams.set("num", "10");
+  url.searchParams.set("hl", "pt");
+  url.searchParams.set("gl", "br");
 
-  // Log da URL com key/cx mascarados
   const maskedUrl = new URL(url.toString());
-  maskedUrl.searchParams.set("key", mask(apiKey));
-  maskedUrl.searchParams.set("cx", mask(cx));
-  console.log("[google] GET", maskedUrl.toString());
+  maskedUrl.searchParams.set("api_key", mask(apiKey));
+  console.log("[serpapi] GET", maskedUrl.toString());
 
   const started = Date.now();
   const res = await fetch(url.toString());
   const elapsed = Date.now() - started;
   const body = await res.text();
-  console.log(`[google] ← status=${res.status} (${elapsed}ms) bytes=${body.length}`);
+  console.log(`[serpapi] ← status=${res.status} (${elapsed}ms) bytes=${body.length}`);
 
   if (!res.ok) {
-    console.error("[google] error body:", body);
+    console.error("[serpapi] error body:", body);
     return [];
   }
 
-  let data: { items?: GoogleItem[]; searchInformation?: { totalResults?: string } };
+  let data: {
+    organic_results?: SerpItem[];
+    search_information?: { total_results?: number };
+    error?: string;
+  };
   try {
     data = JSON.parse(body);
   } catch (e) {
-    console.error("[google] JSON parse failed:", e, "body:", body.slice(0, 500));
+    console.error("[serpapi] JSON parse failed:", e, "body:", body.slice(0, 500));
     return [];
   }
 
-  const items = Array.isArray(data.items) ? data.items : [];
+  if (data.error) {
+    console.error("[serpapi] api error:", data.error);
+    return [];
+  }
+
+  const items = Array.isArray(data.organic_results) ? data.organic_results : [];
   console.log(
-    `[google] totalResults=${data.searchInformation?.totalResults ?? "?"} items=${items.length}`,
+    `[serpapi] total_results=${data.search_information?.total_results ?? "?"} items=${items.length}`,
   );
   return items;
 }
@@ -308,11 +315,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
-    const cx = Deno.env.get("GOOGLE_SEARCH_CX");
-    if (!apiKey || !cx) {
+    const apiKey = Deno.env.get("SERPAPI_KEY");
+    const cx = ""; // não usado pela SerpAPI
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "GOOGLE_SEARCH_API_KEY ou GOOGLE_SEARCH_CX não configurados" }),
+        JSON.stringify({ error: "SERPAPI_KEY não configurada" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
