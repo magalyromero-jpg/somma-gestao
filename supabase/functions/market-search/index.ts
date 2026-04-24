@@ -61,46 +61,96 @@ function portalDomain(portal: string): string {
 }
 
 // ---------- Parsers ----------
-// Limites de sanidade para imóveis residenciais no Brasil
-const PRECO_MIN = 50_000;
-const PRECO_MAX = 50_000_000;
-const PRECO_M2_MIN = 1_000;
-const PRECO_M2_MAX = 50_000;
+type Finalidade = "venda" | "locacao";
 
-function parsePreco(text: string): number | null {
-  // Captura: "R$ 1.200.000", "R$1.200.000", "R$ 1.2 mi", "1.200.000 reais",
-  // "R$ 850.000,00", "R$ 1,2 milhões"
+// Limites de sanidade por finalidade
+const LIMITS = {
+  venda: {
+    precoMin: 50_000,
+    precoMax: 20_000_000,
+    precoM2Min: 1_000,
+    precoM2Max: 50_000,
+  },
+  locacao: {
+    precoMin: 500,
+    precoMax: 50_000,
+    precoM2Min: 10,
+    precoM2Max: 500,
+  },
+} as const;
+
+function normalizeFinalidade(f: string | undefined | null): Finalidade {
+  const v = (f ?? "").toLowerCase();
+  if (v.startsWith("loc") || v.startsWith("alug") || v.startsWith("rent")) return "locacao";
+  return "venda";
+}
+
+const RENT_SUFFIX = /\/\s*m[eê]s|por\s*m[eê]s|mensa(l|is)|ao\s*m[eê]s|\/m[eê]s/i;
+
+function normalizeNumberPtBr(rawNum: string): number {
+  let normalized: string;
+  if (rawNum.includes(",")) {
+    normalized = rawNum.replace(/\./g, "").replace(",", ".");
+  } else {
+    normalized = rawNum.replace(/\./g, "");
+  }
+  return parseFloat(normalized);
+}
+
+function applySuffix(value: number, suf: string): number {
+  const s = suf.toLowerCase();
+  if (s.startsWith("mi") || s.startsWith("milh")) return value * 1_000_000;
+  if (s === "mil") return value * 1_000;
+  return value;
+}
+
+function parsePrecoVenda(text: string): number | null {
   const patterns: RegExp[] = [
     /R\$\s*([\d.,]+)\s*(mi|milh[õo]es|mil)\b/i,
     /R\$\s*([\d.,]+)/i,
     /([\d.,]+)\s*(mi|milh[õo]es|mil)\s*(de\s*)?reais?/i,
     /([\d.,]+)\s*reais?/i,
   ];
+  const { precoMin, precoMax } = LIMITS.venda;
 
   for (const re of patterns) {
     const m = text.match(re);
     if (!m) continue;
-    const rawNum = m[1];
-    const suf = (m[2] ?? "").toLowerCase();
-
-    // Normaliza número PT-BR: "1.200.000,50" -> "1200000.50"; "1,2" -> "1.2"
-    let normalized: string;
-    if (rawNum.includes(",")) {
-      normalized = rawNum.replace(/\./g, "").replace(",", ".");
-    } else {
-      // sem vírgula: pontos são separadores de milhar
-      normalized = rawNum.replace(/\./g, "");
-    }
-    let value = parseFloat(normalized);
+    let value = normalizeNumberPtBr(m[1]);
     if (isNaN(value)) continue;
-
-    if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
-    else if (suf === "mil") value *= 1_000;
-
+    value = applySuffix(value, m[2] ?? "");
     value = Math.round(value);
-    if (value >= PRECO_MIN && value <= PRECO_MAX) return value;
+
+    // Se houver indicador de aluguel ao redor do match, descarta
+    const idx = m.index ?? 0;
+    const around = text.slice(Math.max(0, idx - 5), idx + m[0].length + 20);
+    if (RENT_SUFFIX.test(around)) continue;
+
+    if (value >= precoMin && value <= precoMax) return value;
   }
   return null;
+}
+
+function parsePrecoLocacao(text: string): number | null {
+  const patterns: RegExp[] = [
+    /R\$\s*([\d.,]+)\s*(?:\/\s*m[eê]s|por\s*m[eê]s|mensa(?:l|is)|ao\s*m[eê]s)/i,
+    /R\$\s*([\d.,]+)/i,
+  ];
+  const { precoMin, precoMax } = LIMITS.locacao;
+
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (!m) continue;
+    let value = normalizeNumberPtBr(m[1]);
+    if (isNaN(value)) continue;
+    value = Math.round(value);
+    if (value >= precoMin && value <= precoMax) return value;
+  }
+  return null;
+}
+
+function parsePreco(text: string, finalidade: Finalidade): number | null {
+  return finalidade === "locacao" ? parsePrecoLocacao(text) : parsePrecoVenda(text);
 }
 
 function parseM2(text: string): number | null {
@@ -218,6 +268,9 @@ async function fetchListings(
   const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
   const m2Mid =
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
+  const finalidade = normalizeFinalidade(s.finalidade);
+  const limits = LIMITS[finalidade];
+  console.log(`[parser] finalidade=${finalidade} limites=`, limits);
 
   const listings: ListingDraft[] = [];
   let descartadosSemPreco = 0;
@@ -228,7 +281,8 @@ async function fetchListings(
     for (const tipologia of tipologias) {
       const cat = categoriaDe(tipologia);
       const termo = termoBusca(tipologia, cat);
-      const baseQuery = `${termo} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
+      const sufixoFinalidade = finalidade === "locacao" ? "aluguel" : "venda";
+      const baseQuery = `${termo} ${sufixoFinalidade} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
         .replace(/\s+/g, " ")
         .trim();
       const query = `${baseQuery} site:${domain}`;
@@ -237,18 +291,18 @@ async function fetchListings(
       const items = await googleSearch(apiKey, cx, query);
       for (const item of items) {
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
-        const preco = parsePreco(text);
+        const preco = parsePreco(text, finalidade);
         const m2 = parseM2(text) ?? m2Mid;
         if (!preco) {
           descartadosSemPreco++;
           continue;
         }
 
-        const precoM2 = Math.round(preco / m2);
-        if (precoM2 < PRECO_M2_MIN || precoM2 > PRECO_M2_MAX) {
+        const precoM2 = Math.round((preco / m2) * 100) / 100;
+        if (precoM2 < limits.precoM2Min || precoM2 > limits.precoM2Max) {
           descartadosPrecoM2++;
           console.log(
-            `[parser] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
+            `[parser/${finalidade}] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
           );
           continue;
         }
@@ -273,7 +327,7 @@ async function fetchListings(
   }
 
   console.log(
-    `[parser] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
+    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
   );
   return listings;
 }
