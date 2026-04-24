@@ -22,12 +22,13 @@ export interface MarketListing {
   dorms: number;
   vagas: number;
   preco: number;
-  precoM2: number;
+  precoM2: number | null;
   portal: string;
   tipologia: string;
   url?: string;
   lat?: number;
   lng?: number;
+  diasNoMercado?: number | null;
 }
 
 export interface MarketSearchResult {
@@ -40,6 +41,7 @@ export interface MarketSearchResult {
     maximo: { valor: number; m2: number; tipologia: string };
     total: number;
     desvioPadrao: number;
+    tempoMedioMercado?: number | null;
   };
   tipologias: { tipo: string; count: number; pct: number }[];
   portais: { portal: string; count: number }[];
