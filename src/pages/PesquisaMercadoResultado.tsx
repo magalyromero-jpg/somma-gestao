@@ -42,13 +42,9 @@ export default function PesquisaMercadoResultado() {
 
       <PageHeader
         title="Resultado da pesquisa"
-        subtitle={
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5" strokeWidth={1.5} />
-            {params.bairro} · {params.cidade}/{params.uf} — raio de{" "}
-            {params.raio < 1000 ? `${params.raio}m` : `${params.raio / 1000}km`}
-          </span> as unknown as string
-        }
+        subtitle={`${params.bairro} · ${params.cidade}/${params.uf} — raio de ${
+          params.raio < 1000 ? `${params.raio}m` : `${params.raio / 1000}km`
+        }`}
       />
 
       {/* Resumo dos parâmetros */}
