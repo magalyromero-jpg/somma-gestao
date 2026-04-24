@@ -198,6 +198,225 @@ export type Database = {
           },
         ]
       }
+      market_conclusions: {
+        Row: {
+          competitividade: string | null
+          created_at: string
+          estimativa_ativo: number | null
+          oferta_demanda: string | null
+          posicionamento: string | null
+          search_id: string
+          tipologia_dominante: string | null
+        }
+        Insert: {
+          competitividade?: string | null
+          created_at?: string
+          estimativa_ativo?: number | null
+          oferta_demanda?: string | null
+          posicionamento?: string | null
+          search_id: string
+          tipologia_dominante?: string | null
+        }
+        Update: {
+          competitividade?: string | null
+          created_at?: string
+          estimativa_ativo?: number | null
+          oferta_demanda?: string | null
+          posicionamento?: string | null
+          search_id?: string
+          tipologia_dominante?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_conclusions_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: true
+            referencedRelation: "market_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_listings: {
+        Row: {
+          created_at: string
+          dorms: number | null
+          endereco: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          m2: number | null
+          portal: string | null
+          preco: number | null
+          preco_m2: number | null
+          search_id: string
+          tipologia: string | null
+          titulo: string | null
+          url: string | null
+          vagas: number | null
+        }
+        Insert: {
+          created_at?: string
+          dorms?: number | null
+          endereco?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          m2?: number | null
+          portal?: string | null
+          preco?: number | null
+          preco_m2?: number | null
+          search_id: string
+          tipologia?: string | null
+          titulo?: string | null
+          url?: string | null
+          vagas?: number | null
+        }
+        Update: {
+          created_at?: string
+          dorms?: number | null
+          endereco?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          m2?: number | null
+          portal?: string | null
+          preco?: number | null
+          preco_m2?: number | null
+          search_id?: string
+          tipologia?: string | null
+          titulo?: string | null
+          url?: string | null
+          vagas?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_listings_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "market_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_metrics: {
+        Row: {
+          created_at: string
+          desvio_padrao: number | null
+          maximo_m2: number | null
+          maximo_tipologia: string | null
+          maximo_valor: number | null
+          media: number | null
+          mediana: number | null
+          minimo_m2: number | null
+          minimo_tipologia: string | null
+          minimo_valor: number | null
+          portais: Json | null
+          search_id: string
+          tipologias: Json | null
+          total: number | null
+        }
+        Insert: {
+          created_at?: string
+          desvio_padrao?: number | null
+          maximo_m2?: number | null
+          maximo_tipologia?: string | null
+          maximo_valor?: number | null
+          media?: number | null
+          mediana?: number | null
+          minimo_m2?: number | null
+          minimo_tipologia?: string | null
+          minimo_valor?: number | null
+          portais?: Json | null
+          search_id: string
+          tipologias?: Json | null
+          total?: number | null
+        }
+        Update: {
+          created_at?: string
+          desvio_padrao?: number | null
+          maximo_m2?: number | null
+          maximo_tipologia?: string | null
+          maximo_valor?: number | null
+          media?: number | null
+          mediana?: number | null
+          minimo_m2?: number | null
+          minimo_tipologia?: string | null
+          minimo_valor?: number | null
+          portais?: Json | null
+          search_id?: string
+          tipologias?: Json | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_metrics_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: true
+            referencedRelation: "market_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_searches: {
+        Row: {
+          bairro: string | null
+          cidade: string
+          created_at: string
+          endereco_alvo: string | null
+          finalidade: string
+          id: string
+          m2_max: number | null
+          m2_min: number | null
+          margem: number
+          params: Json | null
+          portais: string[]
+          raio: number
+          status: string
+          tipologias: string[]
+          uf: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bairro?: string | null
+          cidade: string
+          created_at?: string
+          endereco_alvo?: string | null
+          finalidade?: string
+          id?: string
+          m2_max?: number | null
+          m2_min?: number | null
+          margem?: number
+          params?: Json | null
+          portais?: string[]
+          raio?: number
+          status?: string
+          tipologias?: string[]
+          uf: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bairro?: string | null
+          cidade?: string
+          created_at?: string
+          endereco_alvo?: string | null
+          finalidade?: string
+          id?: string
+          m2_max?: number | null
+          m2_min?: number | null
+          margem?: number
+          params?: Json | null
+          portais?: string[]
+          raio?: number
+          status?: string
+          tipologias?: string[]
+          uf?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pesquisas_mercado: {
         Row: {
           area_m2: number | null
