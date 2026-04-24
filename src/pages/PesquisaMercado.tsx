@@ -20,24 +20,25 @@ export default function PesquisaMercado() {
 
     setLoading(true);
     try {
+      const payload = {
+        user_id: user.id,
+        status: "pendente",
+        uf: params.uf,
+        cidade: params.cidade,
+        bairro: params.bairro,
+        endereco_alvo: params.enderecoAlvo,
+        tipologias: params.tipologias,
+        m2_min: params.m2Min,
+        m2_max: params.m2Max,
+        margem: params.margem,
+        portais: params.portais,
+        finalidade: params.finalidade,
+        raio: params.raio,
+        params: params as unknown as Record<string, unknown>,
+      };
       const { data, error } = await supabase
         .from("market_searches")
-        .insert({
-          user_id: user.id,
-          status: "pendente",
-          uf: params.uf,
-          cidade: params.cidade,
-          bairro: params.bairro,
-          endereco_alvo: params.enderecoAlvo,
-          tipologias: params.tipologias,
-          m2_min: params.m2Min,
-          m2_max: params.m2Max,
-          margem: params.margem,
-          portais: params.portais,
-          finalidade: params.finalidade,
-          raio: params.raio,
-          params: params as unknown as Record<string, unknown>,
-        })
+        .insert(payload)
         .select("id")
         .single();
 
