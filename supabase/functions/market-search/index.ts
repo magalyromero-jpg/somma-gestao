@@ -220,6 +220,8 @@ async function fetchListings(
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
 
   const listings: ListingDraft[] = [];
+  let descartadosSemPreco = 0;
+  let descartadosPrecoM2 = 0;
 
   for (const portal of portais) {
     const domain = portalDomain(portal);
@@ -237,9 +239,20 @@ async function fetchListings(
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
         const preco = parsePreco(text);
         const m2 = parseM2(text) ?? m2Mid;
-        if (!preco) continue;
+        if (!preco) {
+          descartadosSemPreco++;
+          continue;
+        }
 
         const precoM2 = Math.round(preco / m2);
+        if (precoM2 < PRECO_M2_MIN || precoM2 > PRECO_M2_MAX) {
+          descartadosPrecoM2++;
+          console.log(
+            `[parser] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
+          );
+          continue;
+        }
+
         listings.push({
           search_id: s.id,
           titulo: (item.title ?? "").slice(0, 280),
@@ -259,6 +272,9 @@ async function fetchListings(
     }
   }
 
+  console.log(
+    `[parser] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
+  );
   return listings;
 }
 
