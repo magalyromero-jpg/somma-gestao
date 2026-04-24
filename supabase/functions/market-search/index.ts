@@ -41,6 +41,37 @@ interface ListingDraft {
   url: string;
   lat: number | null;
   lng: number | null;
+  dias_no_mercado: number | null;
+}
+
+// ---- Filtros para distinguir anúncio individual de página de listagem ----
+const URL_LISTAGEM = /\/(busca|search|resultado|resultados|lista|listagem)(\/|\?|$)/i;
+const URL_ANUNCIO = /(\/imovel\/|\/imoveis\/|\/anuncio\/|\/id-|\/ap-|\/casa-|\/apartamento-|\/MLB-|\/imovel-|\/p\/|\/property\/|-id-\d+)/i;
+// Títulos como "29 Kitnets à venda em Centro" ou "48 Apartamentos ..."
+const TITULO_LISTAGEM = /^\s*\d+\s+[A-Za-zÀ-ÿ]+/;
+
+function isUrlAnuncioIndividual(url: string): boolean {
+  if (!url) return false;
+  if (URL_LISTAGEM.test(url)) return false;
+  return URL_ANUNCIO.test(url);
+}
+
+function isTituloListagem(titulo: string): boolean {
+  return TITULO_LISTAGEM.test(titulo);
+}
+
+function parseDiasNoMercado(text: string): number | null {
+  // "Publicado há 3 dias", "Atualizado há 12 dias", "há 1 mês", "há 2 meses"
+  const dias = text.match(/h[aá]\s+(\d+)\s*dias?/i);
+  if (dias) return parseInt(dias[1], 10);
+  const meses = text.match(/h[aá]\s+(\d+)\s*meses?|h[aá]\s+(um|1)\s*m[eê]s/i);
+  if (meses) {
+    const n = meses[1] ? parseInt(meses[1], 10) : 1;
+    return n * 30;
+  }
+  const horas = text.match(/h[aá]\s+(\d+)\s*horas?/i);
+  if (horas) return 0;
+  return null;
 }
 
 // ---------- Mapeamento Portal -> domínio ----------
