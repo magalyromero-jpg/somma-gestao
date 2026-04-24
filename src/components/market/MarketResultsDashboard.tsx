@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Home } from "lucide-react";
+import { Building2, Home, ExternalLink } from "lucide-react";
 import type { MarketSearchResult } from "@/data/marketSearchMock";
 
 const fmtBRL = (v: number) =>
