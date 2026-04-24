@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import MarketSearchForm from "@/components/market/MarketSearchForm";
 import { type MarketSearchParams } from "@/data/marketSearchMock";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function PesquisaMercado() {
@@ -34,7 +35,7 @@ export default function PesquisaMercado() {
         portais: params.portais,
         finalidade: params.finalidade,
         raio: params.raio,
-        params: params as unknown as Record<string, unknown>,
+        params: params as unknown as Json,
       };
       const { data, error } = await supabase
         .from("market_searches")
