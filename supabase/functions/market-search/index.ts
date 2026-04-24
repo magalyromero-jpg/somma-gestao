@@ -1,7 +1,9 @@
 // Edge Function: market-search
-// Recebe { search_id }, busca anúncios via Google Custom Search API,
-// parseia preço/metragem dos snippets, calcula métricas e persiste em
-// market_listings + market_metrics + market_conclusions.
+// Fluxo em 2 etapas:
+//   1. SerpAPI -> coleta URLs de ANÚNCIOS INDIVIDUAIS (filtra listagens)
+//   2. Firecrawl -> faz scrape de cada anúncio (HTML renderizado, contorna anti-bot)
+//      e extrai preço, metragem e tempo no mercado.
+// Persiste em market_listings + market_metrics + market_conclusions.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
@@ -10,6 +12,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Limites de processamento
+const MAX_URLS_POR_PORTAL = 10;
+const MAX_SERP_POR_PORTAL = 20; // pega mais para sobrar após filtragem
+const SCRAPE_CONCURRENCY = 3;
 
 interface MarketSearchRow {
   id: string;
@@ -44,48 +51,57 @@ interface ListingDraft {
   dias_no_mercado: number | null;
 }
 
-// ---- Filtros para distinguir anúncio individual de página de listagem ----
-const URL_LISTAGEM = /\/(busca|search|resultado|resultados|lista|listagem)(\/|\?|$)/i;
-const URL_ANUNCIO = /(\/imovel\/|\/imoveis\/|\/anuncio\/|\/id-|\/ap-|\/casa-|\/apartamento-|\/MLB-|\/imovel-|\/p\/|\/property\/|-id-\d+)/i;
-// Títulos como "29 Kitnets à venda em Centro" ou "48 Apartamentos ..."
-const TITULO_LISTAGEM = /^\s*\d+\s+[A-Za-zÀ-ÿ]+/;
-
-function isUrlAnuncioIndividual(url: string): boolean {
-  if (!url) return false;
-  if (URL_LISTAGEM.test(url)) return false;
-  return URL_ANUNCIO.test(url);
+// ---------- Portais ----------
+interface PortalSpec {
+  domain: string;
+  // Path/keyword obrigatório no caminho do anúncio individual
+  individualUrlPattern: RegExp;
+  // Filtro inurl extra para a query SerpAPI
+  inurl: string;
 }
 
-function isTituloListagem(titulo: string): boolean {
-  return TITULO_LISTAGEM.test(titulo);
-}
-
-function parseDiasNoMercado(text: string): number | null {
-  // "Publicado há 3 dias", "Atualizado há 12 dias", "há 1 mês", "há 2 meses"
-  const dias = text.match(/h[aá]\s+(\d+)\s*dias?/i);
-  if (dias) return parseInt(dias[1], 10);
-  const meses = text.match(/h[aá]\s+(\d+)\s*meses?|h[aá]\s+(um|1)\s*m[eê]s/i);
-  if (meses) {
-    const n = meses[1] ? parseInt(meses[1], 10) : 1;
-    return n * 30;
-  }
-  const horas = text.match(/h[aá]\s+(\d+)\s*horas?/i);
-  if (horas) return 0;
-  return null;
-}
-
-// ---------- Mapeamento Portal -> domínio ----------
-// Chaves normalizadas (lowercase, sem acento, sem espaços).
-const PORTAL_DOMAINS: Record<string, string> = {
-  "vivareal": "vivareal.com.br",
-  "zap": "zapimoveis.com.br",
-  "zapimoveis": "zapimoveis.com.br",
-  "quintoandar": "quintoandar.com.br",
-  "imovelweb": "imovelweb.com.br",
-  "olx": "olx.com.br",
-  "loft": "loft.com.br",
-  "chavesnamao": "chavesnamao.com.br",
-  "mercadolivre": "mercadolivre.com.br",
+// Chaves normalizadas (lowercase, sem acento, sem espaços)
+const PORTALS: Record<string, PortalSpec> = {
+  vivareal: {
+    domain: "vivareal.com.br",
+    individualUrlPattern: /\/imovel\//i,
+    inurl: "imovel",
+  },
+  zap: {
+    domain: "zapimoveis.com.br",
+    individualUrlPattern: /id-\d+/i,
+    inurl: "id-",
+  },
+  zapimoveis: {
+    domain: "zapimoveis.com.br",
+    individualUrlPattern: /id-\d+/i,
+    inurl: "id-",
+  },
+  quintoandar: {
+    domain: "quintoandar.com.br",
+    individualUrlPattern: /\/imovel\/\d+/i,
+    inurl: "imovel",
+  },
+  imovelweb: {
+    domain: "imovelweb.com.br",
+    individualUrlPattern: /-\d{6,}\.html/i,
+    inurl: ".html",
+  },
+  olx: {
+    domain: "olx.com.br",
+    individualUrlPattern: /\/imoveis\/.+\/[\w-]+-\d+/i,
+    inurl: "imoveis",
+  },
+  loft: {
+    domain: "loft.com.br",
+    individualUrlPattern: /\/venda\/imovel\//i,
+    inurl: "venda",
+  },
+  chavesnamao: {
+    domain: "chavesnamao.com.br",
+    individualUrlPattern: /\/(imovel|imoveis)\/.+\/[\w-]+-\d+/i,
+    inurl: "imovel",
+  },
 };
 
 function normKey(s: string): string {
@@ -96,17 +112,13 @@ function normKey(s: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
-function portalDomain(portal: string): string | null {
-  const key = normKey(portal);
-  return PORTAL_DOMAINS[key] ?? null;
+function getPortalSpec(portal: string): PortalSpec | null {
+  return PORTALS[normKey(portal)] ?? null;
 }
 
-// ---------- Parsers ----------
+// ---------- Finalidade & limites ----------
 type Finalidade = "venda" | "locacao";
 
-// Limites de sanidade por finalidade
-// preco_total: range esperado de valores absolutos
-// precoM2:    range esperado de R$/m² no Brasil
 const LIMITS = {
   venda: {
     precoMin: 50_000,
@@ -128,8 +140,34 @@ function normalizeFinalidade(f: string | undefined | null): Finalidade {
   return "venda";
 }
 
-const RENT_SUFFIX = /\/\s*m[eê]s|por\s*m[eê]s|mensa(l|is)|ao\s*m[eê]s|\/m[eê]s/i;
+// ---------- Tipologia ----------
+const COMERCIAIS = new Set([
+  "Sala comercial", "Loja", "Andar corporativo", "Galpão", "Pavilhão",
+]);
+const TERRENOS = new Set(["Terreno", "Lote em condomínio", "Área industrial"]);
 
+type Categoria = "residencial" | "comercial" | "terreno";
+function categoriaDe(tipologia: string): Categoria {
+  if (COMERCIAIS.has(tipologia)) return "comercial";
+  if (TERRENOS.has(tipologia)) return "terreno";
+  return "residencial";
+}
+
+function termoBusca(tipologia: string, cat: Categoria): string {
+  const t = tipologia.trim();
+  if (cat === "residencial") {
+    if (/studio|kitnet|kitinete/i.test(t)) return `apartamento (studio OR kitnet)`;
+    const mDorm = t.match(/^(\d+)\s*dorm/i);
+    if (mDorm) {
+      const n = mDorm[1];
+      return `apartamento (${n} dormitorios OR ${n} quartos OR ${n} dorm)`;
+    }
+    return t.toLowerCase();
+  }
+  return t.toLowerCase();
+}
+
+// ---------- Parsers de texto ----------
 function normalizeNumberPtBr(rawNum: string): number {
   let normalized: string;
   if (rawNum.includes(",")) {
@@ -147,15 +185,15 @@ function applySuffix(value: number, suf: string): number {
   return value;
 }
 
+const RENT_SUFFIX = /\/\s*m[eê]s|por\s*m[eê]s|mensa(l|is)|ao\s*m[eê]s|\/m[eê]s/i;
+
 function parsePrecoVenda(text: string): number | null {
   const patterns: RegExp[] = [
     /R\$\s*([\d.,]+)\s*(mi|milh[õo]es|mil)\b/i,
     /R\$\s*([\d.,]+)/i,
     /([\d.,]+)\s*(mi|milh[õo]es|mil)\s*(de\s*)?reais?/i,
-    /([\d.,]+)\s*reais?/i,
   ];
   const { precoMin, precoMax } = LIMITS.venda;
-
   for (const re of patterns) {
     const m = text.match(re);
     if (!m) continue;
@@ -163,12 +201,9 @@ function parsePrecoVenda(text: string): number | null {
     if (isNaN(value)) continue;
     value = applySuffix(value, m[2] ?? "");
     value = Math.round(value);
-
-    // Se houver indicador de aluguel ao redor do match, descarta
     const idx = m.index ?? 0;
     const around = text.slice(Math.max(0, idx - 5), idx + m[0].length + 20);
     if (RENT_SUFFIX.test(around)) continue;
-
     if (value >= precoMin && value <= precoMax) return value;
   }
   return null;
@@ -180,13 +215,11 @@ function parsePrecoLocacao(text: string): number | null {
     /R\$\s*([\d.,]+)/i,
   ];
   const { precoMin, precoMax } = LIMITS.locacao;
-
   for (const re of patterns) {
     const m = text.match(re);
     if (!m) continue;
-    let value = normalizeNumberPtBr(m[1]);
+    const value = Math.round(normalizeNumberPtBr(m[1]));
     if (isNaN(value)) continue;
-    value = Math.round(value);
     if (value >= precoMin && value <= precoMax) return value;
   }
   return null;
@@ -197,124 +230,58 @@ function parsePreco(text: string, finalidade: Finalidade): number | null {
 }
 
 function parseM2(text: string): number | null {
-  const m = text.match(/(\d{2,4})\s?(m²|m2|metros)/i);
-  if (!m) return null;
-  const v = parseInt(m[1], 10);
-  return v >= 15 && v <= 2000 ? v : null;
+  // Tenta vários padrões: "120 m²", "120m2", "área útil 120", "área de 120 metros"
+  const candidates: number[] = [];
+  const re1 = /(\d{2,4})\s*(?:m²|m2|metros?)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re1.exec(text)) !== null) {
+    const v = parseInt(m[1], 10);
+    if (v >= 15 && v <= 2000) candidates.push(v);
+  }
+  if (candidates.length === 0) return null;
+  // pega a mediana das ocorrências (área útil costuma aparecer mais)
+  candidates.sort((a, b) => a - b);
+  return candidates[Math.floor(candidates.length / 2)];
 }
 
 function parseDorms(text: string): number {
-  const m = text.match(/(\d)\s*(dorm|quarto|qto)/i);
-  return m ? parseInt(m[1], 10) : 2;
+  const m = text.match(/(\d)\s*(dorm|quarto|qto|suíte|suite)/i);
+  return m ? parseInt(m[1], 10) : 0;
 }
 
 function parseVagas(text: string): number {
   const m = text.match(/(\d)\s*(vaga|garagem)/i);
-  return m ? parseInt(m[1], 10) : 1;
+  return m ? parseInt(m[1], 10) : 0;
 }
 
-// ---------- SerpAPI ----------
-interface SerpItem {
-  title?: string;
-  snippet?: string;
-  link?: string;
-}
-
-function mask(v: string): string {
-  if (!v) return "";
-  if (v.length <= 8) return "***";
-  return `${v.slice(0, 4)}…${v.slice(-4)}`;
-}
-
-async function googleSearch(
-  apiKey: string,
-  _cx: string,
-  query: string,
-): Promise<SerpItem[]> {
-  const url = new URL("https://serpapi.com/search.json");
-  url.searchParams.set("q", query);
-  url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("num", "10");
-  url.searchParams.set("hl", "pt");
-  url.searchParams.set("gl", "br");
-
-  const maskedUrl = new URL(url.toString());
-  maskedUrl.searchParams.set("api_key", mask(apiKey));
-  console.log("[serpapi] GET", maskedUrl.toString());
-
-  const started = Date.now();
-  const res = await fetch(url.toString());
-  const elapsed = Date.now() - started;
-  const body = await res.text();
-  console.log(`[serpapi] ← status=${res.status} (${elapsed}ms) bytes=${body.length}`);
-
-  if (!res.ok) {
-    console.error("[serpapi] error body:", body);
-    return [];
-  }
-
-  let data: {
-    organic_results?: SerpItem[];
-    search_information?: { total_results?: number };
-    error?: string;
-  };
-  try {
-    data = JSON.parse(body);
-  } catch (e) {
-    console.error("[serpapi] JSON parse failed:", e, "body:", body.slice(0, 500));
-    return [];
-  }
-
-  if (data.error) {
-    console.error("[serpapi] api error:", data.error);
-    return [];
-  }
-
-  const items = Array.isArray(data.organic_results) ? data.organic_results : [];
-  console.log(
-    `[serpapi] total_results=${data.search_information?.total_results ?? "?"} items=${items.length}`,
-  );
-  return items;
-}
-
-// ---------- Categorização de tipologia ----------
-const COMERCIAIS = new Set([
-  "Sala comercial", "Loja", "Andar corporativo", "Galpão", "Pavilhão",
-]);
-const TERRENOS = new Set([
-  "Terreno", "Lote em condomínio", "Área industrial",
-]);
-
-type Categoria = "residencial" | "comercial" | "terreno";
-function categoriaDe(tipologia: string): Categoria {
-  if (COMERCIAIS.has(tipologia)) return "comercial";
-  if (TERRENOS.has(tipologia)) return "terreno";
-  return "residencial";
-}
-
-function termoBusca(tipologia: string, cat: Categoria): string {
-  const t = tipologia.trim();
-  if (cat === "residencial") {
-    if (/studio|kitnet|kitinete/i.test(t)) {
-      return `apartamento (studio OR kitnet)`;
+function parseDiasNoMercado(text: string): number | null {
+  const dias = text.match(/h[aá]\s+(\d+)\s*dias?/i);
+  if (dias) return parseInt(dias[1], 10);
+  const meses = text.match(/h[aá]\s+(\d+)\s*meses?/i);
+  if (meses) return parseInt(meses[1], 10) * 30;
+  if (/h[aá]\s+(um|1)\s*m[eê]s/i.test(text)) return 30;
+  if (/h[aá]\s+\d+\s*horas?/i.test(text) || /publicado\s*hoje/i.test(text)) return 0;
+  // Datas tipo "Atualizado em 15/03/2025"
+  const data = text.match(/(?:atualizado|publicado)\s*(?:em\s*)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+  if (data) {
+    const dd = parseInt(data[1], 10);
+    const mm = parseInt(data[2], 10) - 1;
+    let yy = parseInt(data[3], 10);
+    if (yy < 100) yy += 2000;
+    const then = new Date(yy, mm, dd).getTime();
+    if (!isNaN(then)) {
+      const diff = Math.floor((Date.now() - then) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff < 3650) return diff;
     }
-    const mDorm = t.match(/^(\d+)\s*dorm/i);
-    if (mDorm) {
-      const n = mDorm[1];
-      return `apartamento (${n} dormitorios OR ${n} quartos OR ${n} dorm)`;
-    }
-    return t.toLowerCase();
   }
-  return t.toLowerCase();
+  return null;
 }
 
-// Extrai um "núcleo" curto do endereço (até a vírgula ou número),
-// para inserir na query e como termo de filtro.
+// ---------- Helpers comuns ----------
 function enderecoCore(end: string | null | undefined): string {
   if (!end) return "";
   const semNumeroFinal = end.replace(/,?\s*\d+\s*$/, "").trim();
-  const antesVirgula = semNumeroFinal.split(",")[0]?.trim() ?? semNumeroFinal;
-  return antesVirgula;
+  return semNumeroFinal.split(",")[0]?.trim() ?? semNumeroFinal;
 }
 
 function snippetMatchesLocal(
@@ -334,143 +301,295 @@ function snippetMatchesLocal(
   return !bairro && !enderecoAlvo;
 }
 
-async function fetchListings(
-  s: MarketSearchRow,
-  apiKey: string,
-  cx: string,
-): Promise<ListingDraft[]> {
-  // Estrito: usa apenas portais selecionados; ignora portais sem domínio mapeado.
-  const portaisInput = s.portais.length ? s.portais : ["Viva Real", "ZAP Imóveis"];
-  const portaisResolvidos = portaisInput
-    .map((p) => ({ portal: p, domain: portalDomain(p) }))
-    .filter((p): p is { portal: string; domain: string } => !!p.domain);
-  const portaisIgnorados = portaisInput.filter((p) => !portalDomain(p));
-  if (portaisIgnorados.length) {
-    console.warn("[parser] portais sem domínio mapeado (ignorados):", portaisIgnorados);
+function mask(v: string): string {
+  if (!v) return "";
+  if (v.length <= 8) return "***";
+  return `${v.slice(0, 4)}…${v.slice(-4)}`;
+}
+
+// ============================================================
+// ETAPA 1 — SerpAPI: descobrir URLs de anúncios individuais
+// ============================================================
+interface SerpItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+}
+
+async function serpSearch(apiKey: string, query: string, num = 20): Promise<SerpItem[]> {
+  const url = new URL("https://serpapi.com/search.json");
+  url.searchParams.set("q", query);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("num", String(num));
+  url.searchParams.set("hl", "pt");
+  url.searchParams.set("gl", "br");
+
+  const masked = new URL(url.toString());
+  masked.searchParams.set("api_key", mask(apiKey));
+  console.log("[serpapi] GET", masked.toString());
+
+  const t0 = Date.now();
+  const res = await fetch(url.toString());
+  const body = await res.text();
+  console.log(`[serpapi] ← ${res.status} (${Date.now() - t0}ms) ${body.length}b`);
+
+  if (!res.ok) {
+    console.error("[serpapi] error:", body.slice(0, 300));
+    return [];
   }
-  console.log("[parser] portais ativos:", portaisResolvidos.map((p) => `${p.portal}=>${p.domain}`));
+  let data: { organic_results?: SerpItem[]; error?: string };
+  try { data = JSON.parse(body); } catch { return []; }
+  if (data.error) {
+    console.error("[serpapi] api error:", data.error);
+    return [];
+  }
+  return data.organic_results ?? [];
+}
+
+interface DiscoveredUrl {
+  portal: string;
+  spec: PortalSpec;
+  tipologia: string;
+  url: string;
+  serpTitle: string;
+  serpSnippet: string;
+}
+
+async function descobrirUrls(
+  s: MarketSearchRow,
+  serpKey: string,
+): Promise<DiscoveredUrl[]> {
+  const portaisInput = s.portais.length ? s.portais : ["Viva Real", "ZAP Imóveis"];
+  const portais = portaisInput
+    .map((p) => ({ portal: p, spec: getPortalSpec(p) }))
+    .filter((x): x is { portal: string; spec: PortalSpec } => !!x.spec);
+
+  const ignorados = portaisInput.filter((p) => !getPortalSpec(p));
+  if (ignorados.length) console.warn("[etapa1] portais sem spec (ignorados):", ignorados);
 
   const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
-  const m2Mid =
-    s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
   const finalidade = normalizeFinalidade(s.finalidade);
-  const limits = LIMITS[finalidade];
-  console.log(`[parser] finalidade=${finalidade} limites=`, limits);
+  const sufFin = finalidade === "locacao" ? "aluguel" : "venda";
 
   const enderecoQuery = enderecoCore(s.endereco_alvo);
-  const localQuery = [
-    enderecoQuery,
-    s.bairro ?? "",
+  const localPieces = [
+    enderecoQuery ? `"${enderecoQuery}"` : "",
+    s.bairro ? `"${s.bairro}"` : "",
     s.cidade,
     s.uf,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  ].filter(Boolean);
+  const localQuery = localPieces.join(" ");
 
-  const listings: ListingDraft[] = [];
-  let descartadosSemPreco = 0;
-  let descartadosForaLocal = 0;
-  let descartadosDominio = 0;
-  let descartadosUrlListagem = 0;
-  let descartadosTituloListagem = 0;
-  let descartadosPrecoM2Invalido = 0;
+  const out: DiscoveredUrl[] = [];
 
-  for (const { portal, domain } of portaisResolvidos) {
+  for (const { portal, spec } of portais) {
+    const aceitosPortal = new Set<string>();
+
     for (const tipologia of tipologias) {
       const cat = categoriaDe(tipologia);
       const termo = termoBusca(tipologia, cat);
-      const sufixoFinalidade = finalidade === "locacao" ? "aluguel" : "venda";
-      const baseQuery = `${termo} ${sufixoFinalidade} ${localQuery}`
+      const query = `${termo} ${sufFin} ${localQuery} site:${spec.domain} inurl:${spec.inurl}`
         .replace(/\s+/g, " ")
         .trim();
-      // Forçar páginas de anúncio individual (não listagem)
-      const query = `${baseQuery} site:${domain} (inurl:imovel OR inurl:anuncio OR inurl:imoveis)`;
-      console.log("Query:", query);
+      console.log(`[etapa1] query: ${query}`);
 
-      const items = await googleSearch(apiKey, cx, query);
-      for (const item of items) {
-        const titulo = item.title ?? "";
-        const text = `${titulo} ${item.snippet ?? ""}`;
-        const link = item.link ?? "";
+      const items = await serpSearch(serpKey, query, MAX_SERP_POR_PORTAL);
+      let aceitosTipologia = 0;
 
-        // 1. Domínio do portal selecionado
-        if (link && !link.includes(domain)) {
-          descartadosDominio++;
-          continue;
-        }
-
-        // 2. URL deve ser de anúncio individual, não listagem
-        if (!isUrlAnuncioIndividual(link)) {
-          descartadosUrlListagem++;
-          console.log(`[parser] descartado URL listagem/inválida: ${link}`);
-          continue;
-        }
-
-        // 3. Título não pode começar com "N <plural>" (página de listagem)
-        if (isTituloListagem(titulo)) {
-          descartadosTituloListagem++;
-          console.log(`[parser] descartado título listagem: "${titulo}"`);
-          continue;
-        }
-
-        // 4. Filtro local (bairro / endereço alvo)
-        if (!snippetMatchesLocal(text, s.bairro, s.endereco_alvo)) {
-          descartadosForaLocal++;
-          continue;
-        }
-
-        // 5. Preço deve estar presente e parseável
-        const preco = parsePreco(text, finalidade);
-        const m2 = parseM2(text) ?? m2Mid;
-        if (!preco) {
-          descartadosSemPreco++;
-          continue;
-        }
-
-        // 6. preco_m2 sempre calculado; se fora do range, salva null
-        let precoM2: number | null = m2 > 0 ? Math.round(preco / m2) : null;
-        const valido =
-          precoM2 != null &&
-          precoM2 >= limits.precoM2Min &&
-          precoM2 <= limits.precoM2Max;
-        if (!valido) {
-          descartadosPrecoM2Invalido++;
-          precoM2 = null;
-        }
-        console.log(
-          `[listing] ${titulo.slice(0, 80)} | preco_total=${preco} | m2=${m2} | preco_m2=${precoM2} | válido=${valido}`,
-        );
-
-        const dias = parseDiasNoMercado(text);
-
-        listings.push({
-          search_id: s.id,
-          titulo: titulo.slice(0, 280),
-          endereco: `${s.endereco_alvo ? s.endereco_alvo + " — " : ""}${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
-          m2,
-          dorms: cat === "residencial" ? parseDorms(text) : 0,
-          vagas: cat === "terreno" ? 0 : parseVagas(text),
-          preco,
-          preco_m2: precoM2,
+      for (const it of items) {
+        const link = it.link ?? "";
+        if (!link) continue;
+        if (!link.includes(spec.domain)) continue;
+        if (!spec.individualUrlPattern.test(link)) continue;
+        if (aceitosPortal.has(link)) continue;
+        aceitosPortal.add(link);
+        out.push({
           portal,
+          spec,
           tipologia,
           url: link,
-          lat: null,
-          lng: null,
-          dias_no_mercado: dias,
+          serpTitle: it.title ?? "",
+          serpSnippet: it.snippet ?? "",
         });
+        aceitosTipologia++;
+        if (aceitosPortal.size >= MAX_URLS_POR_PORTAL) break;
       }
+
+      console.log(
+        `[etapa1] ${portal} / ${tipologia}: serp=${items.length} aceitos=${aceitosTipologia} total_portal=${aceitosPortal.size}`,
+      );
+      if (aceitosPortal.size >= MAX_URLS_POR_PORTAL) break;
     }
   }
 
-  console.log(
-    `[parser/${finalidade}] aceitos=${listings.length} sem_preco=${descartadosSemPreco} fora_local=${descartadosForaLocal} dominio=${descartadosDominio} url_listagem=${descartadosUrlListagem} titulo_listagem=${descartadosTituloListagem} preco_m2_invalido=${descartadosPrecoM2Invalido}`,
-  );
-  return listings;
+  console.log(`[etapa1] total URLs descobertas: ${out.length}`);
+  return out;
 }
 
+// ============================================================
+// ETAPA 2 — Firecrawl: scrape de cada anúncio
+// ============================================================
+interface FirecrawlScrapeResult {
+  markdown?: string;
+  html?: string;
+  metadata?: { title?: string };
+}
 
-// ---------- Métricas ----------
+async function firecrawlScrape(
+  fcKey: string,
+  url: string,
+): Promise<FirecrawlScrapeResult | null> {
+  const t0 = Date.now();
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${fcKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+        // Pequeno wait para SPAs renderizarem preço/área
+        waitFor: 1500,
+        location: { country: "BR", languages: ["pt-BR"] },
+      }),
+    });
+    const body = await res.text();
+    console.log(`[firecrawl] ${res.status} (${Date.now() - t0}ms) ${url}`);
+    if (!res.ok) {
+      console.error(`[firecrawl] erro ${res.status}: ${body.slice(0, 200)}`);
+      return null;
+    }
+    const json = JSON.parse(body);
+    // SDK v2 retorna { success, data: { markdown, html, metadata } }
+    const data = json.data ?? json;
+    return {
+      markdown: data.markdown,
+      html: data.html,
+      metadata: data.metadata,
+    };
+  } catch (e) {
+    console.error(`[firecrawl] exception ${url}:`, e);
+    return null;
+  }
+}
+
+// Scraping em batches com concorrência limitada
+async function scrapeBatch(
+  fcKey: string,
+  urls: DiscoveredUrl[],
+): Promise<Array<DiscoveredUrl & { scrape: FirecrawlScrapeResult | null }>> {
+  const results: Array<DiscoveredUrl & { scrape: FirecrawlScrapeResult | null }> = [];
+  for (let i = 0; i < urls.length; i += SCRAPE_CONCURRENCY) {
+    const batch = urls.slice(i, i + SCRAPE_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (u) => ({ ...u, scrape: await firecrawlScrape(fcKey, u.url) })),
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+// ============================================================
+// Construção dos listings a partir do scrape + fallback no snippet
+// ============================================================
+function buildListings(
+  s: MarketSearchRow,
+  scraped: Array<DiscoveredUrl & { scrape: FirecrawlScrapeResult | null }>,
+): { listings: ListingDraft[]; descartes: Record<string, number> } {
+  const finalidade = normalizeFinalidade(s.finalidade);
+  const limits = LIMITS[finalidade];
+  const m2Mid =
+    s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 0;
+
+  const listings: ListingDraft[] = [];
+  const descartes = {
+    sem_scrape: 0,
+    sem_preco: 0,
+    sem_m2: 0,
+    fora_local: 0,
+    preco_m2_invalido: 0,
+  };
+
+  for (const item of scraped) {
+    const titulo = item.scrape?.metadata?.title ?? item.serpTitle;
+    const fullText = [
+      titulo,
+      item.scrape?.markdown ?? "",
+      item.serpTitle,
+      item.serpSnippet,
+    ].join("\n");
+
+    if (!item.scrape && !item.serpSnippet) {
+      descartes.sem_scrape++;
+      continue;
+    }
+
+    if (!snippetMatchesLocal(fullText, s.bairro, s.endereco_alvo)) {
+      descartes.fora_local++;
+      continue;
+    }
+
+    const preco = parsePreco(fullText, finalidade);
+    if (!preco) {
+      descartes.sem_preco++;
+      console.log(`[build] sem preço: ${item.url}`);
+      continue;
+    }
+
+    let m2 = parseM2(fullText);
+    if (!m2) {
+      if (m2Mid > 0) {
+        m2 = m2Mid;
+      } else {
+        descartes.sem_m2++;
+        continue;
+      }
+    }
+
+    let precoM2: number | null = m2 > 0 ? Math.round(preco / m2) : null;
+    const valido =
+      precoM2 != null &&
+      precoM2 >= limits.precoM2Min &&
+      precoM2 <= limits.precoM2Max;
+    if (!valido) {
+      descartes.preco_m2_invalido++;
+      precoM2 = null;
+    }
+
+    const dias = parseDiasNoMercado(fullText);
+    const cat = categoriaDe(item.tipologia);
+
+    console.log(
+      `[listing] ${(titulo ?? "").slice(0, 60)} | preco=${preco} | m2=${m2} | preco_m2=${precoM2} | dias=${dias} | válido=${valido}`,
+    );
+
+    listings.push({
+      search_id: s.id,
+      titulo: (titulo ?? "").slice(0, 280),
+      endereco: `${s.endereco_alvo ? s.endereco_alvo + " — " : ""}${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
+      m2,
+      dorms: cat === "residencial" ? parseDorms(fullText) : 0,
+      vagas: cat === "terreno" ? 0 : parseVagas(fullText),
+      preco,
+      preco_m2: precoM2,
+      portal: item.portal,
+      tipologia: item.tipologia,
+      url: item.url,
+      lat: null,
+      lng: null,
+      dias_no_mercado: dias,
+    });
+  }
+
+  return { listings, descartes };
+}
+
+// ============================================================
+// Métricas e conclusões
+// ============================================================
 function median(values: number[]): number {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -481,13 +600,11 @@ function median(values: number[]): number {
 function stddev(values: number[]): number {
   if (values.length < 2) return 0;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance =
-    values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
+  const variance = values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
   return Math.sqrt(variance);
 }
 
 function computeMetrics(search_id: string, listings: ListingDraft[]) {
-  // Para média/mediana de R$/m² ignoramos preco_m2=null (fora de range)
   const precosM2Validos = listings
     .map((l) => l.preco_m2)
     .filter((v): v is number => v != null && v > 0);
@@ -505,12 +622,8 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
   const portalMap = new Map<string, number>();
   for (const l of listings) portalMap.set(l.portal, (portalMap.get(l.portal) ?? 0) + 1);
 
-  const dias = listings
-    .map((l) => l.dias_no_mercado)
-    .filter((v): v is number => v != null && v >= 0);
-  const tempoMedioMercado = dias.length
-    ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length)
-    : null;
+  const dias = listings.map((l) => l.dias_no_mercado).filter((v): v is number => v != null && v >= 0);
+  const tempoMedio = dias.length ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : null;
 
   return {
     search_id,
@@ -524,7 +637,7 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
     maximo_tipologia: max.tipologia,
     total: listings.length,
     desvio_padrao: Math.round(stddev(precos)),
-    tempo_medio_mercado: tempoMedioMercado,
+    tempo_medio_mercado: tempoMedio,
     tipologias: Array.from(tipoMap, ([tipo, count]) => ({
       tipo,
       count,
@@ -535,12 +648,8 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
 }
 
 function computeConclusions(search_id: string, listings: ListingDraft[]) {
-  const precosM2 = listings
-    .map((l) => l.preco_m2)
-    .filter((v): v is number => v != null && v > 0);
-  const mediaM2 = precosM2.length
-    ? precosM2.reduce((a, b) => a + b, 0) / precosM2.length
-    : 0;
+  const precosM2 = listings.map((l) => l.preco_m2).filter((v): v is number => v != null && v > 0);
+  const mediaM2 = precosM2.length ? precosM2.reduce((a, b) => a + b, 0) / precosM2.length : 0;
   const tipoMap = new Map<string, number>();
   for (const l of listings) tipoMap.set(l.tipologia, (tipoMap.get(l.tipologia) ?? 0) + 1);
   const dominante = [...tipoMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
@@ -557,7 +666,9 @@ function computeConclusions(search_id: string, listings: ListingDraft[]) {
   };
 }
 
-// ---------- Handler ----------
+// ============================================================
+// Handler
+// ============================================================
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -570,13 +681,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("SERPAPI_KEY");
-    const cx = ""; // não usado pela SerpAPI
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "SERPAPI_KEY não configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const serpKey = Deno.env.get("SERPAPI_KEY");
+    if (!serpKey) {
+      return new Response(JSON.stringify({ error: "SERPAPI_KEY não configurada" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const fcKey = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!fcKey) {
+      return new Response(JSON.stringify({ error: "FIRECRAWL_API_KEY não configurada" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabase = createClient(
@@ -584,12 +701,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1. Carrega a pesquisa
     const { data: search, error: searchErr } = await supabase
       .from("market_searches")
-      .select(
-        "id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio",
-      )
+      .select("id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio")
       .eq("id", search_id)
       .maybeSingle();
 
@@ -601,16 +715,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    await supabase
-      .from("market_searches")
-      .update({ status: "processando" })
-      .eq("id", search_id);
+    await supabase.from("market_searches").update({ status: "processando" }).eq("id", search_id);
+    const s = search as MarketSearchRow;
 
-    // 2. Busca real via Google Custom Search
-    const listings = await fetchListings(search as MarketSearchRow, apiKey, cx);
-    console.log(`Total listings parseados: ${listings.length}`);
+    // Etapa 1
+    const urls = await descobrirUrls(s, serpKey);
 
-    // 3. Limpa dados antigos
+    // Etapa 2
+    const scraped = urls.length ? await scrapeBatch(fcKey, urls) : [];
+    console.log(`[etapa2] scraped=${scraped.length} (sucesso=${scraped.filter((x) => x.scrape).length})`);
+
+    // Construção de listings
+    const { listings, descartes } = buildListings(s, scraped);
+    console.log(`[build] listings=${listings.length} descartes=${JSON.stringify(descartes)}`);
+
+    // Limpa dados antigos
     await supabase.from("market_listings").delete().eq("search_id", search_id);
     await supabase.from("market_metrics").delete().eq("search_id", search_id);
     await supabase.from("market_conclusions").delete().eq("search_id", search_id);
@@ -621,7 +740,14 @@ Deno.serve(async (req) => {
         .update({ status: "sem_resultados", updated_at: new Date().toISOString() })
         .eq("id", search_id);
       return new Response(
-        JSON.stringify({ success: true, search_id, listings_count: 0, message: "Nenhum anúncio encontrado." }),
+        JSON.stringify({
+          success: true,
+          search_id,
+          listings_count: 0,
+          urls_descobertas: urls.length,
+          descartes,
+          message: "Nenhum anúncio encontrado.",
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -634,9 +760,7 @@ Deno.serve(async (req) => {
     if (insMetricsErr) throw insMetricsErr;
 
     const conclusions = computeConclusions(search_id, listings);
-    const { error: insConclErr } = await supabase
-      .from("market_conclusions")
-      .insert(conclusions);
+    const { error: insConclErr } = await supabase.from("market_conclusions").insert(conclusions);
     if (insConclErr) throw insConclErr;
 
     await supabase
@@ -649,6 +773,8 @@ Deno.serve(async (req) => {
         success: true,
         search_id,
         listings_count: listings.length,
+        urls_descobertas: urls.length,
+        descartes,
         metrics_summary: { total: metrics.total, media: metrics.media, mediana: metrics.mediana },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
