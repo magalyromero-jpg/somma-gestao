@@ -104,20 +104,40 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">UF</Label>
-              <Select value={p.uf} onValueChange={(v) => setP({ ...p, uf: v })}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {UFS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="mt-1.5">
+                <SearchableCombobox
+                  options={UFS}
+                  value={p.uf}
+                  onChange={(v) => setP({ ...p, uf: v, cidade: "", bairro: "" })}
+                  placeholder="UF"
+                  searchPlaceholder="Buscar UF…"
+                  allowCustom={false}
+                />
+              </div>
             </div>
             <div className="md:col-span-4">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Cidade</Label>
-              <Input className="mt-1.5" value={p.cidade} onChange={(e) => setP({ ...p, cidade: e.target.value })} />
+              <div className="mt-1.5">
+                <SearchableCombobox
+                  options={CIDADES_POR_UF[p.uf] ?? []}
+                  value={p.cidade}
+                  onChange={(v) => setP({ ...p, cidade: v, bairro: "" })}
+                  placeholder="Selecionar cidade"
+                  searchPlaceholder="Buscar ou digitar cidade…"
+                />
+              </div>
             </div>
             <div className="md:col-span-3">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Bairro</Label>
-              <Input className="mt-1.5" value={p.bairro} onChange={(e) => setP({ ...p, bairro: e.target.value })} />
+              <div className="mt-1.5">
+                <SearchableCombobox
+                  options={BAIRROS_POR_CIDADE[p.cidade] ?? []}
+                  value={p.bairro}
+                  onChange={(v) => setP({ ...p, bairro: v })}
+                  placeholder="Selecionar bairro"
+                  searchPlaceholder="Buscar ou digitar bairro…"
+                />
+              </div>
             </div>
             <div className="md:col-span-3">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Raio</Label>
