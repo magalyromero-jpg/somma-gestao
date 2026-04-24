@@ -14,6 +14,8 @@ import FamiliaDetalhe from "./pages/FamiliaDetalhe";
 import Imoveis from "./pages/Imoveis";
 import ImovelDetalhe from "./pages/ImovelDetalhe";
 import Mercado from "./pages/Mercado";
+import PesquisaMercado from "./pages/PesquisaMercado";
+import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
 import Analytics from "./pages/Analytics";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
@@ -40,6 +42,8 @@ const App = () => (
               <Route path="/imoveis" element={<Imoveis />} />
               <Route path="/imoveis/:codImovel" element={<ImovelDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
+              <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
+              <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole="gestor"><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole="gestor"><Configuracoes /></ProtectedRoute>} />

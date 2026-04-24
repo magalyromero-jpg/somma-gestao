@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useMemo } from "react";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
