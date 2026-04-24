@@ -99,6 +99,12 @@ interface GoogleItem {
   pagemap?: Record<string, unknown>;
 }
 
+function mask(v: string): string {
+  if (!v) return "";
+  if (v.length <= 8) return "***";
+  return `${v.slice(0, 4)}…${v.slice(-4)}`;
+}
+
 async function googleSearch(
   apiKey: string,
   cx: string,
@@ -110,14 +116,36 @@ async function googleSearch(
   url.searchParams.set("q", query);
   url.searchParams.set("num", "10");
 
+  // Log da URL com key/cx mascarados
+  const maskedUrl = new URL(url.toString());
+  maskedUrl.searchParams.set("key", mask(apiKey));
+  maskedUrl.searchParams.set("cx", mask(cx));
+  console.log("[google] GET", maskedUrl.toString());
+
+  const started = Date.now();
   const res = await fetch(url.toString());
+  const elapsed = Date.now() - started;
+  const body = await res.text();
+  console.log(`[google] ← status=${res.status} (${elapsed}ms) bytes=${body.length}`);
+
   if (!res.ok) {
-    const body = await res.text();
-    console.error("Google Search error:", res.status, body);
+    console.error("[google] error body:", body);
     return [];
   }
-  const data = await res.json();
-  return Array.isArray(data.items) ? data.items : [];
+
+  let data: { items?: GoogleItem[]; searchInformation?: { totalResults?: string } };
+  try {
+    data = JSON.parse(body);
+  } catch (e) {
+    console.error("[google] JSON parse failed:", e, "body:", body.slice(0, 500));
+    return [];
+  }
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  console.log(
+    `[google] totalResults=${data.searchInformation?.totalResults ?? "?"} items=${items.length}`,
+  );
+  return items;
 }
 
 // ---------- Categorização de tipologia ----------
