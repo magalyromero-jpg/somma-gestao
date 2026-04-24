@@ -315,11 +315,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
-    const cx = Deno.env.get("GOOGLE_SEARCH_CX");
-    if (!apiKey || !cx) {
+    const apiKey = Deno.env.get("SERPAPI_KEY");
+    const cx = ""; // não usado pela SerpAPI
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "GOOGLE_SEARCH_API_KEY ou GOOGLE_SEARCH_CX não configurados" }),
+        JSON.stringify({ error: "SERPAPI_KEY não configurada" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
