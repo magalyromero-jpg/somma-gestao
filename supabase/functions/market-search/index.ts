@@ -61,17 +61,46 @@ function portalDomain(portal: string): string {
 }
 
 // ---------- Parsers ----------
+// Limites de sanidade para imóveis residenciais no Brasil
+const PRECO_MIN = 50_000;
+const PRECO_MAX = 50_000_000;
+const PRECO_M2_MIN = 1_000;
+const PRECO_M2_MAX = 50_000;
+
 function parsePreco(text: string): number | null {
-  // Captura valores como "R$ 1.250.000", "R$ 850.000,00", "R$1.2 mi"
-  const m = text.match(/R\$\s*([\d.,]+)(\s*(mi|milh[õo]es|mil))?/i);
-  if (!m) return null;
-  let raw = m[1].replace(/\./g, "").replace(",", ".");
-  let value = parseFloat(raw);
-  if (isNaN(value)) return null;
-  const suf = (m[3] ?? "").toLowerCase();
-  if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
-  else if (suf === "mil") value *= 1_000;
-  return value > 1000 ? Math.round(value) : null; // ignora preços irreais
+  // Captura: "R$ 1.200.000", "R$1.200.000", "R$ 1.2 mi", "1.200.000 reais",
+  // "R$ 850.000,00", "R$ 1,2 milhões"
+  const patterns: RegExp[] = [
+    /R\$\s*([\d.,]+)\s*(mi|milh[õo]es|mil)\b/i,
+    /R\$\s*([\d.,]+)/i,
+    /([\d.,]+)\s*(mi|milh[õo]es|mil)\s*(de\s*)?reais?/i,
+    /([\d.,]+)\s*reais?/i,
+  ];
+
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (!m) continue;
+    const rawNum = m[1];
+    const suf = (m[2] ?? "").toLowerCase();
+
+    // Normaliza número PT-BR: "1.200.000,50" -> "1200000.50"; "1,2" -> "1.2"
+    let normalized: string;
+    if (rawNum.includes(",")) {
+      normalized = rawNum.replace(/\./g, "").replace(",", ".");
+    } else {
+      // sem vírgula: pontos são separadores de milhar
+      normalized = rawNum.replace(/\./g, "");
+    }
+    let value = parseFloat(normalized);
+    if (isNaN(value)) continue;
+
+    if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
+    else if (suf === "mil") value *= 1_000;
+
+    value = Math.round(value);
+    if (value >= PRECO_MIN && value <= PRECO_MAX) return value;
+  }
+  return null;
 }
 
 function parseM2(text: string): number | null {
@@ -191,6 +220,8 @@ async function fetchListings(
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
 
   const listings: ListingDraft[] = [];
+  let descartadosSemPreco = 0;
+  let descartadosPrecoM2 = 0;
 
   for (const portal of portais) {
     const domain = portalDomain(portal);
@@ -208,9 +239,20 @@ async function fetchListings(
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
         const preco = parsePreco(text);
         const m2 = parseM2(text) ?? m2Mid;
-        if (!preco) continue;
+        if (!preco) {
+          descartadosSemPreco++;
+          continue;
+        }
 
         const precoM2 = Math.round(preco / m2);
+        if (precoM2 < PRECO_M2_MIN || precoM2 > PRECO_M2_MAX) {
+          descartadosPrecoM2++;
+          console.log(
+            `[parser] descartado preco_m2=${precoM2} (preco=${preco}, m2=${m2}) text="${text.slice(0, 120)}"`,
+          );
+          continue;
+        }
+
         listings.push({
           search_id: s.id,
           titulo: (item.title ?? "").slice(0, 280),
@@ -230,6 +272,9 @@ async function fetchListings(
     }
   }
 
+  console.log(
+    `[parser] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
+  );
   return listings;
 }
 
