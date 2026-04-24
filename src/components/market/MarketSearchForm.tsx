@@ -10,7 +10,9 @@ import {
   MARGENS,
   PORTAIS,
   RAIOS,
-  TIPOLOGIAS,
+  TIPOLOGIAS_RESIDENCIAL,
+  TIPOLOGIAS_COMERCIAL,
+  TIPOLOGIAS_TERRENO,
   UFS,
   type Finalidade,
   type MarketSearchParams,
@@ -134,14 +136,29 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
             </div>
           </div>
 
-          {/* Tipologias */}
-          <div>
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Tipologia</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {TIPOLOGIAS.map((t) => (
-                <Chip key={t} label={t} active={p.tipologias.includes(t)} onClick={() => toggle("tipologias", t)} />
-              ))}
-            </div>
+          {/* Tipologias agrupadas */}
+          <div className="space-y-4">
+            {[
+              { label: "Residencial", items: TIPOLOGIAS_RESIDENCIAL },
+              { label: "Comercial", items: TIPOLOGIAS_COMERCIAL },
+              { label: "Terrenos", items: TIPOLOGIAS_TERRENO },
+            ].map((grupo) => (
+              <div key={grupo.label}>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">
+                  {grupo.label}
+                </Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {grupo.items.map((t) => (
+                    <Chip
+                      key={t}
+                      label={t}
+                      active={p.tipologias.includes(t)}
+                      onClick={() => toggle("tipologias", t)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Metragem */}
