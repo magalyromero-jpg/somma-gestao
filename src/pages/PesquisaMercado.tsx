@@ -45,14 +45,23 @@ export default function PesquisaMercado() {
 
       if (error) throw error;
 
-      // Dispara processamento da pesquisa (mock até a API do Google estar plugada)
-      supabase.functions
-        .invoke("market-search", { body: { search_id: data.id } })
-        .catch((err) => console.error("market-search invoke error", err));
-
-      toast.success("Pesquisa registrada", {
-        description: "Processando dados de mercado…",
+      toast.info("Processando dados de mercado…", {
+        description: "Buscando anúncios nos portais selecionados.",
       });
+
+      // Aguarda processamento completo antes de navegar
+      const { error: fnError } = await supabase.functions.invoke("market-search", {
+        body: { search_id: data.id },
+      });
+      if (fnError) {
+        console.error("market-search invoke error", fnError);
+        toast.error("Falha ao processar pesquisa", {
+          description: fnError.message ?? "Tente novamente em instantes.",
+        });
+        return;
+      }
+
+      toast.success("Pesquisa concluída");
       navigate(`/pesquisa-mercado/resultado/${data.id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
