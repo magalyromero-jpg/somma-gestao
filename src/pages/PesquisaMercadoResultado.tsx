@@ -65,7 +65,7 @@ export default function PesquisaMercadoResultado() {
     };
   }, [id]);
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingSkeleton rows={6} />;
   if (!result) {
     return (
       <div className="text-center py-12">
