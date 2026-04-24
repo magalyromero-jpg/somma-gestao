@@ -87,9 +87,9 @@ export default function PesquisaMercadoResultado() {
             maximo: { valor: Number(m.maximo_valor ?? 0), m2: Number(m.maximo_m2 ?? 0), tipologia: m.maximo_tipologia ?? "" },
             total: m.total ?? 0,
             desvioPadrao: Number(m.desvio_padrao ?? 0),
-            tipologias: (m.tipologias as Array<{ tipo: string; count: number; pct: number }>) ?? [],
-            portais: (m.portais as Array<{ portal: string; count: number }>) ?? [],
           },
+          tipologias: (m.tipologias as Array<{ tipo: string; count: number; pct: number }>) ?? [],
+          portais: (m.portais as Array<{ portal: string; count: number }>) ?? [],
           conclusoes: {
             posicionamento: c.posicionamento ?? "",
             ofertaDemanda: c.oferta_demanda ?? "",
@@ -97,6 +97,7 @@ export default function PesquisaMercadoResultado() {
             competitividade: c.competitividade ?? "",
             estimativaAtivo: Number(c.estimativa_ativo ?? 0),
           },
+
         });
         setIsMock(false);
       } else {
