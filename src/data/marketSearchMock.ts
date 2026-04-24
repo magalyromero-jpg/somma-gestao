@@ -25,6 +25,7 @@ export interface MarketListing {
   precoM2: number;
   portal: string;
   tipologia: string;
+  url?: string;
   lat?: number;
   lng?: number;
 }
