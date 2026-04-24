@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { Search } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import {
+  MARGENS,
+  PORTAIS,
+  RAIOS,
+  TIPOLOGIAS,
+  UFS,
+  type Finalidade,
+  type MarketSearchParams,
+} from "@/data/marketSearchMock";
+
+interface Props {
+  initial?: Partial<MarketSearchParams>;
+  onSubmit: (params: MarketSearchParams) => void;
+  loading?: boolean;
+}
+
+const defaults: MarketSearchParams = {
+  uf: "SP",
+  cidade: "São Paulo",
+  bairro: "Itaim Bibi",
+  enderecoAlvo: "",
+  tipologias: ["2 dorm", "3 dorm"],
+  m2Min: 60,
+  m2Max: 120,
+  margem: 10,
+  portais: ["Viva Real", "ZAP Imóveis"],
+  finalidade: "venda",
+  raio: 500,
+};
+
+const Chip = ({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "px-3 py-1.5 rounded-full text-xs font-light border transition-all",
+      active
+        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+        : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground",
+    )}
+  >
+    {label}
+  </button>
+);
+
+export default function MarketSearchForm({ initial, onSubmit, loading }: Props) {
+  const [p, setP] = useState<MarketSearchParams>({ ...defaults, ...initial });
+
+  const toggle = (key: "tipologias" | "portais", v: string) =>
+    setP((s) => ({
+      ...s,
+      [key]: s[key].includes(v) ? s[key].filter((x) => x !== v) : [...s[key], v],
+    }));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(p);
+  };
+
+  return (
+    <Card className="border-border/60">
+      <CardHeader>
+        <CardTitle className="text-lg font-light tracking-tight">Parâmetros da pesquisa</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Localização */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">UF</Label>
+              <Select value={p.uf} onValueChange={(v) => setP({ ...p, uf: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {UFS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-4">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Cidade</Label>
+              <Input className="mt-1.5" value={p.cidade} onChange={(e) => setP({ ...p, cidade: e.target.value })} />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Bairro</Label>
+              <Input className="mt-1.5" value={p.bairro} onChange={(e) => setP({ ...p, bairro: e.target.value })} />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Raio</Label>
+              <Select value={String(p.raio)} onValueChange={(v) => setP({ ...p, raio: Number(v) })}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {RAIOS.map((r) => <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-12">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Endereço alvo</Label>
+              <Input
+                className="mt-1.5"
+                placeholder="Ex.: R. Bandeira Paulista, 530 — ou nome do prédio"
+                value={p.enderecoAlvo}
+                onChange={(e) => setP({ ...p, enderecoAlvo: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Tipologias */}
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Tipologia</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {TIPOLOGIAS.map((t) => (
+                <Chip key={t} label={t} active={p.tipologias.includes(t)} onClick={() => toggle("tipologias", t)} />
+              ))}
+            </div>
+          </div>
+
+          {/* Metragem */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem mín. (m²)</Label>
+              <Input type="number" className="mt-1.5" value={p.m2Min} onChange={(e) => setP({ ...p, m2Min: Number(e.target.value) })} />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem máx. (m²)</Label>
+              <Input type="number" className="mt-1.5" value={p.m2Max} onChange={(e) => setP({ ...p, m2Max: Number(e.target.value) })} />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Margem</Label>
+              <Select value={String(p.margem)} onValueChange={(v) => setP({ ...p, margem: Number(v) })}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MARGENS.map((m) => (
+                    <SelectItem key={m} value={String(m)}>{m === 0 ? "0%" : `±${m}%`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Finalidade</Label>
+              <div className="mt-1.5 flex rounded-md border border-input p-1 bg-background">
+                {(["venda", "locacao"] as Finalidade[]).map((f) => (
+                  <button
+                    type="button"
+                    key={f}
+                    onClick={() => setP({ ...p, finalidade: f })}
+                    className={cn(
+                      "flex-1 text-xs font-light px-3 py-1.5 rounded transition-colors capitalize",
+                      p.finalidade === f
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f === "venda" ? "Venda" : "Locação"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Portais */}
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Portais a pesquisar</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {PORTAIS.map((portal) => (
+                <Chip key={portal} label={portal} active={p.portais.includes(portal)} onClick={() => toggle("portais", portal)} />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2 border-t border-border/60">
+            <Button type="submit" disabled={loading} className="gap-2">
+              <Search className="h-4 w-4" strokeWidth={1.75} />
+              {loading ? "Pesquisando…" : "Pesquisar mercado"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
