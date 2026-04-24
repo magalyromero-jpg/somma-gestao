@@ -61,17 +61,46 @@ function portalDomain(portal: string): string {
 }
 
 // ---------- Parsers ----------
+// Limites de sanidade para imóveis residenciais no Brasil
+const PRECO_MIN = 50_000;
+const PRECO_MAX = 50_000_000;
+const PRECO_M2_MIN = 1_000;
+const PRECO_M2_MAX = 50_000;
+
 function parsePreco(text: string): number | null {
-  // Captura valores como "R$ 1.250.000", "R$ 850.000,00", "R$1.2 mi"
-  const m = text.match(/R\$\s*([\d.,]+)(\s*(mi|milh[õo]es|mil))?/i);
-  if (!m) return null;
-  let raw = m[1].replace(/\./g, "").replace(",", ".");
-  let value = parseFloat(raw);
-  if (isNaN(value)) return null;
-  const suf = (m[3] ?? "").toLowerCase();
-  if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
-  else if (suf === "mil") value *= 1_000;
-  return value > 1000 ? Math.round(value) : null; // ignora preços irreais
+  // Captura: "R$ 1.200.000", "R$1.200.000", "R$ 1.2 mi", "1.200.000 reais",
+  // "R$ 850.000,00", "R$ 1,2 milhões"
+  const patterns: RegExp[] = [
+    /R\$\s*([\d.,]+)\s*(mi|milh[õo]es|mil)\b/i,
+    /R\$\s*([\d.,]+)/i,
+    /([\d.,]+)\s*(mi|milh[õo]es|mil)\s*(de\s*)?reais?/i,
+    /([\d.,]+)\s*reais?/i,
+  ];
+
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (!m) continue;
+    const rawNum = m[1];
+    const suf = (m[2] ?? "").toLowerCase();
+
+    // Normaliza número PT-BR: "1.200.000,50" -> "1200000.50"; "1,2" -> "1.2"
+    let normalized: string;
+    if (rawNum.includes(",")) {
+      normalized = rawNum.replace(/\./g, "").replace(",", ".");
+    } else {
+      // sem vírgula: pontos são separadores de milhar
+      normalized = rawNum.replace(/\./g, "");
+    }
+    let value = parseFloat(normalized);
+    if (isNaN(value)) continue;
+
+    if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
+    else if (suf === "mil") value *= 1_000;
+
+    value = Math.round(value);
+    if (value >= PRECO_MIN && value <= PRECO_MAX) return value;
+  }
+  return null;
 }
 
 function parseM2(text: string): number | null {
