@@ -24,17 +24,41 @@ export default function PesquisaMercadoResultado() {
     if (!id) return;
     let cancelled = false;
 
-    (async () => {
-      setLoading(true);
+    const PENDING_STATUSES = new Set(["pendente", "processando"]);
+    const MAX_POLLS = 40; // ~60s @ 1.5s
+    const POLL_INTERVAL = 1500;
+
+    const fetchAll = async () => {
       const [searchRes, listingsRes, metricsRes, conclusionsRes] = await Promise.all([
         supabase.from("market_searches").select("*").eq("id", id).maybeSingle(),
         supabase.from("market_listings").select("*").eq("search_id", id),
         supabase.from("market_metrics").select("*").eq("search_id", id).maybeSingle(),
         supabase.from("market_conclusions").select("*").eq("search_id", id).maybeSingle(),
       ]);
+      return { searchRes, listingsRes, metricsRes, conclusionsRes };
+    };
 
+    (async () => {
+      setLoading(true);
+
+      let snapshot = await fetchAll();
       if (cancelled) return;
 
+      // Se a pesquisa ainda está processando, faz polling até concluir
+      let attempts = 0;
+      while (
+        !cancelled &&
+        snapshot.searchRes.data &&
+        PENDING_STATUSES.has(snapshot.searchRes.data.status) &&
+        attempts < MAX_POLLS
+      ) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+        if (cancelled) return;
+        snapshot = await fetchAll();
+        attempts++;
+      }
+
+      const { searchRes, listingsRes, metricsRes, conclusionsRes } = snapshot;
       const data = searchRes.data;
       if (searchRes.error || !data) {
         toast.error("Pesquisa não encontrada");
