@@ -146,13 +146,18 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
 
           {/* Metragem */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem mín. (m²)</Label>
-              <Input type="number" className="mt-1.5" value={p.m2Min} onChange={(e) => setP({ ...p, m2Min: Number(e.target.value) })} />
-            </div>
-            <div className="md:col-span-3">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem máx. (m²)</Label>
-              <Input type="number" className="mt-1.5" value={p.m2Max} onChange={(e) => setP({ ...p, m2Max: Number(e.target.value) })} />
+            <div className="md:col-span-6">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem (m²)</Label>
+              <Input
+                type="number"
+                min={1}
+                className="mt-1.5"
+                value={m2}
+                onChange={(e) => setM2(Math.max(0, Number(e.target.value) || 0))}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground font-light">
+                Buscando de {range.min}m² a {range.max}m²
+              </p>
             </div>
             <div className="md:col-span-3">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Margem</Label>
