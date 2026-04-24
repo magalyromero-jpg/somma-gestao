@@ -44,20 +44,30 @@ interface ListingDraft {
 }
 
 // ---------- Mapeamento Portal -> domínio ----------
+// Chaves normalizadas (lowercase, sem acento, sem espaços).
 const PORTAL_DOMAINS: Record<string, string> = {
-  "Viva Real": "vivareal.com.br",
-  "VivaReal": "vivareal.com.br",
-  "ZAP Imóveis": "zapimoveis.com.br",
-  "ZAP": "zapimoveis.com.br",
-  "QuintoAndar": "quintoandar.com.br",
-  "Imovelweb": "imovelweb.com.br",
-  "OLX": "olx.com.br",
-  "Loft": "loft.com.br",
-  "Chaves na Mão": "chavesnamao.com.br",
+  "vivareal": "vivareal.com.br",
+  "zap": "zapimoveis.com.br",
+  "zapimoveis": "zapimoveis.com.br",
+  "quintoandar": "quintoandar.com.br",
+  "imovelweb": "imovelweb.com.br",
+  "olx": "olx.com.br",
+  "loft": "loft.com.br",
+  "chavesnamao": "chavesnamao.com.br",
+  "mercadolivre": "mercadolivre.com.br",
 };
 
-function portalDomain(portal: string): string {
-  return PORTAL_DOMAINS[portal] ?? portal.toLowerCase().replace(/\s+/g, "") + ".com.br";
+function normKey(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function portalDomain(portal: string): string | null {
+  const key = normKey(portal);
+  return PORTAL_DOMAINS[key] ?? null;
 }
 
 // ---------- Parsers ----------
@@ -250,13 +260,45 @@ function categoriaDe(tipologia: string): Categoria {
 }
 
 function termoBusca(tipologia: string, cat: Categoria): string {
+  const t = tipologia.trim();
   if (cat === "residencial") {
-    // "2 dorm" -> "apartamento 2 dorm"; tipos como Casa/Cobertura ficam diretos
-    const isDorm = /\bdorm\b|studio/i.test(tipologia);
-    return isDorm ? `apartamento ${tipologia}` : tipologia.toLowerCase();
+    if (/studio|kitnet|kitinete/i.test(t)) {
+      return `apartamento (studio OR kitnet)`;
+    }
+    const mDorm = t.match(/^(\d+)\s*dorm/i);
+    if (mDorm) {
+      const n = mDorm[1];
+      return `apartamento (${n} dormitorios OR ${n} quartos OR ${n} dorm)`;
+    }
+    return t.toLowerCase();
   }
-  if (cat === "comercial") return tipologia.toLowerCase();
-  return tipologia.toLowerCase(); // terreno
+  return t.toLowerCase();
+}
+
+// Extrai um "núcleo" curto do endereço (até a vírgula ou número),
+// para inserir na query e como termo de filtro.
+function enderecoCore(end: string | null | undefined): string {
+  if (!end) return "";
+  const semNumeroFinal = end.replace(/,?\s*\d+\s*$/, "").trim();
+  const antesVirgula = semNumeroFinal.split(",")[0]?.trim() ?? semNumeroFinal;
+  return antesVirgula;
+}
+
+function snippetMatchesLocal(
+  text: string,
+  bairro: string | null | undefined,
+  enderecoAlvo: string | null | undefined,
+): boolean {
+  const haystack = normKey(text);
+  if (enderecoAlvo) {
+    const core = normKey(enderecoCore(enderecoAlvo));
+    if (core && haystack.includes(core)) return true;
+  }
+  if (bairro) {
+    const b = normKey(bairro);
+    if (b && haystack.includes(b)) return true;
+  }
+  return !bairro && !enderecoAlvo;
 }
 
 async function fetchListings(
@@ -264,7 +306,17 @@ async function fetchListings(
   apiKey: string,
   cx: string,
 ): Promise<ListingDraft[]> {
-  const portais = s.portais.length ? s.portais : ["Viva Real", "ZAP Imóveis"];
+  // Estrito: usa apenas portais selecionados; ignora portais sem domínio mapeado.
+  const portaisInput = s.portais.length ? s.portais : ["Viva Real", "ZAP Imóveis"];
+  const portaisResolvidos = portaisInput
+    .map((p) => ({ portal: p, domain: portalDomain(p) }))
+    .filter((p): p is { portal: string; domain: string } => !!p.domain);
+  const portaisIgnorados = portaisInput.filter((p) => !portalDomain(p));
+  if (portaisIgnorados.length) {
+    console.warn("[parser] portais sem domínio mapeado (ignorados):", portaisIgnorados);
+  }
+  console.log("[parser] portais ativos:", portaisResolvidos.map((p) => `${p.portal}=>${p.domain}`));
+
   const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
   const m2Mid =
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
@@ -272,17 +324,28 @@ async function fetchListings(
   const limits = LIMITS[finalidade];
   console.log(`[parser] finalidade=${finalidade} limites=`, limits);
 
+  const enderecoQuery = enderecoCore(s.endereco_alvo);
+  const localQuery = [
+    enderecoQuery,
+    s.bairro ?? "",
+    s.cidade,
+    s.uf,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const listings: ListingDraft[] = [];
   let descartadosSemPreco = 0;
   let descartadosPrecoM2 = 0;
+  let descartadosForaLocal = 0;
+  let descartadosDominio = 0;
 
-  for (const portal of portais) {
-    const domain = portalDomain(portal);
+  for (const { portal, domain } of portaisResolvidos) {
     for (const tipologia of tipologias) {
       const cat = categoriaDe(tipologia);
       const termo = termoBusca(tipologia, cat);
       const sufixoFinalidade = finalidade === "locacao" ? "aluguel" : "venda";
-      const baseQuery = `${termo} ${sufixoFinalidade} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
+      const baseQuery = `${termo} ${sufixoFinalidade} ${localQuery}`
         .replace(/\s+/g, " ")
         .trim();
       const query = `${baseQuery} site:${domain}`;
@@ -291,6 +354,20 @@ async function fetchListings(
       const items = await googleSearch(apiKey, cx, query);
       for (const item of items) {
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
+        const link = item.link ?? "";
+
+        // Reforço: link DEVE ser do domínio do portal selecionado
+        if (link && !link.includes(domain)) {
+          descartadosDominio++;
+          continue;
+        }
+
+        // Filtro local (bairro / endereço alvo)
+        if (!snippetMatchesLocal(text, s.bairro, s.endereco_alvo)) {
+          descartadosForaLocal++;
+          continue;
+        }
+
         const preco = parsePreco(text, finalidade);
         const m2 = parseM2(text) ?? m2Mid;
         if (!preco) {
@@ -310,7 +387,7 @@ async function fetchListings(
         listings.push({
           search_id: s.id,
           titulo: (item.title ?? "").slice(0, 280),
-          endereco: `${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
+          endereco: `${s.endereco_alvo ? s.endereco_alvo + " — " : ""}${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
           m2,
           dorms: cat === "residencial" ? parseDorms(text) : 0,
           vagas: cat === "terreno" ? 0 : parseVagas(text),
@@ -318,7 +395,7 @@ async function fetchListings(
           preco_m2: precoM2,
           portal,
           tipologia,
-          url: item.link ?? "",
+          url: link,
           lat: null,
           lng: null,
         });
@@ -327,7 +404,7 @@ async function fetchListings(
   }
 
   console.log(
-    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2}`,
+    `[parser/${finalidade}] aceitos=${listings.length} descartados_sem_preco=${descartadosSemPreco} descartados_preco_m2=${descartadosPrecoM2} descartados_fora_local=${descartadosForaLocal} descartados_dominio=${descartadosDominio}`,
   );
   return listings;
 }
