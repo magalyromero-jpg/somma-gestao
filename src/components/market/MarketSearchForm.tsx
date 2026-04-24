@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { cn } from "@/lib/utils";
 import {
+  BAIRROS_POR_CIDADE,
+  CIDADES_POR_UF,
   MARGENS,
   PORTAIS,
   RAIOS,
