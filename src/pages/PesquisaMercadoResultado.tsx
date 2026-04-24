@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import MarketResultsDashboard from "@/components/market/MarketResultsDashboard";
 import MarketMapView from "@/components/market/MarketMapView";
 import { LoadingSkeleton } from "@/components/LoadingState";
@@ -16,6 +17,7 @@ export default function PesquisaMercadoResultado() {
   const navigate = useNavigate();
   const [result, setResult] = useState<MarketSearchResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMock, setIsMock] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -23,40 +25,84 @@ export default function PesquisaMercadoResultado() {
 
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("market_searches")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      const [searchRes, listingsRes, metricsRes, conclusionsRes] = await Promise.all([
+        supabase.from("market_searches").select("*").eq("id", id).maybeSingle(),
+        supabase.from("market_listings").select("*").eq("search_id", id),
+        supabase.from("market_metrics").select("*").eq("search_id", id).maybeSingle(),
+        supabase.from("market_conclusions").select("*").eq("search_id", id).maybeSingle(),
+      ]);
 
       if (cancelled) return;
 
-      if (error || !data) {
+      const data = searchRes.data;
+      if (searchRes.error || !data) {
         toast.error("Pesquisa não encontrada");
         setResult(null);
         setLoading(false);
         return;
       }
 
-      // Combina parâmetros reais salvos no banco com o resultado mock
-      // (métricas, listings e conclusões virão da Edge Function futuramente)
-      setResult({
-        ...mockSearchResult,
-        id: data.id,
-        params: {
-          uf: data.uf,
-          cidade: data.cidade,
-          bairro: data.bairro ?? "",
-          enderecoAlvo: data.endereco_alvo ?? "",
-          tipologias: data.tipologias ?? [],
-          m2Min: Number(data.m2_min ?? 0),
-          m2Max: Number(data.m2_max ?? 0),
-          margem: Number(data.margem ?? 0),
-          portais: data.portais ?? [],
-          finalidade: (data.finalidade as Finalidade) ?? "venda",
-          raio: data.raio ?? 500,
-        },
-      });
+      const params = {
+        uf: data.uf,
+        cidade: data.cidade,
+        bairro: data.bairro ?? "",
+        enderecoAlvo: data.endereco_alvo ?? "",
+        tipologias: data.tipologias ?? [],
+        m2Min: Number(data.m2_min ?? 0),
+        m2Max: Number(data.m2_max ?? 0),
+        margem: Number(data.margem ?? 0),
+        portais: data.portais ?? [],
+        finalidade: (data.finalidade as Finalidade) ?? "venda",
+        raio: data.raio ?? 500,
+      };
+
+      const listings = listingsRes.data ?? [];
+      const hasRealData = listings.length > 0 && metricsRes.data && conclusionsRes.data;
+
+      if (hasRealData) {
+        const m = metricsRes.data!;
+        const c = conclusionsRes.data!;
+        setResult({
+          id: data.id,
+          params,
+          listings: listings.map((l) => ({
+            id: l.id,
+            titulo: l.titulo ?? "",
+            endereco: l.endereco ?? "",
+            m2: Number(l.m2 ?? 0),
+            dorms: l.dorms ?? 0,
+            vagas: l.vagas ?? 0,
+            preco: Number(l.preco ?? 0),
+            precoM2: Number(l.preco_m2 ?? 0),
+            portal: l.portal ?? "",
+            tipologia: l.tipologia ?? "",
+            url: l.url ?? "",
+            lat: l.lat != null ? Number(l.lat) : 0,
+            lng: l.lng != null ? Number(l.lng) : 0,
+          })),
+          metricas: {
+            media: Number(m.media ?? 0),
+            mediana: Number(m.mediana ?? 0),
+            minimo: { valor: Number(m.minimo_valor ?? 0), m2: Number(m.minimo_m2 ?? 0), tipologia: m.minimo_tipologia ?? "" },
+            maximo: { valor: Number(m.maximo_valor ?? 0), m2: Number(m.maximo_m2 ?? 0), tipologia: m.maximo_tipologia ?? "" },
+            total: m.total ?? 0,
+            desvioPadrao: Number(m.desvio_padrao ?? 0),
+            tipologias: (m.tipologias as Array<{ tipo: string; count: number; pct: number }>) ?? [],
+            portais: (m.portais as Array<{ portal: string; count: number }>) ?? [],
+          },
+          conclusoes: {
+            posicionamento: c.posicionamento ?? "",
+            ofertaDemanda: c.oferta_demanda ?? "",
+            tipologiaDominante: c.tipologia_dominante ?? "",
+            competitividade: c.competitividade ?? "",
+            estimativaAtivo: Number(c.estimativa_ativo ?? 0),
+          },
+        });
+        setIsMock(false);
+      } else {
+        setResult({ ...mockSearchResult, id: data.id, params });
+        setIsMock(true);
+      }
       setLoading(false);
     })();
 
@@ -97,6 +143,17 @@ export default function PesquisaMercadoResultado() {
           params.raio < 1000 ? `${params.raio}m` : `${params.raio / 1000}km`
         }`}
       />
+
+      {isMock && (
+        <Alert className="mb-6 border-amber-500/40 bg-amber-500/5">
+          <Info className="h-4 w-4 text-amber-600" strokeWidth={1.75} />
+          <AlertDescription className="font-light text-sm">
+            <strong className="font-medium">Dados de exemplo.</strong> A busca real
+            não retornou anúncios — verifique se a Custom Search JSON API está
+            habilitada no projeto Google Cloud associado à chave configurada.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-2">
         {params.tipologias.map((t) => (
