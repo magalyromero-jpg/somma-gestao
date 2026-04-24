@@ -74,18 +74,20 @@ function portalDomain(portal: string): string | null {
 type Finalidade = "venda" | "locacao";
 
 // Limites de sanidade por finalidade
+// preco_total: range esperado de valores absolutos
+// precoM2:    range esperado de R$/m² no Brasil
 const LIMITS = {
   venda: {
     precoMin: 50_000,
     precoMax: 20_000_000,
-    precoM2Min: 1_000,
-    precoM2Max: 50_000,
+    precoM2Min: 3_000,
+    precoM2Max: 30_000,
   },
   locacao: {
     precoMin: 500,
     precoMax: 50_000,
     precoM2Min: 10,
-    precoM2Max: 500,
+    precoM2Max: 300,
   },
 } as const;
 
