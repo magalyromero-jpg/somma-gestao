@@ -28,12 +28,20 @@ const defaults: MarketSearchParams = {
   bairro: "Itaim Bibi",
   enderecoAlvo: "",
   tipologias: ["2 dorm", "3 dorm"],
-  m2Min: 60,
-  m2Max: 120,
+  m2Min: 90,
+  m2Max: 110,
   margem: 10,
   portais: ["Viva Real", "ZAP Imóveis"],
   finalidade: "venda",
   raio: 500,
+};
+
+const computeRange = (m2: number, margem: number) => {
+  const factor = margem / 100;
+  return {
+    min: Math.max(0, Math.round(m2 * (1 - factor))),
+    max: Math.round(m2 * (1 + factor)),
+  };
 };
 
 const Chip = ({
@@ -61,6 +69,13 @@ const Chip = ({
 
 export default function MarketSearchForm({ initial, onSubmit, loading }: Props) {
   const [p, setP] = useState<MarketSearchParams>({ ...defaults, ...initial });
+  const [m2, setM2] = useState<number>(
+    initial?.m2Min && initial?.m2Max
+      ? Math.round((initial.m2Min + initial.m2Max) / 2)
+      : 100,
+  );
+
+  const range = computeRange(m2, p.margem);
 
   const toggle = (key: "tipologias" | "portais", v: string) =>
     setP((s) => ({
@@ -70,7 +85,7 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(p);
+    onSubmit({ ...p, m2Min: range.min, m2Max: range.max });
   };
 
   return (
@@ -131,13 +146,18 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
 
           {/* Metragem */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem mín. (m²)</Label>
-              <Input type="number" className="mt-1.5" value={p.m2Min} onChange={(e) => setP({ ...p, m2Min: Number(e.target.value) })} />
-            </div>
-            <div className="md:col-span-3">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem máx. (m²)</Label>
-              <Input type="number" className="mt-1.5" value={p.m2Max} onChange={(e) => setP({ ...p, m2Max: Number(e.target.value) })} />
+            <div className="md:col-span-6">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Metragem (m²)</Label>
+              <Input
+                type="number"
+                min={1}
+                className="mt-1.5"
+                value={m2}
+                onChange={(e) => setM2(Math.max(0, Number(e.target.value) || 0))}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground font-light">
+                Buscando de {range.min}m² a {range.max}m²
+              </p>
             </div>
             <div className="md:col-span-3">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-light">Margem</Label>
