@@ -1,9 +1,7 @@
 // Edge Function: market-search
-// Recebe { search_id }, busca anúncios (mock por enquanto), calcula métricas
-// e persiste em market_listings + market_metrics. Atualiza market_searches.status.
-//
-// TODO: Substituir generateMockListings() por chamada real ao Google Custom
-// Search API quando GOOGLE_SEARCH_API_KEY estiver configurada.
+// Recebe { search_id }, busca anúncios via Google Custom Search API,
+// parseia preço/metragem dos snippets, calcula métricas e persiste em
+// market_listings + market_metrics + market_conclusions.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
@@ -45,71 +43,131 @@ interface ListingDraft {
   lng: number | null;
 }
 
-// ---------- Mock generator (a substituir pela API real) ----------
-function generateMockListings(s: MarketSearchRow): ListingDraft[] {
-  const portais = s.portais.length
-    ? s.portais
-    : ["Viva Real", "ZAP Imóveis", "QuintoAndar"];
-  const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm", "3 dorm"];
+// ---------- Mapeamento Portal -> domínio ----------
+const PORTAL_DOMAINS: Record<string, string> = {
+  "Viva Real": "vivareal.com.br",
+  "VivaReal": "vivareal.com.br",
+  "ZAP Imóveis": "zapimoveis.com.br",
+  "ZAP": "zapimoveis.com.br",
+  "QuintoAndar": "quintoandar.com.br",
+  "Imovelweb": "imovelweb.com.br",
+  "OLX": "olx.com.br",
+  "Loft": "loft.com.br",
+  "Chaves na Mão": "chavesnamao.com.br",
+};
+
+function portalDomain(portal: string): string {
+  return PORTAL_DOMAINS[portal] ?? portal.toLowerCase().replace(/\s+/g, "") + ".com.br";
+}
+
+// ---------- Parsers ----------
+function parsePreco(text: string): number | null {
+  // Captura valores como "R$ 1.250.000", "R$ 850.000,00", "R$1.2 mi"
+  const m = text.match(/R\$\s*([\d.,]+)(\s*(mi|milh[õo]es|mil))?/i);
+  if (!m) return null;
+  let raw = m[1].replace(/\./g, "").replace(",", ".");
+  let value = parseFloat(raw);
+  if (isNaN(value)) return null;
+  const suf = (m[3] ?? "").toLowerCase();
+  if (suf.startsWith("mi") || suf.startsWith("milh")) value *= 1_000_000;
+  else if (suf === "mil") value *= 1_000;
+  return value > 1000 ? Math.round(value) : null; // ignora preços irreais
+}
+
+function parseM2(text: string): number | null {
+  const m = text.match(/(\d{2,4})\s?(m²|m2|metros)/i);
+  if (!m) return null;
+  const v = parseInt(m[1], 10);
+  return v >= 15 && v <= 2000 ? v : null;
+}
+
+function parseDorms(text: string): number {
+  const m = text.match(/(\d)\s*(dorm|quarto|qto)/i);
+  return m ? parseInt(m[1], 10) : 2;
+}
+
+function parseVagas(text: string): number {
+  const m = text.match(/(\d)\s*(vaga|garagem)/i);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
+// ---------- Google Custom Search ----------
+interface GoogleItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+  pagemap?: Record<string, unknown>;
+}
+
+async function googleSearch(
+  apiKey: string,
+  cx: string,
+  query: string,
+): Promise<GoogleItem[]> {
+  const url = new URL("https://www.googleapis.com/customsearch/v1");
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("cx", cx);
+  url.searchParams.set("q", query);
+  url.searchParams.set("num", "10");
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("Google Search error:", res.status, body);
+    return [];
+  }
+  const data = await res.json();
+  return Array.isArray(data.items) ? data.items : [];
+}
+
+async function fetchListings(
+  s: MarketSearchRow,
+  apiKey: string,
+  cx: string,
+): Promise<ListingDraft[]> {
+  const portais = s.portais.length ? s.portais : ["Viva Real", "ZAP Imóveis"];
+  const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
   const m2Mid =
-    s.m2_min && s.m2_max ? (Number(s.m2_min) + Number(s.m2_max)) / 2 : 90;
-  const m2Min = s.m2_min ? Number(s.m2_min) : Math.round(m2Mid * 0.9);
-  const m2Max = s.m2_max ? Number(s.m2_max) : Math.round(m2Mid * 1.1);
-
-  // Preço base por m² por cidade (mock didático)
-  const baseM2: Record<string, number> = {
-    "São Paulo": 13500,
-    "Rio de Janeiro": 11200,
-    "Belo Horizonte": 8400,
-    "Curitiba": 8900,
-    "Florianópolis": 11500,
-    "Porto Alegre": 7800,
-  };
-  const base = baseM2[s.cidade] ?? 9000;
-
-  const ruas = [
-    "R. Bandeira Paulista",
-    "Av. Brig. Faria Lima",
-    "R. Joaquim Floriano",
-    "Av. Nove de Julho",
-    "R. Clodomiro Amazonas",
-    "R. Pedroso Alvarenga",
-    "Av. Juscelino Kubitschek",
-    "R. Tabapuã",
-  ];
+    s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 90;
 
   const listings: ListingDraft[] = [];
-  const total = 24;
-  for (let i = 0; i < total; i++) {
-    const tipologia = tipologias[i % tipologias.length];
-    const portal = portais[i % portais.length];
-    const m2 = Math.round(m2Min + Math.random() * (m2Max - m2Min));
-    const dorms = Number(tipologia.match(/\d/)?.[0] ?? 2);
-    const vagas = Math.max(1, Math.min(3, dorms - 1 + (Math.random() > 0.6 ? 1 : 0)));
 
-    const noise = 0.85 + Math.random() * 0.3; // ±15%
-    const precoM2 = Math.round(base * noise);
-    const preco = Math.round(precoM2 * m2);
+  for (const portal of portais) {
+    const domain = portalDomain(portal);
+    for (const tipologia of tipologias) {
+      const baseQuery = `apartamento ${tipologia} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
+        .replace(/\s+/g, " ")
+        .trim();
+      const query = `${baseQuery} site:${domain}`;
+      console.log("Query:", query);
 
-    const rua = ruas[i % ruas.length];
-    const numero = 100 + Math.floor(Math.random() * 1800);
+      const items = await googleSearch(apiKey, cx, query);
+      for (const item of items) {
+        const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
+        const preco = parsePreco(text);
+        const m2 = parseM2(text) ?? m2Mid;
+        if (!preco) continue; // sem preço identificado, descarta
 
-    listings.push({
-      search_id: s.id,
-      titulo: `${tipologia} · ${m2}m² · ${s.bairro ?? s.cidade}`,
-      endereco: `${rua}, ${numero} — ${s.bairro ?? ""}, ${s.cidade}/${s.uf}`,
-      m2,
-      dorms,
-      vagas,
-      preco,
-      preco_m2: precoM2,
-      portal,
-      tipologia,
-      url: `https://example.com/${portal.toLowerCase().replace(/\s+/g, "-")}/${s.id}-${i}`,
-      lat: -23.585 + (Math.random() - 0.5) * 0.02,
-      lng: -46.679 + (Math.random() - 0.5) * 0.02,
-    });
+        const precoM2 = Math.round(preco / m2);
+        listings.push({
+          search_id: s.id,
+          titulo: (item.title ?? "").slice(0, 280),
+          endereco: `${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
+          m2,
+          dorms: parseDorms(text),
+          vagas: parseVagas(text),
+          preco,
+          preco_m2: precoM2,
+          portal,
+          tipologia,
+          url: item.link ?? "",
+          lat: null,
+          lng: null,
+        });
+      }
+    }
   }
+
   return listings;
 }
 
@@ -168,7 +226,6 @@ function computeConclusions(search_id: string, listings: ListingDraft[]) {
   const tipoMap = new Map<string, number>();
   for (const l of listings) tipoMap.set(l.tipologia, (tipoMap.get(l.tipologia) ?? 0) + 1);
   const dominante = [...tipoMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-  // Estimativa do ativo: m² médio da amostra * R$/m² mediano
   const m2Medio = listings.reduce((a, b) => a + b.m2, 0) / (listings.length || 1);
   const estimativa = Math.round(m2Medio * median(precosM2));
 
@@ -193,6 +250,15 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const apiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
+    const cx = Deno.env.get("GOOGLE_SEARCH_CX");
+    if (!apiKey || !cx) {
+      return new Response(
+        JSON.stringify({ error: "GOOGLE_SEARCH_API_KEY ou GOOGLE_SEARCH_CX não configurados" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const supabase = createClient(
@@ -222,19 +288,25 @@ Deno.serve(async (req) => {
       .update({ status: "processando" })
       .eq("id", search_id);
 
-    // 2. (Mock) Geração de anúncios. Quando GOOGLE_SEARCH_API_KEY estiver
-    //    configurada, montar queries: `${cidade} ${bairro} ${tipologia} ${m2}m²`
-    //    e chamar https://www.googleapis.com/customsearch/v1.
-    const apiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
-    if (apiKey) {
-      console.log("GOOGLE_SEARCH_API_KEY presente — usando mock até integração real estar pronta.");
-    }
-    const listings = generateMockListings(search as MarketSearchRow);
+    // 2. Busca real via Google Custom Search
+    const listings = await fetchListings(search as MarketSearchRow, apiKey, cx);
+    console.log(`Total listings parseados: ${listings.length}`);
 
-    // 3. Limpa dados antigos e insere novos
+    // 3. Limpa dados antigos
     await supabase.from("market_listings").delete().eq("search_id", search_id);
     await supabase.from("market_metrics").delete().eq("search_id", search_id);
     await supabase.from("market_conclusions").delete().eq("search_id", search_id);
+
+    if (listings.length === 0) {
+      await supabase
+        .from("market_searches")
+        .update({ status: "sem_resultados", updated_at: new Date().toISOString() })
+        .eq("id", search_id);
+      return new Response(
+        JSON.stringify({ success: true, search_id, listings_count: 0, message: "Nenhum anúncio encontrado." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const { error: insListErr } = await supabase.from("market_listings").insert(listings);
     if (insListErr) throw insListErr;
@@ -249,7 +321,6 @@ Deno.serve(async (req) => {
       .insert(conclusions);
     if (insConclErr) throw insConclErr;
 
-    // 4. Atualiza status final
     await supabase
       .from("market_searches")
       .update({ status: "concluida", updated_at: new Date().toISOString() })
