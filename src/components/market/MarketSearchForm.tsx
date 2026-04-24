@@ -69,6 +69,13 @@ const Chip = ({
 
 export default function MarketSearchForm({ initial, onSubmit, loading }: Props) {
   const [p, setP] = useState<MarketSearchParams>({ ...defaults, ...initial });
+  const [m2, setM2] = useState<number>(
+    initial?.m2Min && initial?.m2Max
+      ? Math.round((initial.m2Min + initial.m2Max) / 2)
+      : 100,
+  );
+
+  const range = computeRange(m2, p.margem);
 
   const toggle = (key: "tipologias" | "portais", v: string) =>
     setP((s) => ({
@@ -78,7 +85,7 @@ export default function MarketSearchForm({ initial, onSubmit, loading }: Props) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(p);
+    onSubmit({ ...p, m2Min: range.min, m2Max: range.max });
   };
 
   return (
