@@ -53,7 +53,21 @@ export interface MarketSearchResult {
 }
 
 export const UFS = ["SP", "RJ", "MG", "SC", "RS", "PR", "BA", "DF"];
-export const TIPOLOGIAS = ["Studio", "1 dorm", "2 dorm", "3 dorm", "4+ dorm", "Cobertura", "Garden", "Duplex"];
+export const TIPOLOGIAS_RESIDENCIAL = [
+  "Studio", "1 dorm", "2 dorm", "3 dorm", "4+ dorm",
+  "Cobertura", "Garden", "Duplex", "Casa", "Sobrado",
+];
+export const TIPOLOGIAS_COMERCIAL = [
+  "Sala comercial", "Loja", "Andar corporativo", "Galpão", "Pavilhão",
+];
+export const TIPOLOGIAS_TERRENO = [
+  "Terreno", "Lote em condomínio", "Área industrial",
+];
+export const TIPOLOGIAS = [
+  ...TIPOLOGIAS_RESIDENCIAL,
+  ...TIPOLOGIAS_COMERCIAL,
+  ...TIPOLOGIAS_TERRENO,
+];
 export const PORTAIS = ["Viva Real", "ZAP Imóveis", "ImovelWeb", "Chaves na Mão", "OLX", "QuintoAndar", "MercadoLivre"];
 export const MARGENS = [0, 10, 15, 20, 30];
 export const RAIOS = [
