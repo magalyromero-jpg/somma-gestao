@@ -76,7 +76,7 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
   return (
     <div className="space-y-6">
       {/* Métricas principais */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Metric label="Média R$/m²" value={fmtM2(metricas.media)} />
         <Metric label="Mediana R$/m²" value={fmtM2(metricas.mediana)} />
         <Metric
@@ -90,7 +90,6 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
           hint={`${metricas.maximo.m2}m² · ${metricas.maximo.tipologia}`}
         />
         <Metric label="Anúncios" value={String(metricas.total)} />
-        <Metric label="Desvio padrão" value={fmtM2(metricas.desvioPadrao)} />
         <Metric
           label="Tempo médio no mercado"
           value={metricas.tempoMedioMercado != null ? `${metricas.tempoMedioMercado} dias` : "—"}
