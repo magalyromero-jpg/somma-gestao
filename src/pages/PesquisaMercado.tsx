@@ -45,6 +45,11 @@ export default function PesquisaMercado() {
 
       if (error) throw error;
 
+      // Dispara processamento da pesquisa (mock até a API do Google estar plugada)
+      supabase.functions
+        .invoke("market-search", { body: { search_id: data.id } })
+        .catch((err) => console.error("market-search invoke error", err));
+
       toast.success("Pesquisa registrada", {
         description: "Processando dados de mercado…",
       });
