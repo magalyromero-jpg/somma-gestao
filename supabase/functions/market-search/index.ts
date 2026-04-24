@@ -120,6 +120,31 @@ async function googleSearch(
   return Array.isArray(data.items) ? data.items : [];
 }
 
+// ---------- Categorização de tipologia ----------
+const COMERCIAIS = new Set([
+  "Sala comercial", "Loja", "Andar corporativo", "Galpão", "Pavilhão",
+]);
+const TERRENOS = new Set([
+  "Terreno", "Lote em condomínio", "Área industrial",
+]);
+
+type Categoria = "residencial" | "comercial" | "terreno";
+function categoriaDe(tipologia: string): Categoria {
+  if (COMERCIAIS.has(tipologia)) return "comercial";
+  if (TERRENOS.has(tipologia)) return "terreno";
+  return "residencial";
+}
+
+function termoBusca(tipologia: string, cat: Categoria): string {
+  if (cat === "residencial") {
+    // "2 dorm" -> "apartamento 2 dorm"; tipos como Casa/Cobertura ficam diretos
+    const isDorm = /\bdorm\b|studio/i.test(tipologia);
+    return isDorm ? `apartamento ${tipologia}` : tipologia.toLowerCase();
+  }
+  if (cat === "comercial") return tipologia.toLowerCase();
+  return tipologia.toLowerCase(); // terreno
+}
+
 async function fetchListings(
   s: MarketSearchRow,
   apiKey: string,
@@ -135,7 +160,9 @@ async function fetchListings(
   for (const portal of portais) {
     const domain = portalDomain(portal);
     for (const tipologia of tipologias) {
-      const baseQuery = `apartamento ${tipologia} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
+      const cat = categoriaDe(tipologia);
+      const termo = termoBusca(tipologia, cat);
+      const baseQuery = `${termo} ${m2Mid}m² ${s.bairro ?? ""} ${s.cidade} ${s.uf}`
         .replace(/\s+/g, " ")
         .trim();
       const query = `${baseQuery} site:${domain}`;
@@ -146,7 +173,7 @@ async function fetchListings(
         const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
         const preco = parsePreco(text);
         const m2 = parseM2(text) ?? m2Mid;
-        if (!preco) continue; // sem preço identificado, descarta
+        if (!preco) continue;
 
         const precoM2 = Math.round(preco / m2);
         listings.push({
@@ -154,8 +181,8 @@ async function fetchListings(
           titulo: (item.title ?? "").slice(0, 280),
           endereco: `${s.bairro ? s.bairro + ", " : ""}${s.cidade}/${s.uf}`,
           m2,
-          dorms: parseDorms(text),
-          vagas: parseVagas(text),
+          dorms: cat === "residencial" ? parseDorms(text) : 0,
+          vagas: cat === "terreno" ? 0 : parseVagas(text),
           preco,
           preco_m2: precoM2,
           portal,
@@ -170,6 +197,7 @@ async function fetchListings(
 
   return listings;
 }
+
 
 // ---------- Métricas ----------
 function median(values: number[]): number {
