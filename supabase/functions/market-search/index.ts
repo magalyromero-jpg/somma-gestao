@@ -35,7 +35,7 @@ interface ListingDraft {
   dorms: number;
   vagas: number;
   preco: number;
-  preco_m2: number;
+  preco_m2: number | null;
   portal: string;
   tipologia: string;
   url: string;
