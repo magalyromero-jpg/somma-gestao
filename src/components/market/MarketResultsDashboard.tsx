@@ -195,8 +195,21 @@ export default function MarketResultsDashboard({ result }: { result: MarketSearc
                     <div className="font-medium text-primary">{fmtM2(l.precoM2)}</div>
                   </div>
                 </div>
-                <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground font-light">
-                  Origem: {l.portal}
+                <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-light">
+                    Origem: {l.portal}
+                  </div>
+                  {l.url && (
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-light text-primary hover:underline"
+                    >
+                      Ver anúncio
+                      <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
