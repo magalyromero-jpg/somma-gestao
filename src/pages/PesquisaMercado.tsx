@@ -18,7 +18,6 @@ export default function PesquisaMercado() {
       toast.error("Sessão expirada", { description: "Faça login novamente." });
       return;
     }
-
     setLoading(true);
     try {
       const payload = {
@@ -38,47 +37,30 @@ export default function PesquisaMercado() {
         raio: params.raio,
         params: params as unknown as Json,
       };
-
       const { data, error } = await supabase
         .from("market_searches")
         .insert([payload])
         .select("id")
         .single();
-
-      if (error) {
-        console.error("market_searches insert error", error);
-        throw error;
-      }
-
+      if (error) throw error;
       toast.info("Processando dados de mercado…", {
         description: "Buscando anúncios nos portais selecionados.",
       });
-
       const { error: fnError } = await supabase.functions.invoke("market-search", {
         body: { search_id: data.id },
       });
-
       if (fnError) {
         console.error("market-search invoke error", fnError);
-        throw fnError;
+        toast.error("Falha ao processar pesquisa", {
+          description: fnError.message ?? "Tente novamente em instantes.",
+        });
+        return;
       }
-
       toast.success("Pesquisa concluída");
       navigate(`/pesquisa-mercado/resultado/${data.id}`);
-    } catch (err: unknown) {
-      console.error("PesquisaMercado handleSubmit error", err);
-      const e = err as { message?: string; code?: string; details?: string; hint?: string; status?: number; name?: string };
-      const parts = [
-        e?.code ? `code: ${e.code}` : null,
-        e?.status ? `status: ${e.status}` : null,
-        e?.message ?? (typeof err === "string" ? err : null) ?? "Erro desconhecido",
-        e?.details ? `details: ${e.details}` : null,
-        e?.hint ? `hint: ${e.hint}` : null,
-      ].filter(Boolean);
-      toast.error("Falha na pesquisa de mercado", {
-        description: parts.join(" • "),
-        duration: 10000,
-      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Falha ao salvar pesquisa", { description: message });
     } finally {
       setLoading(false);
     }
