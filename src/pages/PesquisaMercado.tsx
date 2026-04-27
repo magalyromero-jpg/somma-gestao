@@ -28,6 +28,7 @@ export default function PesquisaMercado() {
         cidade: params.cidade,
         bairro: params.bairro,
         endereco_alvo: params.enderecoAlvo,
+        nome_predio: params.nomePredio ?? null,
         tipologias: params.tipologias,
         m2_min: params.m2Min,
         m2_max: params.m2Max,
@@ -37,6 +38,7 @@ export default function PesquisaMercado() {
         raio: params.raio,
         params: params as unknown as Json,
       };
+
       const { data, error } = await supabase
         .from("market_searches")
         .insert([payload])
@@ -49,10 +51,10 @@ export default function PesquisaMercado() {
         description: "Buscando anúncios nos portais selecionados.",
       });
 
-      // Aguarda processamento completo antes de navegar
       const { error: fnError } = await supabase.functions.invoke("market-search", {
         body: { search_id: data.id },
       });
+
       if (fnError) {
         console.error("market-search invoke error", fnError);
         toast.error("Falha ao processar pesquisa", {
