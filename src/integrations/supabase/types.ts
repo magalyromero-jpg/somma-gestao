@@ -374,6 +374,7 @@ export type Database = {
           m2_max: number | null
           m2_min: number | null
           margem: number
+          nome_predio: string | null
           params: Json | null
           portais: string[]
           raio: number
@@ -393,6 +394,7 @@ export type Database = {
           m2_max?: number | null
           m2_min?: number | null
           margem?: number
+          nome_predio?: string | null
           params?: Json | null
           portais?: string[]
           raio?: number
@@ -412,6 +414,7 @@ export type Database = {
           m2_max?: number | null
           m2_min?: number | null
           margem?: number
+          nome_predio?: string | null
           params?: Json | null
           portais?: string[]
           raio?: number

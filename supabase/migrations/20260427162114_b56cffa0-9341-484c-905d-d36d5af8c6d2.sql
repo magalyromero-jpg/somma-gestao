@@ -1,0 +1,1 @@
+ALTER TABLE public.market_searches ADD COLUMN IF NOT EXISTS nome_predio text;
