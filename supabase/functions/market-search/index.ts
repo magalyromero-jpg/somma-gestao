@@ -733,7 +733,7 @@ Deno.serve(async (req) => {
  
     const { data: search, error: searchErr } = await supabase
       .from("market_searches")
-      .select("id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio, nome_predio")
+      .select("id, created_by, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem_pct, portais, finalidade, raio_metros, nome_predio")
       .eq("id", search_id)
       .maybeSingle();
  
