@@ -4,20 +4,20 @@
 //   2. Firecrawl -> faz scrape de cada anúncio (HTML renderizado, contorna anti-bot)
 //      e extrai preço, metragem e tempo no mercado.
 // Persiste em market_listings + market_metrics + market_conclusions.
-
+ 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-
+ 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
-
+ 
 // Limites de processamento
 const MAX_URLS_POR_PORTAL = 10;
-const MAX_SERP_POR_PORTAL = 20; // pega mais para sobrar após filtragem
+const MAX_SERP_POR_PORTAL = 20;
 const SCRAPE_CONCURRENCY = 3;
-
+ 
 interface MarketSearchRow {
   id: string;
   user_id: string;
@@ -32,8 +32,9 @@ interface MarketSearchRow {
   portais: string[];
   finalidade: string;
   raio: number;
+  nome_predio?: string | null; // NOVO: pesquisa por nome do prédio
 }
-
+ 
 interface ListingDraft {
   search_id: string;
   titulo: string;
@@ -50,37 +51,43 @@ interface ListingDraft {
   lng: number | null;
   dias_no_mercado: number | null;
 }
-
+ 
 // ---------- Portais ----------
 interface PortalSpec {
   domain: string;
-  // Path/keyword obrigatório no caminho do anúncio individual
   individualUrlPattern: RegExp;
-  // Filtro inurl extra para a query SerpAPI
   inurl: string;
+  // Padrão que identifica páginas de condomínio/listagem (para EXCLUIR)
+  condominioPattern?: RegExp;
 }
-
-// Chaves normalizadas (lowercase, sem acento, sem espaços)
+ 
 const PORTALS: Record<string, PortalSpec> = {
   vivareal: {
     domain: "vivareal.com.br",
     individualUrlPattern: /\/imovel\//i,
     inurl: "imovel",
+    condominioPattern: /\/condominio\//i,
   },
   zap: {
     domain: "zapimoveis.com.br",
-    individualUrlPattern: /id-\d+/i,
-    inurl: "id-",
+    // FIX: ZAP usa UUID hexadecimal no formato id-XXXXXXXX-XXXX
+    // Anúncios individuais: /venda/imoveis/... ou /aluguel/imoveis/...
+    // Condomínios: /condominio/...
+    individualUrlPattern: /\/(venda|aluguel)\/imoveis\/.+id-[0-9a-f]{6,}/i,
+    inurl: "imoveis",
+    condominioPattern: /\/condominio\//i,
   },
   zapimoveis: {
     domain: "zapimoveis.com.br",
-    individualUrlPattern: /id-\d+/i,
-    inurl: "id-",
+    individualUrlPattern: /\/(venda|aluguel)\/imoveis\/.+id-[0-9a-f]{6,}/i,
+    inurl: "imoveis",
+    condominioPattern: /\/condominio\//i,
   },
   quintoandar: {
     domain: "quintoandar.com.br",
     individualUrlPattern: /\/imovel\/\d+/i,
     inurl: "imovel",
+    condominioPattern: /\/edificio\//i,
   },
   imovelweb: {
     domain: "imovelweb.com.br",
@@ -103,7 +110,7 @@ const PORTALS: Record<string, PortalSpec> = {
     inurl: "imovel",
   },
 };
-
+ 
 function normKey(s: string): string {
   return s
     .normalize("NFD")
@@ -111,14 +118,14 @@ function normKey(s: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
-
+ 
 function getPortalSpec(portal: string): PortalSpec | null {
   return PORTALS[normKey(portal)] ?? null;
 }
-
+ 
 // ---------- Finalidade & limites ----------
 type Finalidade = "venda" | "locacao";
-
+ 
 const LIMITS = {
   venda: {
     precoMin: 50_000,
@@ -133,26 +140,26 @@ const LIMITS = {
     precoM2Max: 300,
   },
 } as const;
-
+ 
 function normalizeFinalidade(f: string | undefined | null): Finalidade {
   const v = (f ?? "").toLowerCase();
   if (v.startsWith("loc") || v.startsWith("alug") || v.startsWith("rent")) return "locacao";
   return "venda";
 }
-
+ 
 // ---------- Tipologia ----------
 const COMERCIAIS = new Set([
   "Sala comercial", "Loja", "Andar corporativo", "Galpão", "Pavilhão",
 ]);
 const TERRENOS = new Set(["Terreno", "Lote em condomínio", "Área industrial"]);
-
+ 
 type Categoria = "residencial" | "comercial" | "terreno";
 function categoriaDe(tipologia: string): Categoria {
   if (COMERCIAIS.has(tipologia)) return "comercial";
   if (TERRENOS.has(tipologia)) return "terreno";
   return "residencial";
 }
-
+ 
 function termoBusca(tipologia: string, cat: Categoria): string {
   const t = tipologia.trim();
   if (cat === "residencial") {
@@ -166,8 +173,8 @@ function termoBusca(tipologia: string, cat: Categoria): string {
   }
   return t.toLowerCase();
 }
-
-// ---------- Parsers de texto ----------
+ 
+// ---------- Parsers ----------
 function normalizeNumberPtBr(rawNum: string): number {
   let normalized: string;
   if (rawNum.includes(",")) {
@@ -177,16 +184,16 @@ function normalizeNumberPtBr(rawNum: string): number {
   }
   return parseFloat(normalized);
 }
-
+ 
 function applySuffix(value: number, suf: string): number {
   const s = suf.toLowerCase();
   if (s.startsWith("mi") || s.startsWith("milh")) return value * 1_000_000;
   if (s === "mil") return value * 1_000;
   return value;
 }
-
+ 
 const RENT_SUFFIX = /\/\s*m[eê]s|por\s*m[eê]s|mensa(l|is)|ao\s*m[eê]s|\/m[eê]s/i;
-
+ 
 function parsePrecoVenda(text: string): number | null {
   const patterns: RegExp[] = [
     /R\$\s*([\d.,]+)\s*(mi|milh[õo]es|mil)\b/i,
@@ -208,7 +215,7 @@ function parsePrecoVenda(text: string): number | null {
   }
   return null;
 }
-
+ 
 function parsePrecoLocacao(text: string): number | null {
   const patterns: RegExp[] = [
     /R\$\s*([\d.,]+)\s*(?:\/\s*m[eê]s|por\s*m[eê]s|mensa(?:l|is)|ao\s*m[eê]s)/i,
@@ -224,13 +231,12 @@ function parsePrecoLocacao(text: string): number | null {
   }
   return null;
 }
-
+ 
 function parsePreco(text: string, finalidade: Finalidade): number | null {
   return finalidade === "locacao" ? parsePrecoLocacao(text) : parsePrecoVenda(text);
 }
-
+ 
 function parseM2(text: string): number | null {
-  // Tenta vários padrões: "120 m²", "120m2", "área útil 120", "área de 120 metros"
   const candidates: number[] = [];
   const re1 = /(\d{2,4})\s*(?:m²|m2|metros?)/gi;
   let m: RegExpExecArray | null;
@@ -239,21 +245,20 @@ function parseM2(text: string): number | null {
     if (v >= 15 && v <= 2000) candidates.push(v);
   }
   if (candidates.length === 0) return null;
-  // pega a mediana das ocorrências (área útil costuma aparecer mais)
   candidates.sort((a, b) => a - b);
   return candidates[Math.floor(candidates.length / 2)];
 }
-
+ 
 function parseDorms(text: string): number {
   const m = text.match(/(\d)\s*(dorm|quarto|qto|suíte|suite)/i);
   return m ? parseInt(m[1], 10) : 0;
 }
-
+ 
 function parseVagas(text: string): number {
   const m = text.match(/(\d)\s*(vaga|garagem)/i);
   return m ? parseInt(m[1], 10) : 0;
 }
-
+ 
 function parseDiasNoMercado(text: string): number | null {
   const dias = text.match(/h[aá]\s+(\d+)\s*dias?/i);
   if (dias) return parseInt(dias[1], 10);
@@ -261,7 +266,6 @@ function parseDiasNoMercado(text: string): number | null {
   if (meses) return parseInt(meses[1], 10) * 30;
   if (/h[aá]\s+(um|1)\s*m[eê]s/i.test(text)) return 30;
   if (/h[aá]\s+\d+\s*horas?/i.test(text) || /publicado\s*hoje/i.test(text)) return 0;
-  // Datas tipo "Atualizado em 15/03/2025"
   const data = text.match(/(?:atualizado|publicado)\s*(?:em\s*)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
   if (data) {
     const dd = parseInt(data[1], 10);
@@ -276,20 +280,26 @@ function parseDiasNoMercado(text: string): number | null {
   }
   return null;
 }
-
-// ---------- Helpers comuns ----------
+ 
+// ---------- Helpers ----------
 function enderecoCore(end: string | null | undefined): string {
   if (!end) return "";
   const semNumeroFinal = end.replace(/,?\s*\d+\s*$/, "").trim();
   return semNumeroFinal.split(",")[0]?.trim() ?? semNumeroFinal;
 }
-
+ 
 function snippetMatchesLocal(
   text: string,
   bairro: string | null | undefined,
   enderecoAlvo: string | null | undefined,
+  nomePredio: string | null | undefined,
 ): boolean {
   const haystack = normKey(text);
+  // NOVO: se tem nome do prédio, prioriza match por nome
+  if (nomePredio) {
+    const np = normKey(nomePredio);
+    if (np && haystack.includes(np)) return true;
+  }
   if (enderecoAlvo) {
     const core = normKey(enderecoCore(enderecoAlvo));
     if (core && haystack.includes(core)) return true;
@@ -298,24 +308,24 @@ function snippetMatchesLocal(
     const b = normKey(bairro);
     if (b && haystack.includes(b)) return true;
   }
-  return !bairro && !enderecoAlvo;
+  return !bairro && !enderecoAlvo && !nomePredio;
 }
-
+ 
 function mask(v: string): string {
   if (!v) return "";
   if (v.length <= 8) return "***";
   return `${v.slice(0, 4)}…${v.slice(-4)}`;
 }
-
+ 
 // ============================================================
-// ETAPA 1 — SerpAPI: descobrir URLs de anúncios individuais
+// ETAPA 1 — SerpAPI
 // ============================================================
 interface SerpItem {
   title?: string;
   snippet?: string;
   link?: string;
 }
-
+ 
 async function serpSearch(apiKey: string, query: string, num = 20): Promise<SerpItem[]> {
   const url = new URL("https://serpapi.com/search.json");
   url.searchParams.set("q", query);
@@ -323,16 +333,16 @@ async function serpSearch(apiKey: string, query: string, num = 20): Promise<Serp
   url.searchParams.set("num", String(num));
   url.searchParams.set("hl", "pt");
   url.searchParams.set("gl", "br");
-
+ 
   const masked = new URL(url.toString());
   masked.searchParams.set("api_key", mask(apiKey));
   console.log("[serpapi] GET", masked.toString());
-
+ 
   const t0 = Date.now();
   const res = await fetch(url.toString());
   const body = await res.text();
   console.log(`[serpapi] ← ${res.status} (${Date.now() - t0}ms) ${body.length}b`);
-
+ 
   if (!res.ok) {
     console.error("[serpapi] error:", body.slice(0, 300));
     return [];
@@ -345,7 +355,7 @@ async function serpSearch(apiKey: string, query: string, num = 20): Promise<Serp
   }
   return data.organic_results ?? [];
 }
-
+ 
 interface DiscoveredUrl {
   portal: string;
   spec: PortalSpec;
@@ -354,7 +364,7 @@ interface DiscoveredUrl {
   serpTitle: string;
   serpSnippet: string;
 }
-
+ 
 async function descobrirUrls(
   s: MarketSearchRow,
   serpKey: string,
@@ -363,44 +373,66 @@ async function descobrirUrls(
   const portais = portaisInput
     .map((p) => ({ portal: p, spec: getPortalSpec(p) }))
     .filter((x): x is { portal: string; spec: PortalSpec } => !!x.spec);
-
+ 
   const ignorados = portaisInput.filter((p) => !getPortalSpec(p));
   if (ignorados.length) console.warn("[etapa1] portais sem spec (ignorados):", ignorados);
-
+ 
   const tipologias = s.tipologias.length ? s.tipologias : ["2 dorm"];
   const finalidade = normalizeFinalidade(s.finalidade);
   const sufFin = finalidade === "locacao" ? "aluguel" : "venda";
-
+ 
+  // NOVO: se tem nome do prédio, monta query específica por prédio
+  const temNomePredio = !!s.nome_predio?.trim();
   const enderecoQuery = enderecoCore(s.endereco_alvo);
+ 
   const localPieces = [
-    enderecoQuery ? `"${enderecoQuery}"` : "",
-    s.bairro ? `"${s.bairro}"` : "",
+    temNomePredio
+      ? `"${s.nome_predio!.trim()}"` // busca exata pelo nome do prédio
+      : enderecoQuery ? `"${enderecoQuery}"` : "",
+    s.bairro && !temNomePredio ? `"${s.bairro}"` : "",
     s.cidade,
     s.uf,
   ].filter(Boolean);
   const localQuery = localPieces.join(" ");
-
+ 
   const out: DiscoveredUrl[] = [];
-
+ 
   for (const { portal, spec } of portais) {
     const aceitosPortal = new Set<string>();
-
+ 
     for (const tipologia of tipologias) {
       const cat = categoriaDe(tipologia);
-      const termo = termoBusca(tipologia, cat);
-      const query = `${termo} ${sufFin} ${localQuery} site:${spec.domain} inurl:${spec.inurl}`
-        .replace(/\s+/g, " ")
-        .trim();
+      const termo = temNomePredio
+        ? tipologia.toLowerCase() // quando busca por prédio, termo simples
+        : termoBusca(tipologia, cat);
+ 
+      // FIX: para ZAP, usa -inurl:condominio para excluir páginas de condomínio
+      const excludeCondominio = spec.condominioPattern ? " -inurl:condominio" : "";
+      const query =
+        `${termo} ${sufFin} ${localQuery} site:${spec.domain} inurl:${spec.inurl}${excludeCondominio}`
+          .replace(/\s+/g, " ")
+          .trim();
+ 
       console.log(`[etapa1] query: ${query}`);
-
       const items = await serpSearch(serpKey, query, MAX_SERP_POR_PORTAL);
       let aceitosTipologia = 0;
-
+ 
       for (const it of items) {
         const link = it.link ?? "";
         if (!link) continue;
         if (!link.includes(spec.domain)) continue;
-        if (!spec.individualUrlPattern.test(link)) continue;
+ 
+        // FIX: exclui explicitamente páginas de condomínio
+        if (spec.condominioPattern && spec.condominioPattern.test(link)) {
+          console.log(`[etapa1] descartado (condomínio): ${link}`);
+          continue;
+        }
+ 
+        if (!spec.individualUrlPattern.test(link)) {
+          console.log(`[etapa1] descartado (não individual): ${link}`);
+          continue;
+        }
+ 
         if (aceitosPortal.has(link)) continue;
         aceitosPortal.add(link);
         out.push({
@@ -414,27 +446,27 @@ async function descobrirUrls(
         aceitosTipologia++;
         if (aceitosPortal.size >= MAX_URLS_POR_PORTAL) break;
       }
-
+ 
       console.log(
         `[etapa1] ${portal} / ${tipologia}: serp=${items.length} aceitos=${aceitosTipologia} total_portal=${aceitosPortal.size}`,
       );
       if (aceitosPortal.size >= MAX_URLS_POR_PORTAL) break;
     }
   }
-
+ 
   console.log(`[etapa1] total URLs descobertas: ${out.length}`);
   return out;
 }
-
+ 
 // ============================================================
-// ETAPA 2 — Firecrawl: scrape de cada anúncio
+// ETAPA 2 — Firecrawl
 // ============================================================
 interface FirecrawlScrapeResult {
   markdown?: string;
   html?: string;
   metadata?: { title?: string };
 }
-
+ 
 async function firecrawlScrape(
   fcKey: string,
   url: string,
@@ -451,7 +483,6 @@ async function firecrawlScrape(
         url,
         formats: ["markdown"],
         onlyMainContent: true,
-        // Pequeno wait para SPAs renderizarem preço/área
         waitFor: 1500,
         location: { country: "BR", languages: ["pt-BR"] },
       }),
@@ -463,7 +494,6 @@ async function firecrawlScrape(
       return null;
     }
     const json = JSON.parse(body);
-    // SDK v2 retorna { success, data: { markdown, html, metadata } }
     const data = json.data ?? json;
     return {
       markdown: data.markdown,
@@ -475,8 +505,7 @@ async function firecrawlScrape(
     return null;
   }
 }
-
-// Scraping em batches com concorrência limitada
+ 
 async function scrapeBatch(
   fcKey: string,
   urls: DiscoveredUrl[],
@@ -491,9 +520,9 @@ async function scrapeBatch(
   }
   return results;
 }
-
+ 
 // ============================================================
-// Construção dos listings a partir do scrape + fallback no snippet
+// Construção dos listings
 // ============================================================
 function buildListings(
   s: MarketSearchRow,
@@ -503,7 +532,7 @@ function buildListings(
   const limits = LIMITS[finalidade];
   const m2Mid =
     s.m2_min && s.m2_max ? Math.round((Number(s.m2_min) + Number(s.m2_max)) / 2) : 0;
-
+ 
   const listings: ListingDraft[] = [];
   const descartes = {
     sem_scrape: 0,
@@ -512,7 +541,7 @@ function buildListings(
     fora_local: 0,
     preco_m2_invalido: 0,
   };
-
+ 
   for (const item of scraped) {
     const titulo = item.scrape?.metadata?.title ?? item.serpTitle;
     const fullText = [
@@ -521,24 +550,25 @@ function buildListings(
       item.serpTitle,
       item.serpSnippet,
     ].join("\n");
-
+ 
     if (!item.scrape && !item.serpSnippet) {
       descartes.sem_scrape++;
       continue;
     }
-
-    if (!snippetMatchesLocal(fullText, s.bairro, s.endereco_alvo)) {
+ 
+    // FIX: passa nome_predio para o filtro de localidade
+    if (!snippetMatchesLocal(fullText, s.bairro, s.endereco_alvo, s.nome_predio)) {
       descartes.fora_local++;
       continue;
     }
-
+ 
     const preco = parsePreco(fullText, finalidade);
     if (!preco) {
       descartes.sem_preco++;
       console.log(`[build] sem preço: ${item.url}`);
       continue;
     }
-
+ 
     let m2 = parseM2(fullText);
     if (!m2) {
       if (m2Mid > 0) {
@@ -548,7 +578,7 @@ function buildListings(
         continue;
       }
     }
-
+ 
     let precoM2: number | null = m2 > 0 ? Math.round(preco / m2) : null;
     const valido =
       precoM2 != null &&
@@ -558,14 +588,14 @@ function buildListings(
       descartes.preco_m2_invalido++;
       precoM2 = null;
     }
-
+ 
     const dias = parseDiasNoMercado(fullText);
     const cat = categoriaDe(item.tipologia);
-
+ 
     console.log(
       `[listing] ${(titulo ?? "").slice(0, 60)} | preco=${preco} | m2=${m2} | preco_m2=${precoM2} | dias=${dias} | válido=${valido}`,
     );
-
+ 
     listings.push({
       search_id: s.id,
       titulo: (titulo ?? "").slice(0, 280),
@@ -583,10 +613,10 @@ function buildListings(
       dias_no_mercado: dias,
     });
   }
-
+ 
   return { listings, descartes };
 }
-
+ 
 // ============================================================
 // Métricas e conclusões
 // ============================================================
@@ -596,14 +626,14 @@ function median(values: number[]): number {
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
-
+ 
 function stddev(values: number[]): number {
   if (values.length < 2) return 0;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const variance = values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
   return Math.sqrt(variance);
 }
-
+ 
 function computeMetrics(search_id: string, listings: ListingDraft[]) {
   const precosM2Validos = listings
     .map((l) => l.preco_m2)
@@ -613,18 +643,18 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
     ? precosM2Validos.reduce((a, b) => a + b, 0) / precosM2Validos.length
     : 0;
   const mediana = median(precosM2Validos);
-
+ 
   const min = listings.reduce((a, b) => (a.preco < b.preco ? a : b));
   const max = listings.reduce((a, b) => (a.preco > b.preco ? a : b));
-
+ 
   const tipoMap = new Map<string, number>();
   for (const l of listings) tipoMap.set(l.tipologia, (tipoMap.get(l.tipologia) ?? 0) + 1);
   const portalMap = new Map<string, number>();
   for (const l of listings) portalMap.set(l.portal, (portalMap.get(l.portal) ?? 0) + 1);
-
+ 
   const dias = listings.map((l) => l.dias_no_mercado).filter((v): v is number => v != null && v >= 0);
   const tempoMedio = dias.length ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : null;
-
+ 
   return {
     search_id,
     media: Math.round(media),
@@ -646,7 +676,7 @@ function computeMetrics(search_id: string, listings: ListingDraft[]) {
     portais: Array.from(portalMap, ([portal, count]) => ({ portal, count })),
   };
 }
-
+ 
 function computeConclusions(search_id: string, listings: ListingDraft[]) {
   const precosM2 = listings.map((l) => l.preco_m2).filter((v): v is number => v != null && v > 0);
   const mediaM2 = precosM2.length ? precosM2.reduce((a, b) => a + b, 0) / precosM2.length : 0;
@@ -655,7 +685,7 @@ function computeConclusions(search_id: string, listings: ListingDraft[]) {
   const dominante = [...tipoMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
   const m2Medio = listings.reduce((a, b) => a + b.m2, 0) / (listings.length || 1);
   const estimativa = precosM2.length ? Math.round(m2Medio * median(precosM2)) : 0;
-
+ 
   return {
     search_id,
     posicionamento: `Preço médio do m² na região: R$ ${Math.round(mediaM2).toLocaleString("pt-BR")}.`,
@@ -665,13 +695,13 @@ function computeConclusions(search_id: string, listings: ListingDraft[]) {
     estimativa_ativo: estimativa,
   };
 }
-
+ 
 // ============================================================
 // Handler
 // ============================================================
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
+ 
   try {
     const { search_id } = await req.json().catch(() => ({}));
     if (!search_id || typeof search_id !== "string") {
@@ -680,7 +710,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
+ 
     const serpKey = Deno.env.get("SERPAPI_KEY");
     if (!serpKey) {
       return new Response(JSON.stringify({ error: "SERPAPI_KEY não configurada" }), {
@@ -695,18 +725,18 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
+ 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-
+ 
     const { data: search, error: searchErr } = await supabase
       .from("market_searches")
-      .select("id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio")
+      .select("id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio, nome_predio")
       .eq("id", search_id)
       .maybeSingle();
-
+ 
     if (searchErr) throw searchErr;
     if (!search) {
       return new Response(JSON.stringify({ error: "Pesquisa não encontrada" }), {
@@ -714,26 +744,21 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
+ 
     await supabase.from("market_searches").update({ status: "processando" }).eq("id", search_id);
     const s = search as MarketSearchRow;
-
-    // Etapa 1
+ 
     const urls = await descobrirUrls(s, serpKey);
-
-    // Etapa 2
     const scraped = urls.length ? await scrapeBatch(fcKey, urls) : [];
     console.log(`[etapa2] scraped=${scraped.length} (sucesso=${scraped.filter((x) => x.scrape).length})`);
-
-    // Construção de listings
+ 
     const { listings, descartes } = buildListings(s, scraped);
     console.log(`[build] listings=${listings.length} descartes=${JSON.stringify(descartes)}`);
-
-    // Limpa dados antigos
+ 
     await supabase.from("market_listings").delete().eq("search_id", search_id);
     await supabase.from("market_metrics").delete().eq("search_id", search_id);
     await supabase.from("market_conclusions").delete().eq("search_id", search_id);
-
+ 
     if (listings.length === 0) {
       await supabase
         .from("market_searches")
@@ -751,23 +776,23 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
+ 
     const { error: insListErr } = await supabase.from("market_listings").insert(listings);
     if (insListErr) throw insListErr;
-
+ 
     const metrics = computeMetrics(search_id, listings);
     const { error: insMetricsErr } = await supabase.from("market_metrics").insert(metrics);
     if (insMetricsErr) throw insMetricsErr;
-
+ 
     const conclusions = computeConclusions(search_id, listings);
     const { error: insConclErr } = await supabase.from("market_conclusions").insert(conclusions);
     if (insConclErr) throw insConclErr;
-
+ 
     await supabase
       .from("market_searches")
       .update({ status: "concluida", updated_at: new Date().toISOString() })
       .eq("id", search_id);
-
+ 
     return new Response(
       JSON.stringify({
         success: true,
