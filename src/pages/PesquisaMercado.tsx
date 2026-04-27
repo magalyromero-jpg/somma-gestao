@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/PageHeader";
 import MarketSearchForm from "@/components/market/MarketSearchForm";
 import { type MarketSearchParams } from "@/data/marketSearchMock";
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function PesquisaMercado() {
@@ -21,7 +20,7 @@ export default function PesquisaMercado() {
     setLoading(true);
     try {
       const payload = {
-        user_id: user.id,
+        created_by: user.id,
         status: "pendente",
         uf: params.uf,
         cidade: params.cidade,
@@ -31,11 +30,10 @@ export default function PesquisaMercado() {
         tipologias: params.tipologias,
         m2_min: params.m2Min,
         m2_max: params.m2Max,
-        margem: params.margem,
+        margem_pct: params.margem,
         portais: params.portais,
         finalidade: params.finalidade,
-        raio: params.raio,
-        params: params as unknown as Json,
+        raio_metros: params.raio,
       };
       const { data, error } = await supabase
         .from("market_searches")
