@@ -20,7 +20,7 @@ const SCRAPE_CONCURRENCY = 3;
  
 interface MarketSearchRow {
   id: string;
-  user_id: string;
+  created_by: string;
   uf: string;
   cidade: string;
   bairro: string | null;
@@ -28,10 +28,10 @@ interface MarketSearchRow {
   tipologias: string[];
   m2_min: number | null;
   m2_max: number | null;
-  margem: number;
+  margem_pct: number;
   portais: string[];
   finalidade: string;
-  raio: number;
+  raio_metros: number;
   nome_predio?: string | null; // NOVO: pesquisa por nome do prédio
 }
  
