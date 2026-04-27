@@ -20,7 +20,7 @@ const SCRAPE_CONCURRENCY = 3;
  
 interface MarketSearchRow {
   id: string;
-  user_id: string;
+  created_by: string;
   uf: string;
   cidade: string;
   bairro: string | null;
@@ -28,10 +28,10 @@ interface MarketSearchRow {
   tipologias: string[];
   m2_min: number | null;
   m2_max: number | null;
-  margem: number;
+  margem_pct: number;
   portais: string[];
   finalidade: string;
-  raio: number;
+  raio_metros: number;
   nome_predio?: string | null; // NOVO: pesquisa por nome do prédio
 }
  
@@ -733,7 +733,7 @@ Deno.serve(async (req) => {
  
     const { data: search, error: searchErr } = await supabase
       .from("market_searches")
-      .select("id, user_id, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem, portais, finalidade, raio, nome_predio")
+      .select("id, created_by, uf, cidade, bairro, endereco_alvo, tipologias, m2_min, m2_max, margem_pct, portais, finalidade, raio_metros, nome_predio")
       .eq("id", search_id)
       .maybeSingle();
  

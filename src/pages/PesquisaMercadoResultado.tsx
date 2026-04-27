@@ -75,10 +75,10 @@ export default function PesquisaMercadoResultado() {
         tipologias: data.tipologias ?? [],
         m2Min: Number(data.m2_min ?? 0),
         m2Max: Number(data.m2_max ?? 0),
-        margem: Number(data.margem ?? 0),
+        margem: Number(data.margem_pct ?? 0),
         portais: data.portais ?? [],
         finalidade: (data.finalidade as Finalidade) ?? "venda",
-        raio: data.raio ?? 500,
+        raio: data.raio_metros ?? 500,
       };
       setParams(p);
 
