@@ -368,61 +368,61 @@ export type Database = {
           bairro: string | null
           cidade: string
           created_at: string
+          created_by: string
           endereco_alvo: string | null
           finalidade: string
           id: string
           m2_max: number | null
           m2_min: number | null
-          margem: number
+          margem_pct: number
           nome_predio: string | null
           params: Json | null
           portais: string[]
-          raio: number
+          raio_metros: number
           status: string
           tipologias: string[]
           uf: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           bairro?: string | null
           cidade: string
           created_at?: string
+          created_by: string
           endereco_alvo?: string | null
           finalidade?: string
           id?: string
           m2_max?: number | null
           m2_min?: number | null
-          margem?: number
+          margem_pct?: number
           nome_predio?: string | null
           params?: Json | null
           portais?: string[]
-          raio?: number
+          raio_metros?: number
           status?: string
           tipologias?: string[]
           uf: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           bairro?: string | null
           cidade?: string
           created_at?: string
+          created_by?: string
           endereco_alvo?: string | null
           finalidade?: string
           id?: string
           m2_max?: number | null
           m2_min?: number | null
-          margem?: number
+          margem_pct?: number
           nome_predio?: string | null
           params?: Json | null
           portais?: string[]
-          raio?: number
+          raio_metros?: number
           status?: string
           tipologias?: string[]
           uf?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
