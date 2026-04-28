@@ -41,6 +41,7 @@ export default function PesquisaMercado() {
         .select("id")
         .single();
       if (error) throw error;
+      console.log("Insert OK, search_id:", data.id, "now invoking market-search");
       toast.info("Processando dados de mercado…", {
         description: "Buscando anúncios nos portais selecionados.",
       });
