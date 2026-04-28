@@ -73,13 +73,13 @@ const PORTALS: Record<string, PortalSpec> = {
     // FIX: ZAP usa UUID hexadecimal no formato id-XXXXXXXX-XXXX
     // Anúncios individuais: /venda/imoveis/... ou /aluguel/imoveis/...
     // Condomínios: /condominio/...
-    individualUrlPattern: /\/(venda|aluguel)\/imoveis\/.+id-[0-9a-f]{6,}/i,
+    individualUrlPattern: /zapimoveis\.com\.br\/.+id-[0-9a-f-]{6,}/i,
     inurl: "imoveis",
     condominioPattern: /\/condominio\//i,
   },
   zapimoveis: {
     domain: "zapimoveis.com.br",
-    individualUrlPattern: /\/(venda|aluguel)\/imoveis\/.+id-[0-9a-f]{6,}/i,
+    individualUrlPattern: /zapimoveis\.com\.br\/.+id-[0-9a-f-]{6,}/i,
     inurl: "imoveis",
     condominioPattern: /\/condominio\//i,
   },
