@@ -5,7 +5,7 @@
 //      e extrai preço, metragem e tempo no mercado.
 // Persiste em market_listings + market_metrics + market_conclusions.
  
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
