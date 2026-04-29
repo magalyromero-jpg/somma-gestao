@@ -12,8 +12,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MAX_CONDOMINIOS = 5;
-const MAX_UNIDADES_POR_CONDOMINIO = 4;
+const MAX_CONDOMINIOS = 3;
+const MAX_UNIDADES_POR_CONDOMINIO = 2;
 const MAX_SERP_POR_PORTAL = 10;
 const SCRAPE_CONCURRENCY = 3;
 
@@ -307,7 +307,7 @@ async function firecrawlScrape(fcKey: string, url: string): Promise<FirecrawlRes
         url,
         formats: ["markdown", "links"],
         onlyMainContent: true,
-        waitFor: 2000,
+        waitFor: 800,
         location: { country: "BR", languages: ["pt-BR"] },
       }),
     });
