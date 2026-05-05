@@ -21,6 +21,7 @@ import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
+import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } },
@@ -35,7 +36,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/analise-leilao" element={<AnaliseLeilao />} />
+            <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
+            <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole="gestor"><Dashboard /></ProtectedRoute>} />
