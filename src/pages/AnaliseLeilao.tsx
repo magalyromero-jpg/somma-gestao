@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -24,14 +24,19 @@ import {
   Menu,
   X,
   RotateCcw,
+  ArrowLeft,
+  Pencil,
 } from "lucide-react";
+import { RISCOS } from "@/data/analiseLeilao";
 import {
-  IMOVEL,
-  CDI_CURVA,
-  IPCA_CURVA,
-  RISCOS,
-  PREMISSAS,
-} from "@/data/analiseLeilao";
+  DadosImovel,
+  capRateNominal,
+  cdiCurva,
+  ipcaCurva,
+  precoPorM2,
+  PREMISSAS_LABELS,
+} from "@/lib/analiseLeilao/types";
+import { getAtual } from "@/lib/analiseLeilao/storage";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -49,50 +54,23 @@ const SECTIONS = [
   { id: "resumo", label: "Resumo executivo" },
 ];
 
-const Badge = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <span
-    className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${className}`}
-  >
+const Badge = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${className}`}>
     {children}
   </span>
 );
 
-const Card = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={`bg-white border border-slate-200 rounded-xl shadow-sm p-5 ${className}`}
-  >
-    {children}
-  </div>
+const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`bg-white border border-slate-200 rounded-xl shadow-sm p-5 ${className}`}>{children}</div>
 );
 
-const SectionWrap = ({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) => {
+const SectionWrap = ({ id, children }: { id: string; children: React.ReactNode }) => {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setVisible(true),
-      { threshold: 0.1 },
-    );
+    const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.1 });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -110,13 +88,22 @@ const SectionWrap = ({
 };
 
 // ---------- Comparativo ----------
-function Comparativo() {
-  const [inv, setInv] = useState(6820);
+function Comparativo({ d }: { d: DadosImovel }) {
+  const cdiArr = useMemo(() => cdiCurva(d), [d]);
+  const ipcaArr = useMemo(() => ipcaCurva(d), [d]);
+  const cap = capRateNominal(d) / 100;
+  const investDefault = d.investimentoTotalMil || d.lanceMinimoMil * 1.075;
+
+  const [inv, setInv] = useState(investDefault);
   const [valim, setValim] = useState(0.06);
   const [reaj, setReaj] = useState(0.03);
 
+  useEffect(() => {
+    setInv(investDefault);
+  }, [investDefault]);
+
   const reset = () => {
-    setInv(6820);
+    setInv(investDefault);
     setValim(0.06);
     setReaj(0.03);
   };
@@ -125,36 +112,30 @@ function Comparativo() {
     const anos = Array.from({ length: 11 }, (_, i) => i);
     let rendaAcum = 0;
     const imPatr = anos.map((i) => {
-      if (i > 0) rendaAcum += inv * 0.078 * Math.pow(1 + reaj, i - 1);
+      if (i > 0) rendaAcum += inv * cap * Math.pow(1 + reaj, i - 1);
       return inv * Math.pow(1 + valim, i) + rendaAcum;
     });
     const cdiPatr = anos.map((i) => {
       let v = inv;
-      for (let j = 0; j < i; j++) {
-        v *= 1 + (CDI_CURVA[Math.min(j, CDI_CURVA.length - 1)] / 100) * 0.85;
-      }
+      for (let j = 0; j < i; j++) v *= 1 + (cdiArr[Math.min(j, cdiArr.length - 1)] / 100) * 0.85;
       return v;
     });
     const ntnbPatr = anos.map((i) => {
       let v = inv;
       for (let j = 0; j < i; j++) {
-        const rate =
-          (IPCA_CURVA[Math.min(j, IPCA_CURVA.length - 1)] / 100 + 0.06) * 0.85;
+        const rate = (ipcaArr[Math.min(j, ipcaArr.length - 1)] / 100 + 0.06) * 0.85;
         v *= 1 + rate;
       }
       return v;
     });
     const ipcaPatr = anos.map((i) => {
       let v = inv;
-      for (let j = 0; j < i; j++) {
-        v *= 1 + IPCA_CURVA[Math.min(j, IPCA_CURVA.length - 1)] / 100;
-      }
+      for (let j = 0; j < i; j++) v *= 1 + ipcaArr[Math.min(j, ipcaArr.length - 1)] / 100;
       return v;
     });
     const ipcaAcum = (i: number) => {
       let v = 1;
-      for (let j = 0; j < i; j++)
-        v *= 1 + IPCA_CURVA[Math.min(j, IPCA_CURVA.length - 1)] / 100;
+      for (let j = 0; j < i; j++) v *= 1 + ipcaArr[Math.min(j, ipcaArr.length - 1)] / 100;
       return v;
     };
     const evol = anos.map((i) => ({
@@ -166,16 +147,16 @@ function Comparativo() {
     }));
     const real = anos.map((i) => ({
       label: i === 0 ? "Hoje" : `Ano ${i}`,
-      Imovel: ((imPatr[i] / inv / ipcaAcum(i)) - 1) * 100,
-      CDI: ((cdiPatr[i] / inv / ipcaAcum(i)) - 1) * 100,
-      NTNB: ((ntnbPatr[i] / inv / ipcaAcum(i)) - 1) * 100,
+      Imovel: (imPatr[i] / inv / ipcaAcum(i) - 1) * 100,
+      CDI: (cdiPatr[i] / inv / ipcaAcum(i) - 1) * 100,
+      NTNB: (ntnbPatr[i] / inv / ipcaAcum(i) - 1) * 100,
     }));
     let breakeven: string | null = null;
     for (let v = 0; v <= 20; v += 0.1) {
       let rA = 0;
       let p10 = 0;
       for (let i = 0; i <= 10; i++) {
-        if (i > 0) rA += inv * 0.078 * Math.pow(1 + reaj, i - 1);
+        if (i > 0) rA += inv * cap * Math.pow(1 + reaj, i - 1);
         p10 = inv * Math.pow(1 + v / 100, i) + rA;
       }
       if (p10 >= cdiPatr[10]) {
@@ -184,28 +165,28 @@ function Comparativo() {
       }
     }
     return { evol, real, imPatr, cdiPatr, ntnbPatr, ipcaPatr, breakeven };
-  }, [inv, valim, reaj]);
+  }, [inv, valim, reaj, cap, cdiArr, ipcaArr]);
 
   const cdiBars = [
-    { label: "Atual", v: 14.65 },
-    { label: "2026", v: 13 },
-    { label: "2027", v: 11 },
-    { label: "2028", v: 10 },
-    { label: "2029", v: 10 },
-    { label: "2030+", v: 10 },
+    { label: "Atual", v: d.cdiAtual },
+    { label: "2026", v: d.cdiProjeto2026 },
+    { label: "2027", v: d.cdiProjeto2027 },
+    { label: "2028", v: d.cdiProjeto2028plus },
+    { label: "2029", v: d.cdiProjeto2028plus },
+    { label: "2030+", v: d.cdiProjeto2028plus },
   ];
 
   const final = data.imPatr[10];
   const finalCdi = data.cdiPatr[10];
   const winnerIm = final >= finalCdi;
 
+  const premissas = PREMISSAS_LABELS(d);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <TrendingUp className="text-slate-700" />
-        <h2 className="text-2xl font-bold text-slate-900">
-          Comparativo: Imóvel vs CDI vs NTN-B
-        </h2>
+        <h2 className="text-2xl font-bold text-slate-900">Comparativo: Imóvel vs CDI vs NTN-B</h2>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -217,11 +198,8 @@ function Comparativo() {
               <div className="col-span-3">Valor</div>
               <div className="col-span-3">Fonte</div>
             </div>
-            {PREMISSAS.map((p) => (
-              <div
-                key={p.p}
-                className="grid grid-cols-12 py-1 border-b border-slate-100"
-              >
+            {premissas.map((p) => (
+              <div key={p.p} className="grid grid-cols-12 py-1 border-b border-slate-100">
                 <div className="col-span-6 text-slate-700">{p.p}</div>
                 <div className="col-span-3 font-medium">{p.v}</div>
                 <div className="col-span-3 text-slate-500">{p.f}</div>
@@ -232,22 +210,17 @@ function Comparativo() {
 
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-slate-900">
-              Sliders de sensibilidade
-            </h3>
-            <button
-              onClick={reset}
-              className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900"
-            >
-              <RotateCcw size={12} /> Resetar
+            <h3 className="font-semibold text-slate-900">Sliders de sensibilidade</h3>
+            <button onClick={reset} className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900">
+              <RotateCcw size={12} /> Resetar premissas
             </button>
           </div>
           <div className="space-y-4">
             <SliderRow
               label="Investimento inicial"
-              value={`R$ ${inv.toLocaleString("pt-BR")}k`}
-              min={6000}
-              max={9000}
+              value={fmtBRLM(inv)}
+              min={Math.max(100, inv * 0.5)}
+              max={Math.max(inv * 1.5, inv + 1000)}
               step={10}
               v={inv}
               onChange={setInv}
@@ -255,7 +228,7 @@ function Comparativo() {
             <SliderRow
               label="Valorização imóvel a.a."
               value={fmtPct(valim * 100)}
-              min={2}
+              min={0}
               max={14}
               step={0.5}
               v={valim * 100}
@@ -273,66 +246,24 @@ function Comparativo() {
           </div>
           <div className="mt-4 p-3 rounded-lg bg-slate-900 text-white text-sm">
             Valorização mínima para empatar com CDI:{" "}
-            <span className="font-bold text-green-400">
-              {data.breakeven ? `${data.breakeven}% a.a.` : "—"}
-            </span>
+            <span className="font-bold text-green-400">{data.breakeven ? `${data.breakeven}% a.a.` : "—"}</span>
           </div>
         </Card>
       </div>
 
-      {/* Gráfico 1 */}
       <Card>
-        <h3 className="font-semibold text-slate-900 mb-3">
-          Evolução patrimonial (10 anos)
-        </h3>
+        <h3 className="font-semibold text-slate-900 mb-3">Evolução patrimonial (10 anos)</h3>
         <ResponsiveContainer width="100%" height={340}>
           <ComposedChart data={data.evol}>
             <CartesianGrid stroke="#f1f5f9" />
             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              tickFormatter={(v) => `R$ ${(v / 1000).toFixed(1)}M`}
-            />
-            <Tooltip
-              formatter={(v: number) => fmtBRLM(v)}
-              contentStyle={{ background: "#fff", border: "1px solid #e2e8f0" }}
-            />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$ ${(v / 1000).toFixed(1)}M`} />
+            <Tooltip formatter={(v: number) => fmtBRLM(v)} contentStyle={{ background: "#fff", border: "1px solid #e2e8f0" }} />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="Imovel"
-              fill="#86efac"
-              stroke="#16a34a"
-              strokeWidth={2}
-              name="Imóvel"
-            />
-            <Line
-              type="monotone"
-              dataKey="CDI"
-              stroke="#2563eb"
-              strokeDasharray="6 3"
-              strokeWidth={2}
-              dot={false}
-              name="CDI líquido"
-            />
-            <Line
-              type="monotone"
-              dataKey="NTNB"
-              stroke="#d97706"
-              strokeDasharray="3 3"
-              strokeWidth={2}
-              dot={false}
-              name="NTN-B"
-            />
-            <Line
-              type="monotone"
-              dataKey="IPCA"
-              stroke="#94a3b8"
-              strokeDasharray="2 4"
-              strokeWidth={2}
-              dot={false}
-              name="IPCA puro"
-            />
+            <Area type="monotone" dataKey="Imovel" fill="#86efac" stroke="#16a34a" strokeWidth={2} name="Imóvel" />
+            <Line type="monotone" dataKey="CDI" stroke="#2563eb" strokeDasharray="6 3" strokeWidth={2} dot={false} name="CDI líquido" />
+            <Line type="monotone" dataKey="NTNB" stroke="#d97706" strokeDasharray="3 3" strokeWidth={2} dot={false} name="NTN-B" />
+            <Line type="monotone" dataKey="IPCA" stroke="#94a3b8" strokeDasharray="2 4" strokeWidth={2} dot={false} name="IPCA puro" />
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
@@ -350,49 +281,23 @@ function Comparativo() {
             </BarChart>
           </ResponsiveContainer>
           <p className="text-xs text-slate-500 mt-2">
-            Curva do Boletim Focus. CDI alto agora, mas cai — reduz sua vantagem
-            no longo prazo.
+            Curva do Boletim Focus. CDI alto agora, mas cai — reduz sua vantagem no longo prazo.
           </p>
         </Card>
 
         <Card>
-          <h3 className="font-semibold text-slate-900 mb-3">
-            Retorno real acumulado (acima da inflação)
-          </h3>
+          <h3 className="font-semibold text-slate-900 mb-3">Retorno real acumulado (acima da inflação)</h3>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data.real}>
               <CartesianGrid stroke="#f1f5f9" />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickFormatter={(v) => `${v.toFixed(0)}%`}
-              />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(0)}%`} />
               <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
               <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="Imovel"
-                stroke="#16a34a"
-                strokeWidth={2}
-                name="Imóvel real"
-              />
-              <Line
-                type="monotone"
-                dataKey="CDI"
-                stroke="#2563eb"
-                strokeDasharray="6 3"
-                strokeWidth={2}
-                name="CDI real"
-              />
-              <Line
-                type="monotone"
-                dataKey="NTNB"
-                stroke="#d97706"
-                strokeDasharray="3 3"
-                strokeWidth={2}
-                name="NTN-B real"
-              />
+              <Line type="monotone" dataKey="Imovel" stroke="#16a34a" strokeWidth={2} name="Imóvel real" />
+              <Line type="monotone" dataKey="CDI" stroke="#2563eb" strokeDasharray="6 3" strokeWidth={2} name="CDI real" />
+              <Line type="monotone" dataKey="NTNB" stroke="#d97706" strokeDasharray="3 3" strokeWidth={2} name="NTN-B real" />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -409,56 +314,21 @@ function Comparativo() {
         </Card>
         <Card>
           <p className="text-xs text-slate-500">NTN-B</p>
-          <p className="text-xl font-bold text-amber-700">
-            {fmtBRLM(data.ntnbPatr[10])}
-          </p>
+          <p className="text-xl font-bold text-amber-700">{fmtBRLM(data.ntnbPatr[10])}</p>
         </Card>
         <Card>
           <p className="text-xs text-slate-500">IPCA puro</p>
-          <p className="text-xl font-bold text-slate-600">
-            {fmtBRLM(data.ipcaPatr[10])}
-          </p>
+          <p className="text-xl font-bold text-slate-600">{fmtBRLM(data.ipcaPatr[10])}</p>
         </Card>
-      </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <InsightCard
-          titulo="CDI começa alto mas cai"
-          texto="A curva Focus prevê CDI partindo de 14,65% e caindo para ~10% até 2028, reduzindo a vantagem do CDI no longo prazo."
-        />
-        <InsightCard
-          titulo={`Ponto de equilíbrio: ${data.breakeven ?? "—"}% a.a.`}
-          texto="Valorização mínima do imóvel necessária para empatar com o CDI líquido em 10 anos, somada à renda contratada."
-        />
-        <InsightCard
-          titulo="NTN-B como benchmark"
-          texto="IPCA + 6% representa o retorno real exigido pelo mercado para prazos longos. Compare o cap rate real com este piso."
-        />
-        <InsightCard
-          titulo="O que não está aqui"
-          texto="Não há série histórica pública de valorização imobiliária para São Bento do Sul. A premissa de valorização é estimativa."
-        />
       </div>
     </div>
   );
 }
 
 const SliderRow = ({
-  label,
-  value,
-  min,
-  max,
-  step,
-  v,
-  onChange,
+  label, value, min, max, step, v, onChange,
 }: {
-  label: string;
-  value: string;
-  min: number;
-  max: number;
-  step: number;
-  v: number;
-  onChange: (x: number) => void;
+  label: string; value: string; min: number; max: number; step: number; v: number; onChange: (x: number) => void;
 }) => (
   <div>
     <div className="flex justify-between text-sm mb-1">
@@ -477,19 +347,21 @@ const SliderRow = ({
   </div>
 );
 
-const InsightCard = ({ titulo, texto }: { titulo: string; texto: string }) => (
-  <Card>
-    <h4 className="font-semibold text-slate-900 text-sm mb-1">{titulo}</h4>
-    <p className="text-xs text-slate-600 leading-relaxed">{texto}</p>
-  </Card>
-);
-
 // ---------- Page ----------
 export default function AnaliseLeilao() {
+  const nav = useNavigate();
+  const [d, setD] = useState<DadosImovel | null>(() => getAtual());
   const [active, setActive] = useState("ficha");
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (!d) {
+      nav("/analise-leilao", { replace: true });
+    }
+  }, [d, nav]);
+
+  useEffect(() => {
+    if (!d) return;
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -503,53 +375,59 @@ export default function AnaliseLeilao() {
       if (el) obs.observe(el);
     });
     return () => obs.disconnect();
-  }, []);
+  }, [d]);
+
+  if (!d) return null;
 
   const go = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMenuOpen(false);
   };
 
-  // Renda calculations
-  const rendaAnual = IMOVEL.aluguelMensalInicial * 12;
+  const novaAnalise = () => {
+    if (confirm("Deseja iniciar uma nova análise? Os dados atuais serão perdidos.")) {
+      localStorage.removeItem("analiseLeilao_atual_v1");
+      nav("/analise-leilao");
+    }
+  };
+  const editar = () => nav("/analise-leilao");
+
+  const cap = capRateNominal(d);
+  const rendaAnual = d.aluguelMensalInicial * 12;
+  const investTotal = (d.investimentoTotalMil || d.lanceMinimoMil * 1.075) * 1000;
+  const payback = rendaAnual > 0 ? investTotal / rendaAnual : 0;
+  const pm2 = precoPorM2(d);
+
   const rendaAcumData = Array.from({ length: 5 }, (_, i) => {
     let acum = 0;
-    for (let j = 0; j <= i; j++) {
-      acum += IMOVEL.aluguelMensalInicial * 12 * Math.pow(1.03, j);
-    }
-    return {
-      ano: `Ano ${i + 1}`,
-      Renda: acum / 1000,
-      Lance: IMOVEL.lanceMinimoMil,
-    };
+    for (let j = 0; j <= i; j++) acum += rendaAnual * Math.pow(1.03, j);
+    return { ano: `Ano ${i + 1}`, Renda: acum / 1000, Lance: d.lanceMinimoMil };
   });
 
-  // Correção
   const correcaoData = Array.from({ length: 5 }, (_, i) => {
-    let ipca = 0,
-      igpm = 0,
-      sem = 0;
+    let ipca = 0, igpm = 0, sem = 0;
     for (let j = 0; j <= i; j++) {
-      ipca += IMOVEL.aluguelMensalInicial * 12 * Math.pow(1.05, j);
-      igpm += IMOVEL.aluguelMensalInicial * 12 * Math.pow(1.04, j);
-      sem += IMOVEL.aluguelMensalInicial * 12;
+      ipca += rendaAnual * Math.pow(1.05, j);
+      igpm += rendaAnual * Math.pow(1.04, j);
+      sem += rendaAnual;
     }
-    return {
-      ano: `Ano ${i + 1}`,
-      "IPCA 5%": ipca / 1000,
-      "IGPM 4%": igpm / 1000,
-      "Sem reajuste": sem / 1000,
-    };
+    return { ano: `Ano ${i + 1}`, "IPCA 5%": ipca / 1000, "IGPM 4%": igpm / 1000, "Sem reajuste": sem / 1000 };
   });
   const realData = Array.from({ length: 6 }, (_, i) => ({
     ano: i === 0 ? "Hoje" : `Ano ${i}`,
-    "Com IPCA": IMOVEL.aluguelMensalInicial,
-    "Sem reajuste": IMOVEL.aluguelMensalInicial / Math.pow(1.05, i),
+    "Com IPCA": d.aluguelMensalInicial,
+    "Sem reajuste": d.aluguelMensalInicial / Math.pow(1.05, i),
   }));
+
+  const mostraVenal = d.valorVenalMil > 0;
+  const mostraMercado = d.valorMercadoMinMil > 0 || d.valorMercadoMaxMil > 0;
+  const descontoMin = mostraMercado && d.valorMercadoMaxMil > 0
+    ? ((d.valorMercadoMaxMil - d.lanceMinimoMil) / d.valorMercadoMaxMil) * 100 : null;
+  const descontoMax = mostraMercado && d.valorMercadoMinMil > 0
+    ? ((d.valorMercadoMinMil - d.lanceMinimoMil) / d.valorMercadoMinMil) * 100 : null;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Mobile top bar */}
       <div className="lg:hidden sticky top-0 z-40 bg-white border-b flex items-center justify-between p-3">
         <span className="font-semibold text-slate-900 text-sm">Análise Leilão</span>
         <button onClick={() => setMenuOpen((o) => !o)}>
@@ -558,12 +436,14 @@ export default function AnaliseLeilao() {
       </div>
       {menuOpen && (
         <div className="lg:hidden bg-white border-b p-3 space-y-2">
+          <button onClick={novaAnalise} className="block w-full text-left text-sm py-1 text-primary font-medium">
+            ← Nova análise
+          </button>
+          <button onClick={editar} className="block w-full text-left text-sm py-1 text-slate-700">
+            Editar dados
+          </button>
           {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => go(s.id)}
-              className="block w-full text-left text-sm py-1 text-slate-700"
-            >
+            <button key={s.id} onClick={() => go(s.id)} className="block w-full text-left text-sm py-1 text-slate-700">
               {s.label}
             </button>
           ))}
@@ -571,11 +451,14 @@ export default function AnaliseLeilao() {
       )}
 
       <div className="flex max-w-[1400px] mx-auto">
-        {/* Sidebar */}
         <aside className="hidden lg:block w-60 sticky top-0 self-start h-screen p-6 border-r border-slate-200 bg-white">
-          <div className="text-sm font-bold text-slate-900 mb-4">
-            Análise de Investimento
-          </div>
+          <button
+            onClick={novaAnalise}
+            className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 mb-4"
+          >
+            <ArrowLeft size={12} /> Nova análise
+          </button>
+          <div className="text-sm font-bold text-slate-900 mb-4">Análise de Investimento</div>
           <nav className="space-y-1">
             {SECTIONS.map((s) => (
               <button
@@ -591,29 +474,42 @@ export default function AnaliseLeilao() {
               </button>
             ))}
           </nav>
+          <button
+            onClick={editar}
+            className="mt-6 inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900"
+          >
+            <Pencil size={12} /> Editar dados
+          </button>
         </aside>
 
         <main className="flex-1 min-w-0 p-4 lg:p-8 space-y-12">
-          {/* HERO */}
           <SectionWrap id="ficha">
             <div className="rounded-2xl bg-slate-900 text-white p-8 lg:p-10 grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
-                <Badge className="bg-green-500/20 text-green-300 border border-green-500/40">
-                  Oportunidade de Leilão
-                </Badge>
-                <h1 className="text-3xl lg:text-4xl font-bold">{IMOVEL.nome}</h1>
-                <p className="text-slate-300">{IMOVEL.endereco}</p>
-                <p className="text-xs text-slate-400">{IMOVEL.leilao}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge className="bg-green-500/20 text-green-300 border border-green-500/40">
+                    Oportunidade de Leilão
+                  </Badge>
+                  <button
+                    onClick={editar}
+                    className="ml-auto inline-flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-full"
+                  >
+                    <Pencil size={12} /> Editar dados
+                  </button>
+                </div>
+                <h1 className="text-3xl lg:text-4xl font-bold">{d.nome || "—"}</h1>
+                <p className="text-slate-300">{d.endereco}</p>
+                {d.leilao && <p className="text-xs text-slate-400">{d.leilao}</p>}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
                   {[
-                    ["Área construída", `${IMOVEL.areaConst} m²`],
-                    ["Área do lote", `${IMOVEL.areaLote} m²`],
-                    ["Testada", `${IMOVEL.testada} m`],
-                    ["Tipo", IMOVEL.tipo],
-                    ["Estrutura", IMOVEL.estrutura],
-                    ["Conservação", IMOVEL.estadoConservacao],
-                    ["Matrícula", IMOVEL.matricula],
-                    ["Locatário", IMOVEL.locatario],
+                    ["Área construída", d.areaConst ? `${d.areaConst} m²` : "—"],
+                    ["Área do lote", d.areaLote ? `${d.areaLote} m²` : "—"],
+                    ["Testada", d.testada ? `${d.testada} m` : "—"],
+                    ["Tipo", d.tipo || "—"],
+                    ["Estrutura", d.estrutura],
+                    ["Conservação", d.estadoConservacao],
+                    ["Matrícula", d.matricula || "—"],
+                    ["Locatário", d.locatario || "—"],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <p className="text-xs text-slate-400">{k}</p>
@@ -622,8 +518,12 @@ export default function AnaliseLeilao() {
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Badge className="bg-blue-500/20 text-blue-300">Locação simultânea BB</Badge>
-                  <Badge className="bg-green-500/20 text-green-300">Renda garantida 60 meses</Badge>
+                  <Badge className="bg-blue-500/20 text-blue-300">Locação simultânea</Badge>
+                  {d.prazoLocacaoMeses > 0 && (
+                    <Badge className="bg-green-500/20 text-green-300">
+                      Renda garantida {d.prazoLocacaoMeses} meses
+                    </Badge>
+                  )}
                   <Badge className="bg-amber-500/20 text-amber-300">Pagamento à vista</Badge>
                 </div>
               </div>
@@ -633,110 +533,77 @@ export default function AnaliseLeilao() {
             </div>
           </SectionWrap>
 
-          {/* PREÇO */}
           <SectionWrap id="preco">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Preço: leilão vs mercado
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Preço: leilão vs mercado</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <p className="text-xs text-slate-500">Lance mínimo</p>
-                <p className="text-2xl font-bold text-slate-900">R$ 6,45M</p>
-                <p className="text-xs text-slate-500 mt-1">≈ R$ 3.924/m²</p>
+                <p className="text-2xl font-bold text-slate-900">{fmtBRLM(d.lanceMinimoMil * 1000)}</p>
+                {pm2 > 0 && <p className="text-xs text-slate-500 mt-1">≈ {fmtBRL(pm2)}/m²</p>}
               </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Valor venal (IPTU 2024)</p>
-                <p className="text-2xl font-bold text-slate-900">R$ 1,32M</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Valor de mercado estimado</p>
-                <p className="text-2xl font-bold text-slate-900">R$ 7,5–9M</p>
-                <p className="text-xs text-slate-500 mt-1">R$ 4.500–5.500/m²</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Desconto vs mercado</p>
-                <p className="text-2xl font-bold text-green-700">~25–30%</p>
-                <Badge className="bg-green-100 text-green-700 mt-2">
-                  Margem de segurança
-                </Badge>
-              </Card>
+              {mostraVenal && (
+                <Card>
+                  <p className="text-xs text-slate-500">Valor venal (IPTU)</p>
+                  <p className="text-2xl font-bold text-slate-900">{fmtBRLM(d.valorVenalMil * 1000)}</p>
+                </Card>
+              )}
+              {mostraMercado && (
+                <Card>
+                  <p className="text-xs text-slate-500">Valor de mercado estimado</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {d.valorMercadoMinMil > 0 && d.valorMercadoMaxMil > 0
+                      ? `${fmtBRLM(d.valorMercadoMinMil * 1000)} – ${fmtBRLM(d.valorMercadoMaxMil * 1000)}`
+                      : fmtBRLM(((d.valorMercadoMinMil || d.valorMercadoMaxMil) * 1000))}
+                  </p>
+                </Card>
+              )}
+              {descontoMin !== null && descontoMin > 0 && (
+                <Card>
+                  <p className="text-xs text-slate-500">Desconto vs mercado</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    {descontoMin && descontoMax
+                      ? `~${descontoMin.toFixed(0)}–${descontoMax.toFixed(0)}%`
+                      : `~${descontoMin?.toFixed(0)}%`}
+                  </p>
+                  <Badge className="bg-green-100 text-green-700 mt-2">Margem de segurança</Badge>
+                </Card>
+              )}
             </div>
-            <Card className="mt-6">
-              <p className="text-sm font-medium text-slate-700 mb-3">
-                Posicionamento do lance
-              </p>
-              <div className="relative h-3 bg-gradient-to-r from-slate-200 via-green-300 to-amber-300 rounded-full">
-                <div
-                  className="absolute -top-1 w-1 h-5 bg-slate-900"
-                  style={{ left: "14%" }}
-                />
-                <div
-                  className="absolute -top-1 w-1 h-5 bg-green-700"
-                  style={{ left: "55%" }}
-                />
-                <div
-                  className="absolute -top-1 w-1 h-5 bg-amber-700"
-                  style={{ left: "85%" }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-slate-600 mt-2">
-                <span>Venal R$ 1,32M</span>
-                <span className="text-green-700 font-semibold">Lance R$ 6,45M</span>
-                <span>Mercado R$ 7,5–9M</span>
-              </div>
-            </Card>
           </SectionWrap>
 
-          {/* RENDA */}
           <SectionWrap id="renda">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Renda e locação simultânea
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Renda e locação simultânea</h2>
             <Card className="border-2 border-green-500">
-              <Badge className="bg-green-100 text-green-700 mb-3">
-                Renda contratada pelo edital
-              </Badge>
+              <Badge className="bg-green-100 text-green-700 mb-3">Renda contratada pelo edital</Badge>
               <div className="grid md:grid-cols-3 gap-6 mt-2">
                 <div>
                   <p className="text-xs text-slate-500">Aluguel mensal</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {fmtBRL(IMOVEL.aluguelMensalInicial)}
-                  </p>
+                  <p className="text-2xl font-bold text-slate-900">{fmtBRL(d.aluguelMensalInicial)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Renda anual bruta</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {fmtBRL(rendaAnual)}
-                  </p>
+                  <p className="text-2xl font-bold text-slate-900">{fmtBRL(rendaAnual)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Cap rate nominal</p>
-                  <p className="text-2xl font-bold text-green-700">
-                    {fmtPct(IMOVEL.capRateNominal)} a.a.
-                  </p>
+                  <p className="text-2xl font-bold text-green-700">{fmtPct(cap)} a.a.</p>
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-4 border-t pt-3">
-                Locatário: {IMOVEL.locatario} | Prazo: até{" "}
-                {IMOVEL.prazoLocacaoMeses} meses | Reajuste: IGPM / IPCA / INPC
-                (a escolha)
+                Locatário: {d.locatario || "—"} | Prazo: até {d.prazoLocacaoMeses} meses
               </p>
             </Card>
             <Card className="mt-6">
-              <h3 className="font-semibold text-slate-900 mb-3">
-                Renda acumulada por ano (R$ mil)
-              </h3>
+              <h3 className="font-semibold text-slate-900 mb-3">Renda acumulada por ano (R$ mil)</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={rendaAcumData}>
                   <CartesianGrid stroke="#f1f5f9" />
                   <XAxis dataKey="ano" />
                   <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(1)}M`} />
-                  <Tooltip
-                    formatter={(v: number) => `R$ ${(v / 1000).toFixed(2)}M`}
-                  />
+                  <Tooltip formatter={(v: number) => `R$ ${(v / 1000).toFixed(2)}M`} />
                   <Legend />
                   <ReferenceLine
-                    y={IMOVEL.lanceMinimoMil}
+                    y={d.lanceMinimoMil}
                     stroke="#64748b"
                     strokeDasharray="4 4"
                     label={{ value: "Lance mínimo", fontSize: 11, fill: "#64748b" }}
@@ -747,52 +614,25 @@ export default function AnaliseLeilao() {
             </Card>
           </SectionWrap>
 
-          {/* CORREÇÃO */}
           <SectionWrap id="correcao">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Risco crítico: correção monetária
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Risco crítico: correção monetária</h2>
             <div className="bg-red-50 border border-red-300 rounded-xl p-4 flex gap-3 mb-6">
               <AlertTriangle className="text-red-600 shrink-0" />
               <p className="text-sm text-red-900">
-                Contratos com entes estatais frequentemente têm reajuste
-                limitado por processo interno ou simplesmente omissão. O edital
-                prevê reajuste anual mediante prévia manifestação formal do
-                locador — se o BB não solicitar, caduca sem retroatividade.
+                Contratos com entes estatais frequentemente têm reajuste limitado por processo interno
+                ou simplesmente omissão. O reajuste depende de prévia manifestação formal do locador
+                — se o locatário não solicitar, caduca sem retroatividade.
               </p>
             </div>
-
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <Card className="border-l-4 border-green-500">
-                <p className="text-xs text-slate-500">Renda 5a c/ IPCA 5%</p>
-                <p className="text-xl font-bold text-green-700">R$ 2,82M</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Renda 5a c/ IGPM 4%</p>
-                <p className="text-xl font-bold">R$ 2,73M</p>
-              </Card>
-              <Card className="border-l-4 border-red-500">
-                <p className="text-xs text-slate-500">Renda 5a sem reajuste</p>
-                <p className="text-xl font-bold text-red-700">R$ 2,52M</p>
-                <p className="text-xs text-red-600 mt-1">
-                  -R$ 300k vs cenário base
-                </p>
-              </Card>
-            </div>
-
             <div className="grid lg:grid-cols-2 gap-6">
               <Card>
-                <h3 className="font-semibold text-slate-900 mb-3">
-                  Renda acumulada por cenário
-                </h3>
+                <h3 className="font-semibold text-slate-900 mb-3">Renda acumulada por cenário</h3>
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={correcaoData}>
                     <CartesianGrid stroke="#f1f5f9" />
                     <XAxis dataKey="ano" />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(1)}M`} />
-                    <Tooltip
-                      formatter={(v: number) => `R$ ${(v / 1000).toFixed(2)}M`}
-                    />
+                    <Tooltip formatter={(v: number) => `R$ ${(v / 1000).toFixed(2)}M`} />
                     <Legend />
                     <Bar dataKey="IPCA 5%" fill="#16a34a" />
                     <Bar dataKey="IGPM 4%" fill="#2563eb" />
@@ -801,60 +641,22 @@ export default function AnaliseLeilao() {
                 </ResponsiveContainer>
               </Card>
               <Card>
-                <h3 className="font-semibold text-slate-900 mb-3">
-                  Aluguel real deflacionado
-                </h3>
+                <h3 className="font-semibold text-slate-900 mb-3">Aluguel real deflacionado</h3>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={realData}>
                     <CartesianGrid stroke="#f1f5f9" />
                     <XAxis dataKey="ano" />
-                    <YAxis
-                      domain={[28000, 45000]}
-                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                    />
+                    <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmtBRL(v)} />
                     <Legend />
-                    <Line
-                      dataKey="Com IPCA"
-                      stroke="#16a34a"
-                      strokeWidth={2}
-                    />
-                    <Line
-                      dataKey="Sem reajuste"
-                      stroke="#dc2626"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                    />
+                    <Line dataKey="Com IPCA" stroke="#16a34a" strokeWidth={2} />
+                    <Line dataKey="Sem reajuste" stroke="#dc2626" strokeWidth={2} strokeDasharray="5 5" />
                   </LineChart>
                 </ResponsiveContainer>
               </Card>
             </div>
-            <p className="text-xs text-slate-600 mt-3">
-              Inflação de referência: IPCA 5% a.a. | Sem reajuste, o locador
-              perde ~20% do poder de compra em 5 anos.
-            </p>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-              <Card>
-                <p className="text-xs text-slate-500">Cap rate nominal (ano 1)</p>
-                <p className="text-xl font-bold text-green-700">7,8%</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Cap rate real sem reajuste</p>
-                <p className="text-xl font-bold text-red-600">2,8%</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Cap rate real c/ IPCA pleno</p>
-                <p className="text-xl font-bold text-green-700">7,8%</p>
-              </Card>
-              <Card>
-                <p className="text-xs text-slate-500">Renda líquida PF (IR 27,5%)</p>
-                <p className="text-xl font-bold text-amber-600">~R$ 30,4k/mês</p>
-              </Card>
-            </div>
           </SectionWrap>
 
-          {/* RISCOS */}
           <SectionWrap id="riscos">
             <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2">
               <ShieldAlert /> Mapa de riscos
@@ -862,37 +664,17 @@ export default function AnaliseLeilao() {
             <div className="space-y-3">
               {RISCOS.map((r) => {
                 const sev = r.severidade;
-                const borderC =
-                  sev === "Alto"
-                    ? "border-red-500"
-                    : sev === "Médio"
-                      ? "border-yellow-500"
-                      : "border-green-500";
-                const badgeC =
-                  sev === "Alto"
-                    ? "bg-red-100 text-red-700"
-                    : sev === "Médio"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-green-100 text-green-700";
-                const dot =
-                  sev === "Alto" ? "🔴" : sev === "Médio" ? "🟡" : "🟢";
+                const borderC = sev === "Alto" ? "border-red-500" : sev === "Médio" ? "border-yellow-500" : "border-green-500";
+                const badgeC = sev === "Alto" ? "bg-red-100 text-red-700" : sev === "Médio" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
+                const dot = sev === "Alto" ? "🔴" : sev === "Médio" ? "🟡" : "🟢";
                 return (
-                  <Card
-                    key={r.titulo}
-                    className={`border-l-4 ${borderC}`}
-                  >
+                  <Card key={r.titulo} className={`border-l-4 ${borderC}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-semibold text-slate-900">
-                          {r.titulo}
-                        </h4>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {r.descricao}
-                        </p>
+                        <h4 className="font-semibold text-slate-900">{r.titulo}</h4>
+                        <p className="text-sm text-slate-600 mt-1">{r.descricao}</p>
                       </div>
-                      <Badge className={badgeC}>
-                        {dot} {sev}
-                      </Badge>
+                      <Badge className={badgeC}>{dot} {sev}</Badge>
                     </div>
                   </Card>
                 );
@@ -900,46 +682,36 @@ export default function AnaliseLeilao() {
             </div>
           </SectionWrap>
 
-          {/* COMPARATIVO */}
           <SectionWrap id="comparativo">
-            <Comparativo />
+            <Comparativo d={d} />
           </SectionWrap>
 
-          {/* RESUMO */}
           <SectionWrap id="resumo">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Resumo executivo
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Resumo executivo</h2>
             <Card className="border-2 border-green-500">
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-xs text-slate-500">Investimento total</p>
-                  <p className="text-xl font-bold">~R$ 6,82M</p>
-                  <p className="text-xs text-slate-500">
-                    lance + comissão 5% + ITBI ~2% + cartório
-                  </p>
+                  <p className="text-xl font-bold">{fmtBRLM(investTotal)}</p>
+                  <p className="text-xs text-slate-500">lance + custos estimados</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Renda bruta anual</p>
-                  <p className="text-xl font-bold text-green-700">
-                    R$ 503.088
-                  </p>
+                  <p className="text-xl font-bold text-green-700">{fmtBRL(rendaAnual)}</p>
                   <p className="text-xs text-slate-500">contratada</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Payback (renda pura)</p>
-                  <p className="text-xl font-bold">~12,8 anos</p>
+                  <p className="text-xl font-bold">{payback > 0 ? `~${payback.toFixed(1)} anos` : "—"}</p>
                   <p className="text-xs text-slate-500">sem valorização</p>
                 </div>
               </div>
               <div className="mt-6 space-y-2">
                 {[
-                  "Locatário investment grade (Banco do Brasil S.A.) — Risco baixo",
-                  "Imóvel em estado ótimo, sem obras exigidas pelo edital — Sem capex imediato",
-                  "Centro de São Bento do Sul — Alta demanda comercial",
-                  "Desconto ~25–30% sobre valor de mercado estimado — Margem de segurança",
-                  "Cap rate de ~7,8% a.a. com renda garantida no ato da compra — Renda imediata",
-                  "Matrícula limpa — penhoramentos anteriores cancelados em cartório",
+                  `Cap rate de ${fmtPct(cap)} a.a. com renda contratada no ato da compra`,
+                  `Locatário: ${d.locatario || "—"}`,
+                  `Estado de conservação: ${d.estadoConservacao}`,
+                  `Prazo de locação: ${d.prazoLocacaoMeses} meses`,
                 ].map((t) => (
                   <div key={t} className="flex items-start gap-2 text-sm">
                     <CheckCircle2 className="text-green-600 shrink-0 mt-0.5" size={16} />
@@ -948,11 +720,8 @@ export default function AnaliseLeilao() {
                 ))}
               </div>
               <p className="text-xs text-slate-500 mt-6 border-t pt-3">
-                Atualização das informações recomendada antes de qualquer
-                decisão de investimento. Premissas macroeconômicas baseadas no
-                Boletim Focus do Banco Central — mai/2026. Valorização do
-                imóvel é estimativa sem série histórica pública disponível para
-                São Bento do Sul.
+                Atualização das informações recomendada antes de qualquer decisão de investimento.
+                Premissas macroeconômicas baseadas no Boletim Focus do Banco Central.
               </p>
             </Card>
           </SectionWrap>
