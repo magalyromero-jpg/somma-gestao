@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, RotateCcw, Trash2, FileText, ArrowRight } from "lucide-react";
+import { ChevronDown, ChevronUp, RotateCcw, Trash2, FileText, ArrowRight, Upload, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,8 @@ export default function AnaliseLeilaoForm() {
   const [openMacro, setOpenMacro] = useState(false);
   const [historico, setHistorico] = useState(() => getHistorico());
   const [erros, setErros] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
+  const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
 
   const set = <K extends keyof DadosImovel>(k: K, v: DadosImovel[K]) =>
     setDados((d) => ({ ...d, [k]: v }));
@@ -130,6 +132,110 @@ export default function AnaliseLeilaoForm() {
     setHistorico(getHistorico());
   };
 
+  const extrairDoPDF = async (file: File) => {
+    setUploading(true);
+    setNomeArquivo(file.name);
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res((r.result as string).split(",")[1]);
+        r.onerror = () => rej(new Error("Falha ao ler arquivo"));
+        r.readAsDataURL(file);
+      });
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "document",
+                  source: { type: "base64", media_type: "application/pdf", data: base64 },
+                },
+                {
+                  type: "text",
+                  text: `Você é um especialista em leilões imobiliários. Analise este edital e extraia os dados do imóvel.
+Retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem backticks.
+Use exatamente estas chaves e tipos:
+
+{
+  "nome": "identificação do lote ou imóvel (string)",
+  "endereco": "endereço completo (string)",
+  "leilao": "número ou identificação do leilão (string)",
+  "tipo": "tipo do imóvel ex: Galpão, Apartamento, Sala Comercial (string)",
+  "areaConst": número da área construída em m² (number),
+  "areaLote": número da área do lote em m² ou 0 (number),
+  "testada": número da testada em metros ou 0 (number),
+  "estrutura": "Alvenaria ou Metálica ou Mista ou Madeira (string)",
+  "estadoConservacao": "Ótimo ou Bom ou Regular ou Ruim (string)",
+  "matricula": "número da matrícula CRI ou string vazia",
+  "locatario": "nome do locatário ou string vazia",
+  "lanceMinimoMil": valor do lance mínimo em reais ex: 1500000 (number),
+  "investimentoTotalMil": 0,
+  "aluguelMensalInicial": valor do aluguel mensal em reais ou 0 (number),
+  "prazoLocacaoMeses": número de meses do contrato de locação ou 0 (number),
+  "valorVenalMil": valor venal da prefeitura em reais ou 0 (number),
+  "valorMercadoMinMil": 0,
+  "valorMercadoMaxMil": 0
+}
+
+Importante: lanceMinimoMil, aluguelMensalInicial e valorVenalMil devem ser o valor COMPLETO em reais (não dividido por mil).`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+      const text =
+        data.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const extraido = JSON.parse(clean);
+
+      const dadosExtraidos: DadosImovel = {
+        ...dados,
+        nome: extraido.nome || "",
+        endereco: extraido.endereco || "",
+        leilao: extraido.leilao || "",
+        tipo: extraido.tipo || "",
+        areaConst: Number(extraido.areaConst) || 0,
+        areaLote: Number(extraido.areaLote) || 0,
+        testada: Number(extraido.testada) || 0,
+        estrutura: extraido.estrutura || "Alvenaria",
+        estadoConservacao: extraido.estadoConservacao || "Bom",
+        matricula: extraido.matricula || "",
+        locatario: extraido.locatario || "",
+        lanceMinimoMil: (Number(extraido.lanceMinimoMil) || 0) / 1000,
+        investimentoTotalMil: (Number(extraido.investimentoTotalMil) || 0) / 1000,
+        aluguelMensalInicial: Number(extraido.aluguelMensalInicial) || 0,
+        prazoLocacaoMeses: Number(extraido.prazoLocacaoMeses) || 0,
+        valorVenalMil: (Number(extraido.valorVenalMil) || 0) / 1000,
+        valorMercadoMinMil: (Number(extraido.valorMercadoMinMil) || 0) / 1000,
+        valorMercadoMaxMil: (Number(extraido.valorMercadoMaxMil) || 0) / 1000,
+      };
+
+      setDados(dadosExtraidos);
+      setAtual(dadosExtraidos);
+      salvarAnalise(dadosExtraidos);
+      setHistorico(getHistorico());
+
+      toast.success("Dados extraídos com sucesso! Gerando análise...");
+      setTimeout(() => nav("/analise-leilao/resultado"), 800);
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível extrair os dados. Verifique o PDF e tente novamente.");
+      setNomeArquivo(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Persist working state
   useEffect(() => {
     setAtual(dados);
@@ -144,10 +250,52 @@ export default function AnaliseLeilaoForm() {
             <h1 className="text-2xl font-bold">Análise de Investimento Imobiliário</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Nova análise — preencha os dados do imóvel de leilão
+            Suba o edital em PDF ou preencha os dados manualmente
           </p>
         </header>
 
+        {/* Upload PDF */}
+        <div className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-primary transition-colors">
+          {uploading ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-sm font-medium text-slate-900">Lendo o edital...</p>
+              {nomeArquivo && (
+                <p className="text-xs text-slate-500">{nomeArquivo}</p>
+              )}
+              <p className="text-xs text-slate-400">
+                Extraindo dados e gerando análise automaticamente
+              </p>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-10 w-10 text-slate-400 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-900 mb-1">
+                Suba o PDF do edital de leilão
+              </p>
+              <p className="text-xs text-slate-500 mb-5">
+                O Claude vai extrair os dados e gerar a análise automaticamente
+              </p>
+              <label className="cursor-pointer inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <Upload size={15} /> Selecionar PDF
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) extrairDoPDF(file);
+                  }}
+                />
+              </label>
+              <p className="text-xs text-slate-400 mt-5">
+                — ou preencha o formulário abaixo manualmente —
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Formulário manual */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
           <Tabs defaultValue="imovel">
             <TabsList className="grid grid-cols-2 w-full max-w-md">
