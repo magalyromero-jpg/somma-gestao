@@ -157,20 +157,22 @@ export default function AnaliseLeilaoForm() {
         endereco: extraido.endereco || "",
         leilao: extraido.leilao || "",
         tipo: extraido.tipo || "",
-        areaConst: Number(extraido.areaConst) || 0,
-        areaLote: Number(extraido.areaLote) || 0,
-        testada: Number(extraido.testada) || 0,
-        estrutura: extraido.estrutura || "Alvenaria",
-        estadoConservacao: extraido.estadoConservacao || "Bom",
         matricula: extraido.matricula || "",
         locatario: extraido.locatario || "",
-        lanceMinimoMil: (Number(extraido.lanceMinimoMil) || 0) / 1000,
-        investimentoTotalMil: (Number(extraido.investimentoTotalMil) || 0) / 1000,
-        aluguelMensalInicial: Number(extraido.aluguelMensalInicial) || 0,
         prazoLocacaoMeses: Number(extraido.prazoLocacaoMeses) || 0,
-        valorVenalMil: (Number(extraido.valorVenalMil) || 0) / 1000,
-        valorMercadoMinMil: (Number(extraido.valorMercadoMinMil) || 0) / 1000,
-        valorMercadoMaxMil: (Number(extraido.valorMercadoMaxMil) || 0) / 1000,
+        aluguelMensalInicial: Number(extraido.aluguelMensalInicial) || 0,
+        lanceMinimoMil: (Number(extraido.lanceMinimoMil) || 0) / 1000,
+        // Campos físicos: sempre null — usuário preenche após upload do IPTU
+        areaConst: 0,
+        areaLote: 0,
+        testada: 0,
+        estrutura: "Alvenaria",
+        estadoConservacao: "Bom",
+        // Campos de mercado: sempre zerados — usuário pesquisa e preenche
+        valorVenalMil: 0,
+        valorMercadoMinMil: 0,
+        valorMercadoMaxMil: 0,
+        investimentoTotalMil: ((Number(extraido.lanceMinimoMil) || 0) / 1000) * 1.075,
       };
 
       setDados(dadosExtraidos);
@@ -178,8 +180,7 @@ export default function AnaliseLeilaoForm() {
       salvarAnalise(dadosExtraidos);
       setHistorico(getHistorico());
 
-      toast.success("Dados extraídos com sucesso! Gerando análise...");
-      setTimeout(() => nav("/analise-leilao/resultado"), 800);
+      toast.success("Dados do edital extraídos! Complete os campos físicos e de mercado para gerar a análise.");
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível extrair os dados. Verifique o PDF e tente novamente.");
