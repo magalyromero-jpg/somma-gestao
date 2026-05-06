@@ -143,60 +143,12 @@ export default function AnaliseLeilaoForm() {
         r.readAsDataURL(file);
       });
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "document",
-                  source: { type: "base64", media_type: "application/pdf", data: base64 },
-                },
-                {
-                  type: "text",
-                  text: `Você é um especialista em leilões imobiliários. Analise este edital e extraia os dados do imóvel.
-Retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem backticks.
-Use exatamente estas chaves e tipos:
-
-{
-  "nome": "identificação do lote ou imóvel (string)",
-  "endereco": "endereço completo (string)",
-  "leilao": "número ou identificação do leilão (string)",
-  "tipo": "tipo do imóvel ex: Galpão, Apartamento, Sala Comercial (string)",
-  "areaConst": número da área construída em m² (number),
-  "areaLote": número da área do lote em m² ou 0 (number),
-  "testada": número da testada em metros ou 0 (number),
-  "estrutura": "Alvenaria ou Metálica ou Mista ou Madeira (string)",
-  "estadoConservacao": "Ótimo ou Bom ou Regular ou Ruim (string)",
-  "matricula": "número da matrícula CRI ou string vazia",
-  "locatario": "nome do locatário ou string vazia",
-  "lanceMinimoMil": valor do lance mínimo em reais ex: 1500000 (number),
-  "investimentoTotalMil": 0,
-  "aluguelMensalInicial": valor do aluguel mensal em reais ou 0 (number),
-  "prazoLocacaoMeses": número de meses do contrato de locação ou 0 (number),
-  "valorVenalMil": valor venal da prefeitura em reais ou 0 (number),
-  "valorMercadoMinMil": 0,
-  "valorMercadoMaxMil": 0
-}
-
-Importante: lanceMinimoMil, aluguelMensalInicial e valorVenalMil devem ser o valor COMPLETO em reais (não dividido por mil).`,
-                },
-              ],
-            },
-          ],
-        }),
+      const { data: resp, error } = await supabase.functions.invoke("extract-edital", {
+        body: { pdfBase64: base64 },
       });
-
-      const data = await response.json();
-      const text =
-        data.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
-      const clean = text.replace(/```json|```/g, "").trim();
-      const extraido = JSON.parse(clean);
+      if (error) throw error;
+      if (resp?.error) throw new Error(resp.error);
+      const extraido = resp.data;
 
       const dadosExtraidos: DadosImovel = {
         ...dados,
