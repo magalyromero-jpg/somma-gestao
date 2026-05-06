@@ -5,6 +5,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SYSTEM_PROMPT = `Você receberá o PDF de um edital de leilão imobiliário brasileiro.
+Extraia APENAS os campos abaixo se estiverem EXPLICITAMENTE no texto do documento.
+Se um campo não existir no documento, retorne null. NUNCA invente ou assuma valores.
+
+CAMPOS A EXTRAIR:
+- nome: string — identificação do lote (ex: "LOTE 14 - São Bento do Sul")
+- endereco: string — endereço completo do imóvel
+- leilao: string — número do leilão (ex: "2026/260004V(9055)")
+- matricula: string — número da matrícula do CRI
+- locatario: string — nome do locatário (geralmente "BANCO DO BRASIL S/A")
+- prazoLocacaoMeses: number — prazo em meses
+- aluguelMensalInicial: number — valor mensal em R$ como número puro (ex: 41924)
+- lanceMinimoMil: number — lance mínimo em R$ como número puro (ex: 6449855)
+- tipo: string — tipo do imóvel se mencionado (ex: "Prédio Comercial")
+
+REGRA CRÍTICA: Os campos abaixo NUNCA aparecem no edital. Retorne sempre null para eles:
+- areaConst, areaLote, testada (vêm do IPTU ou matrícula)
+- estrutura, estadoConservacao (vêm de vistoria presencial)
+- valorVenalMil, valorMercadoMinMil, valorMercadoMaxMil (requerem pesquisa externa)
+- investimentoTotalMil, aluguelMensalInicial quando não houver valor explícito
+
+Para valores monetários: remova pontos de milhar e vírgulas decimais, retorne sempre como número inteiro em reais (não em milhares).
+
+Responda SOMENTE com JSON válido, sem texto adicional, sem markdown, sem explicações.`;
+
 const tool = {
   type: "function",
   function: {
@@ -13,26 +38,19 @@ const tool = {
     parameters: {
       type: "object",
       properties: {
-        nome: { type: "string", description: "Identificação do lote/imóvel" },
-        endereco: { type: "string" },
-        leilao: { type: "string", description: "Número/identificação do leilão" },
-        tipo: { type: "string", description: "Ex: Galpão, Apartamento, Sala Comercial" },
-        areaConst: { type: "number", description: "Área construída em m²" },
-        areaLote: { type: "number", description: "Área do lote em m² (0 se não houver)" },
-        testada: { type: "number", description: "Testada em metros (0 se não houver)" },
-        estrutura: { type: "string", enum: ["Alvenaria", "Metálica", "Mista", "Madeira"] },
-        estadoConservacao: { type: "string", enum: ["Ótimo", "Bom", "Regular", "Ruim"] },
-        matricula: { type: "string" },
-        locatario: { type: "string" },
-        lanceMinimoMil: { type: "number", description: "Lance mínimo em REAIS (valor completo, não dividido por mil)" },
-        aluguelMensalInicial: { type: "number", description: "Aluguel mensal em REAIS" },
-        prazoLocacaoMeses: { type: "number" },
-        valorVenalMil: { type: "number", description: "Valor venal em REAIS (0 se não houver)" },
+        nome: { type: ["string", "null"] },
+        endereco: { type: ["string", "null"] },
+        leilao: { type: ["string", "null"] },
+        matricula: { type: ["string", "null"] },
+        locatario: { type: ["string", "null"] },
+        tipo: { type: ["string", "null"] },
+        prazoLocacaoMeses: { type: ["number", "null"] },
+        aluguelMensalInicial: { type: ["number", "null"] },
+        lanceMinimoMil: { type: ["number", "null"], description: "Lance mínimo em REAIS (inteiro)" },
       },
       required: [
-        "nome", "endereco", "leilao", "tipo", "areaConst", "areaLote", "testada",
-        "estrutura", "estadoConservacao", "matricula", "locatario",
-        "lanceMinimoMil", "aluguelMensalInicial", "prazoLocacaoMeses", "valorVenalMil",
+        "nome", "endereco", "leilao", "matricula", "locatario", "tipo",
+        "prazoLocacaoMeses", "aluguelMensalInicial", "lanceMinimoMil",
       ],
       additionalProperties: false,
     },
@@ -70,11 +88,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          {
-            role: "system",
-            content:
-              "Você é um especialista em leilões imobiliários. Extraia os dados do edital chamando a função extrair_edital. Use 0 quando o dado não estiver disponível e string vazia para campos textuais ausentes.",
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: [
@@ -82,7 +96,7 @@ serve(async (req) => {
                 type: "image_url",
                 image_url: { url: `data:application/pdf;base64,${pdfBase64}` },
               },
-              { type: "text", text: "Extraia os dados deste edital." },
+              { type: "text", text: "Extraia os dados deste edital seguindo estritamente as regras." },
             ],
           },
         ],
