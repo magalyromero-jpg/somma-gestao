@@ -36,8 +36,6 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
-            <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole="gestor"><Dashboard /></ProtectedRoute>} />
@@ -49,6 +47,8 @@ const App = () => (
               <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
               <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
+              <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole="gestor"><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole="gestor"><Configuracoes /></ProtectedRoute>} />
             </Route>
