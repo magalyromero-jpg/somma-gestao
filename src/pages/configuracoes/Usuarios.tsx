@@ -42,7 +42,7 @@ export default function Usuarios() {
   // form
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("gestor");
+  const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("admin");
   const [modo, setModo] = useState<"convite" | "senha">("convite");
   const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
@@ -92,7 +92,7 @@ export default function Usuarios() {
     }
     toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
     setOpen(false);
-    setNome(""); setEmail(""); setPerfil("gestor"); setSenha(""); setModo("convite");
+    setNome(""); setEmail(""); setPerfil("admin"); setSenha(""); setModo("convite");
     carregar();
   }
 
