@@ -42,6 +42,7 @@ import {
 } from "@/lib/onboarding/checklist";
 import { detectarDocumento, PROCESSING_STEPS } from "@/lib/onboarding/detectDocumento";
 import { useAuth } from "@/contexts/AuthContext";
+import { DiligenciaImovelCard } from "@/components/diligencia/DiligenciaImovelCard";
 
 const PAPEL_LABEL: Record<Papel, string> = {
   titular: "Titular",
