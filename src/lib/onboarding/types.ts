@@ -59,23 +59,28 @@ export interface Imovel {
   holding_id: string | null;
   forma_aquisicao: "compra" | "permuta" | "integralizacao" | "heranca" | "doacao" | "outra" | null;
   locacao: boolean;
-  situacao_2023: number | null;
-  situacao_2024: number | null;
+  alienado?: boolean;
+  situacao_ano_anterior: number | null;
+  situacao_ano_atual: number | null;
+  benfeitorias?: Array<{ descricao: string; valor: number | null; ano: number | null }>;
   alertas: string[];
   fonte: string;
 }
 
 export interface Veiculo {
+  id?: string;
   descricao: string;
   placa: string | null;
+  renavam?: string | null;
   ano: string | null;
   valor_declarado: number | null;
   titular_id: string;
+  alienado?: boolean;
   fonte: string;
 }
 
 export interface PatrimonialData {
-  familia: { nome: string; sede: string | null; perfil: string | null; fonte: string };
+  familia: { nome: string; sede: string | null; perfil: string | null; email_familia?: string | null; fonte: string };
   membros: Membro[];
   holdings: Holding[];
   imoveis: Imovel[];
@@ -94,8 +99,8 @@ export interface PatrimonialData {
   dividas?: Array<{
     descricao: string;
     credor: string | null;
-    valor_2023: number | null;
-    valor_2024: number | null;
+    valor_ano_anterior: number | null;
+    valor_ano_atual: number | null;
     titular_id: string;
     fonte: string;
   }>;
@@ -109,14 +114,15 @@ export interface PatrimonialData {
   checklist_documentos?: Record<string, string | string[]>;
   alertas_gerais?: Array<{ nivel: "critico" | "atencao" | "informativo"; mensagem: string; relacionado_a: string | null }>;
   patrimonio_liquido?: {
-    bens_2023: number | null;
-    bens_2024: number | null;
-    dividas_2023: number | null;
-    dividas_2024: number | null;
-    liquido_2024: number | null;
+    bens_ano_anterior: number | null;
+    bens_ano_atual: number | null;
+    dividas_ano_anterior: number | null;
+    dividas_ano_atual: number | null;
+    liquido_ano_atual: number | null;
   };
   meta: {
     documentos_analisados: string[];
+    ano_calendario?: number | null;
     data_extracao: string;
     confianca: "alta" | "media" | "baixa";
     observacoes_gerais: string | null;

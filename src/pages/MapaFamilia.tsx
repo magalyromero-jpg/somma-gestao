@@ -195,8 +195,8 @@ export default function MapaFamilia() {
   const totalImoveis = data?.imoveis?.length ?? 0;
   const totalHoldings = data?.holdings?.length ?? 0;
   const patrimonio =
-    data?.patrimonio_liquido?.bens_2024 ??
-    data?.patrimonio_liquido?.bens_2023 ??
+    data?.patrimonio_liquido?.bens_ano_atual ??
+    data?.patrimonio_liquido?.bens_ano_anterior ??
     null;
   const dividendos = data?.rendimentos?.isentos_dividendos ?? null;
 
