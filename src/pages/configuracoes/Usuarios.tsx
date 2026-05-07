@@ -105,6 +105,19 @@ export default function Usuarios() {
     carregar();
   }
 
+  async function reenviar(u: UsuarioRow) {
+    if (!u.email) return;
+    const perfilEnvio = (u.role && u.role !== "familia" ? u.role : "analista") as "admin" | "gestor" | "analista";
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: { nome: u.nome ?? u.email, email: u.email, perfil: perfilEnvio },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Falha ao reenviar convite");
+      return;
+    }
+    toast.success(`Convite reenviado para ${u.email}`);
+  }
+
   return (
     <>
       <PageHeader
