@@ -116,10 +116,38 @@ export default function AnaliseLeilaoForm() {
     nav("/analise-leilao/resultado");
   };
 
-  const restaurarFocus = () => {
-    setDados((d) => ({ ...d, ...FOCUS_DEFAULTS }));
-    toast.success("Premissas Focus restauradas");
+  const buscarFocus = async () => {
+    setLoadingFocus(true);
+    try {
+      const { data: resp, error } = await supabase.functions.invoke("fetch-focus", { body: {} });
+      if (error) throw error;
+      if (resp?.error) throw new Error(resp.error);
+      const f = resp.data;
+      setDados((d) => ({
+        ...d,
+        cdiAtual: Number(f.cdiAtual) || d.cdiAtual,
+        cdiProjeto2026: Number(f.cdiProjeto2026) || d.cdiProjeto2026,
+        cdiProjeto2027: Number(f.cdiProjeto2027) || d.cdiProjeto2027,
+        cdiProjeto2028plus: Number(f.cdiProjeto2028plus) || d.cdiProjeto2028plus,
+        ipcaProjeto2026: Number(f.ipcaProjeto2026) || d.ipcaProjeto2026,
+        ipcaProjeto2027: Number(f.ipcaProjeto2027) || d.ipcaProjeto2027,
+        ipcaProjeto2028plus: Number(f.ipcaProjeto2028plus) || d.ipcaProjeto2028plus,
+      }));
+      toast.success("Premissas Focus atualizadas");
+    } catch (err) {
+      console.error(err);
+      setDados((d) => ({ ...d, ...FOCUS_DEFAULTS }));
+      toast.error("Não foi possível buscar o Focus — usando padrões");
+    } finally {
+      setLoadingFocus(false);
+    }
   };
+
+  // Buscar Focus ao montar
+  useEffect(() => {
+    buscarFocus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const abrir = (id: number) => {
     const item = historico.find((h) => h.id === id);
