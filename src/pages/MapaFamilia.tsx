@@ -1075,23 +1075,8 @@ function DocumentosTab({
             })}
           </Accordion>
 
-          <div className="border-t pt-4 space-y-2">
-            <Label className="text-xs">+ Adicionar imóvel manualmente</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                placeholder="Endereço ou identificação"
-                value={novoImovel}
-                onChange={(e) => setNovoImovel(e.target.value)}
-                className="flex-1 min-w-[200px]"
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={novoLocacao} onCheckedChange={(v) => setNovoLocacao(!!v)} />
-                Imóvel de locação?
-              </label>
-              <Button onClick={adicionarImovel} disabled={novoImovel.trim().length < 2}>
-                <Plus /> Adicionar
-              </Button>
-            </div>
+          <div className="text-xs text-muted-foreground border-t pt-3">
+            Documentos por imóvel ficam na aba <strong>Diligência</strong>.
           </div>
         </CardContent>
       </Card>
