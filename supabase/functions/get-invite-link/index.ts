@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
     const { email } = await req.json().catch(() => ({}));
     if (!email) return json({ error: "Email obrigatório" }, 400);
 
-    const origin = req.headers.get("origin") ?? SUPABASE_URL;
+    const redirectTo = "https://somma-gestao.lovable.app/auth/set-password";
     const { data, error } = await admin.auth.admin.generateLink({
       type: "invite",
       email,
-      options: { redirectTo: `${origin}/auth/set-password` },
+      options: { redirectTo },
     });
     if (error) return json({ error: error.message }, 400);
 
