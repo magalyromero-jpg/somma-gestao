@@ -41,9 +41,26 @@ Deno.serve(async (req) => {
     if (!isAdmin) return json({ error: "Apenas administradores podem convidar usuários" }, 403);
 
     const body = await req.json().catch(() => ({}));
-    const { email, nome, perfil, senha } = body as {
+    const { email, nome, perfil, senha, acao, user_id } = body as {
       email?: string; nome?: string; perfil?: Perfil; senha?: string;
+      acao?: "criar" | "redefinir_senha"; user_id?: string;
     };
+
+    // === MODO: redefinir senha de usuário existente ===
+    if (acao === "redefinir_senha") {
+      if (!user_id || !senha || String(senha).length < 8) {
+        return json({ error: "user_id e senha (mín. 8) são obrigatórios" }, 400);
+      }
+      const { error: updErr } = await admin.auth.admin.updateUserById(user_id, {
+        password: String(senha),
+        email_confirm: true,
+      });
+      if (updErr) return json({ error: updErr.message }, 400);
+      await admin.from("profiles").update({ status: "ativo" }).eq("user_id", user_id);
+      return json({ ok: true, user_id, modo: "redefinir_senha" });
+    }
+
+    // === MODO: criar usuário novo ===
     if (!email || !nome || !perfil || !PERFIS.includes(perfil)) {
       return json({ error: "Dados inválidos: email, nome e perfil válido são obrigatórios" }, 400);
     }
@@ -57,7 +74,6 @@ Deno.serve(async (req) => {
     let newUserId: string;
 
     if (senha) {
-      // Cria diretamente com senha — já confirma e-mail, sem envio de convite.
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
         password: String(senha),
@@ -88,7 +104,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Atribui o papel solicitado (handle_new_user adiciona 'familia' por padrão; substituímos)
     await admin.from("user_roles").delete().eq("user_id", newUserId);
     await admin.from("user_roles").insert({ user_id: newUserId, role: perfil });
 

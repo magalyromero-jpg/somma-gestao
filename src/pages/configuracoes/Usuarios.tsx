@@ -47,6 +47,29 @@ export default function Usuarios() {
   const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // redefinir senha
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [pwdUser, setPwdUser] = useState<UsuarioRow | null>(null);
+  const [pwdNova, setPwdNova] = useState("");
+  const [pwdBusy, setPwdBusy] = useState(false);
+
+  async function definirSenhaExistente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pwdUser) return;
+    if (pwdNova.length < 8) return toast.error("Senha deve ter ao menos 8 caracteres");
+    setPwdBusy(true);
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: { acao: "redefinir_senha", user_id: pwdUser.user_id, senha: pwdNova },
+    });
+    setPwdBusy(false);
+    if (error || (data as any)?.error) {
+      return toast.error((data as any)?.error ?? error?.message ?? "Falha ao definir senha");
+    }
+    toast.success(`Senha definida para ${pwdUser.email}`);
+    setPwdOpen(false); setPwdNova(""); setPwdUser(null);
+    carregar();
+  }
+
   async function carregar() {
     setLoading(true);
     const [{ data: profiles }, { data: roles }] = await Promise.all([
@@ -285,6 +308,11 @@ export default function Usuarios() {
                         </Button>
                       </>
                     )}
+                    {isAdmin && (
+                      <Button size="sm" variant="ghost" onClick={() => { setPwdUser(u); setPwdNova(""); setPwdOpen(true); }}>
+                        Definir senha
+                      </Button>
+                    )}
                     {isAdmin && u.status !== "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "inativo")}>
                         Desativar
@@ -302,6 +330,37 @@ export default function Usuarios() {
           </table>
         </div>
       </Card>
+
+      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir senha — {pwdUser?.nome ?? pwdUser?.email}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={definirSenhaExistente} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pwdNova">Nova senha (mín. 8 caracteres)</Label>
+              <Input
+                id="pwdNova"
+                type="text"
+                autoComplete="new-password"
+                value={pwdNova}
+                onChange={(e) => setPwdNova(e.target.value)}
+                minLength={8}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                O usuário poderá entrar imediatamente com este e-mail e senha.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setPwdOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={pwdBusy} className="bg-gold hover:bg-gold/90 text-gold-foreground">
+                {pwdBusy ? "Salvando…" : "Salvar senha"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
