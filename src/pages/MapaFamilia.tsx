@@ -537,6 +537,7 @@ function HoldingsTab({ data, imoveisDb }: { data: PatrimonialData | null; imovei
         <TabsTrigger value="holdings">Holdings ({holdings.length})</TabsTrigger>
         <TabsTrigger value="imoveis">Imóveis ({sorted.length})</TabsTrigger>
         <TabsTrigger value="pf">Imóveis na PF ({imoveisPF.length})</TabsTrigger>
+        <TabsTrigger value="pj">Imóveis na PJ ({imoveisPJ.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="holdings" className="mt-4">
