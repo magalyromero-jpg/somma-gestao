@@ -218,6 +218,11 @@ export default function Usuarios() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    {isAdmin && u.status === "pendente" && (
+                      <Button size="sm" variant="ghost" onClick={() => reenviar(u)}>
+                        Reenviar
+                      </Button>
+                    )}
                     {isAdmin && u.status !== "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "inativo")}>
                         Desativar
