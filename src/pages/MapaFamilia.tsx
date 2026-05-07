@@ -491,52 +491,102 @@ const MembroCard = ({ m, destaque }: { m: Membro; destaque?: boolean }) => (
 );
 
 /* ===== Holdings Tab ===== */
-function HoldingsTab({ data }: { data: PatrimonialData | null }) {
-  if (!data) return <EmptyMsg msg="Sem dados de holdings ainda." />;
-  const imoveisPF = data.imoveis.filter((i) => i.titularidade === "PF");
-  const imoveisPJ = data.imoveis.filter((i) => i.titularidade !== "PF");
-  const imoveisPorHolding = (hid: string) => data.imoveis.filter((i) => i.holding_id === hid);
+type ImovelDb = {
+  id: string;
+  nome: string;
+  endereco: string | null;
+  valor_declarado: number | null;
+  matricula: string | null;
+  titularidade: string | null;
+  holding_cnpj: string | null;
+  alertas: any;
+};
+
+function HoldingsTab({ data, imoveisDb }: { data: PatrimonialData | null; imoveisDb: ImovelDb[] }) {
+  // Normaliza CNPJ para comparação
+  const normCnpj = (s?: string | null) => (s ?? "").replace(/\D/g, "");
+
+  const sorted = [...imoveisDb].sort(
+    (a, b) => (Number(b.valor_declarado ?? 0) - Number(a.valor_declarado ?? 0)),
+  );
+  const imoveisPF = sorted.filter((i) => (i.titularidade ?? "").toUpperCase() === "PF");
+  const imoveisPJ = sorted.filter((i) => (i.titularidade ?? "").toUpperCase() !== "PF");
+
+  const holdings = data?.holdings ?? [];
+  const membros = data?.membros ?? [];
+
+  const imoveisPorHolding = (cnpj?: string | null) => {
+    const c = normCnpj(cnpj);
+    if (!c) return [];
+    return sorted.filter((i) => normCnpj(i.holding_cnpj) === c);
+  };
+
+  const holdingNomePorCnpj = (cnpj?: string | null) => {
+    const c = normCnpj(cnpj);
+    return holdings.find((h) => normCnpj(h.cnpj) === c)?.razao_social ?? null;
+  };
+
+  const temDivergencia = (i: ImovelDb) => {
+    const arr = Array.isArray(i.alertas) ? i.alertas : [];
+    return arr.some((a: any) => String(a).toLowerCase().includes("titular") || String(a).toLowerCase().includes("diverg"));
+  };
 
   return (
     <Tabs defaultValue="holdings" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="holdings">Holdings ({data.holdings.length})</TabsTrigger>
-        <TabsTrigger value="imoveis">Imóveis ({imoveisPJ.length})</TabsTrigger>
+        <TabsTrigger value="holdings">Holdings ({holdings.length})</TabsTrigger>
+        <TabsTrigger value="imoveis">Imóveis ({sorted.length})</TabsTrigger>
         <TabsTrigger value="pf">Imóveis na PF ({imoveisPF.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="holdings" className="mt-4">
-        {data.holdings.length > 0 ? (
+        {holdings.length > 0 ? (
           <Accordion type="multiple" className="space-y-2">
-            {data.holdings.map((h) => (
-              <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
-                <AccordionTrigger>
-                  <div className="flex items-center gap-3 flex-wrap text-left">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{h.razao_social}</span>
-                    {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
-                    <Badge variant="outline">{h.tipo}</Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4 pb-4">
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground mb-2">Sócios</div>
-                    <div className="space-y-1 text-sm">
-                      {h.socios.map((s, i) => {
-                        const m = data.membros.find((mm) => mm.id === s.membro_id);
-                        return (
-                          <div key={i} className="flex justify-between border-b last:border-0 py-1">
-                            <span>{m?.nome ?? s.membro_id}</span>
-                            <span className="font-medium">{s.percentual != null ? `${s.percentual}%` : "—"}</span>
-                          </div>
-                        );
-                      })}
+            {holdings.map((h) => {
+              const imvs = imoveisPorHolding(h.cnpj);
+              return (
+                <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-3 flex-wrap text-left">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{h.razao_social}</span>
+                      {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
+                      <Badge variant="outline">{h.tipo}</Badge>
+                      {imvs.length > 0 && (
+                        <Badge className="bg-orange-500/15 text-orange-700 border-orange-500/30" variant="outline">
+                          {imvs.length} imóve{imvs.length === 1 ? "l" : "is"}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                  <ImoveisLista imoveis={imoveisPorHolding(h.id)} titulo="Imóveis integralizados" membros={data.membros} />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pb-4">
+                    <div>
+                      <div className="text-xs uppercase text-muted-foreground mb-2">Sócios</div>
+                      <div className="space-y-1 text-sm">
+                        {h.socios.map((s, i) => {
+                          const m = membros.find((mm) => mm.id === s.membro_id);
+                          return (
+                            <div key={i} className="flex justify-between border-b last:border-0 py-1">
+                              <span>{m?.nome ?? s.membro_id}</span>
+                              <span className="font-medium">{s.percentual != null ? `${s.percentual}%` : "—"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase text-muted-foreground mb-2">Imóveis vinculados</div>
+                      <ImoveisDbLista
+                        imoveis={imvs}
+                        defaultBadge="pj"
+                        holdingNomePorCnpj={holdingNomePorCnpj}
+                        temDivergencia={temDivergencia}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         ) : (
           <EmptyMsg msg="Nenhuma holding identificada." />
@@ -544,13 +594,81 @@ function HoldingsTab({ data }: { data: PatrimonialData | null }) {
       </TabsContent>
 
       <TabsContent value="imoveis" className="mt-4">
-        <ImoveisLista imoveis={imoveisPJ} membros={data.membros} />
+        <ImoveisDbLista
+          imoveis={sorted}
+          showLocal
+          holdingNomePorCnpj={holdingNomePorCnpj}
+          temDivergencia={temDivergencia}
+        />
       </TabsContent>
 
       <TabsContent value="pf" className="mt-4">
-        <ImoveisLista imoveis={imoveisPF} membros={data.membros} />
+        <ImoveisDbLista
+          imoveis={imoveisPF}
+          defaultBadge="pf"
+          holdingNomePorCnpj={holdingNomePorCnpj}
+          temDivergencia={temDivergencia}
+        />
       </TabsContent>
     </Tabs>
+  );
+}
+
+function ImoveisDbLista({
+  imoveis,
+  showLocal,
+  defaultBadge,
+  holdingNomePorCnpj,
+  temDivergencia,
+}: {
+  imoveis: ImovelDb[];
+  showLocal?: boolean;
+  defaultBadge?: "pf" | "pj";
+  holdingNomePorCnpj: (cnpj?: string | null) => string | null;
+  temDivergencia: (i: ImovelDb) => boolean;
+}) {
+  if (imoveis.length === 0) return <div className="text-sm text-muted-foreground">Nenhum imóvel.</div>;
+  return (
+    <div className="space-y-2">
+      {imoveis.map((i) => {
+        const isPF = (i.titularidade ?? "").toUpperCase() === "PF";
+        const holdingNome = holdingNomePorCnpj(i.holding_cnpj);
+        const showPFBadge = showLocal ? isPF : defaultBadge === "pf";
+        const showPJBadge = showLocal ? !isPF : defaultBadge === "pj";
+        const diverg = temDivergencia(i);
+        return (
+          <div key={i.id} className="border rounded-md p-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-medium">{i.nome}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{i.endereco || "—"}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-sm">
+                  {i.valor_declarado != null ? formatBRL(Number(i.valor_declarado)) : "—"}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2 text-[11px]">
+              {i.matricula && <Badge variant="outline">Matrícula {i.matricula}</Badge>}
+              {showPFBadge && (
+                <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">PF</Badge>
+              )}
+              {showPJBadge && (
+                <Badge className="bg-orange-500/15 text-orange-700 border-orange-500/30" variant="outline">
+                  PJ{holdingNome ? ` · ${holdingNome}` : ""}
+                </Badge>
+              )}
+              {diverg && (
+                <Badge className="bg-red-500/15 text-red-700 border-red-500/30" variant="outline">
+                  ⚠ Divergência
+                </Badge>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
