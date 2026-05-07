@@ -202,11 +202,15 @@ export default function MapaFamilia() {
 
   return (
     <>
-      <PageHeader title={familia.nome} subtitle={`${sede} · ${fonte}`}>
-        <Button variant="outline" onClick={() => toast("Relatório em breve")}>
-          Relatório <ArrowUpRight />
-        </Button>
-      </PageHeader>
+      <PageHeader
+        title={familia.nome}
+        subtitle={`${sede} · ${fonte}`}
+        actions={
+          <Button variant="outline" onClick={() => toast("Relatório em breve")}>
+            Relatório <ArrowUpRight />
+          </Button>
+        }
+      />
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
