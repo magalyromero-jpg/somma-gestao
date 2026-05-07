@@ -204,6 +204,11 @@ export default function MapaFamilia() {
 
   return (
     <>
+      <div className="mb-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/familias"><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Link>
+        </Button>
+      </div>
       <PageHeader
         title={familia.nome}
         subtitle={`${sede} · ${fonte}`}
@@ -213,6 +218,7 @@ export default function MapaFamilia() {
           </Button>
         }
       />
+
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
