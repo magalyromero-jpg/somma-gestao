@@ -11,20 +11,65 @@ Sua função é extrair e estruturar informações de documentos fiscais e jurí
 (Declaração de Imposto de Renda, contratos sociais, matrículas de imóveis, fichas
 cadastrais) para compor o mapa patrimonial de uma família cliente.
 
-REGRAS OBRIGATÓRIAS:
+REGRAS GERAIS:
+- Responda chamando a ferramenta registrar_patrimonio com JSON válido conforme o schema.
 - Nunca invente dados. Se uma informação não estiver no documento, use null.
-- Quando houver ambiguidade (ex: imóvel pode estar na PF ou já integralizado na PJ),
-  registre exatamente o que o documento diz e sinalize com um alerta.
-- Classifique cada membro familiar pelo seu papel real no ecossistema:
-  "titular", "conjuge", "filho", "dependente", "socio_familiar", "socio_externo".
-- Para imóveis, extraia SEMPRE: endereço completo, valor declarado, área (m²),
-  matrícula, cartório, data de aquisição, e se está na PF ou em qual PJ.
-- Identifique holdings pela natureza: "patrimonial", "operacional", "rural",
-  "holding_pura", "nova" (constituída no ano-calendário).
-- Sinalize alertas para: imóveis integralizados recentemente, ativos em recuperação
-  judicial, permutas, bens no exterior, dívidas relevantes, e qualquer estrutura
-  que mereça due diligence antes da precificação.
-- O campo "fonte" em cada objeto deve indicar de qual documento o dado foi extraído.`;
+- O campo "fonte" em cada objeto deve indicar de qual documento o dado foi extraído.
+  Ex: "IRPF 2025 - Bruno Roquete Tavares", "Contrato Social B&E Safe Ltda"
+
+MEMBROS DA FAMÍLIA:
+- Identifique todos os membros mencionados nos documentos.
+- Classifique cada um pelo papel real no ecossistema:
+  "titular" → declarante principal do IR ou titular da ficha cadastral
+  "conjuge" → cônjuge ou companheiro(a)
+  "filho" → filho(a) declarado como dependente
+  "dependente" → outro dependente que não filho
+  "socio_familiar" → familiar que aparece como sócio em empresas
+  "socio_externo" → sócio sem relação familiar identificada
+- O campo "is_assinante: true" deve ser marcado apenas para titular e cônjuge.
+
+HOLDINGS E PARTICIPAÇÕES SOCIETÁRIAS:
+- Classifique cada holding pelo tipo:
+  "patrimonial" → detém imóveis ou ativos patrimoniais
+  "operacional" → atividade-fim (praticagem, indústria, serviços)
+  "rural" → atividade rural ou agropecuária
+  "holding_pura" → sem imóveis próprios, apenas participa de outras empresas
+  "nova" → constituída no ano-calendário do IR analisado
+  "encerrada" → participação zerada em 31/12 do ano analisado
+  "outra" → não se encaixa
+- Holdings "encerradas" NÃO devem ser contabilizadas no total de "ativas".
+- Registre número de quotas, valor por quota e percentual quando disponível.
+
+IMÓVEIS — REGRAS CRÍTICAS:
+- Para cada imóvel, extraia SEMPRE: endereço completo, valor declarado, área m²,
+  matrícula, cartório, data de aquisição, titularidade (PF ou PJ) e qual PJ se aplicável.
+- Identifique a forma de aquisição: compra, permuta, integralizacao, heranca, doacao, outra.
+- BENFEITORIAS NÃO SÃO IMÓVEIS: itens declarados como "benfeitoria" no IR
+  (tipicamente grupo 99, código 99, com descrição contendo "benfeitoria") devem ser
+  registrados no campo "benfeitorias" do imóvel ao qual pertencem — NUNCA como
+  imóvel independente. Se não for possível identificar o imóvel vinculado, registre
+  a benfeitoria em "alertas_gerais" com nível "atencao".
+- Se um imóvel constar na PF mas houver menção de integralização em PJ no mesmo
+  documento, registre titularidade como "PF" e adicione alerta:
+  "Divergência de titularidade: consta na PF na DAA de [ano], mas há indicação
+  de integralização na PJ [nome] no mesmo ano."
+- Imóveis com valor zerado em 31/12 do ano analisado foram alienados/transferidos:
+  registre com flag "alienado: true" e não inclua no total de imóveis ativos.
+
+ALERTAS AUTOMÁTICOS — gerar alerta para:
+- Imóvel adquirido por permuta (verificar se imóvel permutado foi baixado).
+- Imóvel integralizado em PJ recentemente.
+- Divergência de titularidade PF/PJ no mesmo ano.
+- Ativos em recuperação judicial.
+- Bens no exterior.
+- Dívidas relevantes (> R$ 100.000).
+- Holdings constituídas no ano-calendário.
+- Holdings encerradas (verificar distrato).
+
+NÍVEL DOS ALERTAS:
+- "critico" → risco jurídico ou fiscal imediato (ex: divergência de titularidade)
+- "atencao" → requer verificação antes da precificação (ex: permuta, integralização recente)
+- "informativo" → contexto relevante (ex: holding nova, bem no exterior)`;
 
 const PATRIMONIAL_TOOL = {
   type: "function",
@@ -40,6 +85,7 @@ const PATRIMONIAL_TOOL = {
             nome: { type: "string" },
             sede: { type: ["string", "null"] },
             perfil: { type: ["string", "null"] },
+            email_familia: { type: ["string", "null"] },
             fonte: { type: "string" },
           },
           required: ["nome", "fonte"],
@@ -75,7 +121,7 @@ const PATRIMONIAL_TOOL = {
               cnpj: { type: ["string", "null"] },
               tipo: {
                 type: "string",
-                enum: ["patrimonial", "operacional", "rural", "holding_pura", "nova", "outra"],
+                enum: ["patrimonial", "operacional", "rural", "holding_pura", "nova", "encerrada", "outra"],
               },
               regime_tributario: { type: ["string", "null"] },
               socios: {
@@ -127,12 +173,25 @@ const PATRIMONIAL_TOOL = {
                 enum: ["compra", "permuta", "integralizacao", "heranca", "doacao", "outra", null],
               },
               locacao: { type: "boolean" },
-              situacao_2023: { type: ["number", "null"] },
-              situacao_2024: { type: ["number", "null"] },
+              alienado: { type: "boolean" },
+              situacao_ano_anterior: { type: ["number", "null"] },
+              situacao_ano_atual: { type: ["number", "null"] },
+              benfeitorias: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    descricao: { type: "string" },
+                    valor: { type: ["number", "null"] },
+                    ano: { type: ["number", "null"] },
+                  },
+                  required: ["descricao"],
+                },
+              },
               alertas: { type: "array", items: { type: "string" } },
               fonte: { type: "string" },
             },
-            required: ["id", "descricao", "titularidade", "titular_id", "locacao", "alertas", "fonte"],
+            required: ["id", "descricao", "titularidade", "titular_id", "locacao", "alienado", "alertas", "fonte"],
           },
         },
         veiculos: {
@@ -140,14 +199,17 @@ const PATRIMONIAL_TOOL = {
           items: {
             type: "object",
             properties: {
+              id: { type: "string" },
               descricao: { type: "string" },
               placa: { type: ["string", "null"] },
+              renavam: { type: ["string", "null"] },
               ano: { type: ["string", "null"] },
               valor_declarado: { type: ["number", "null"] },
               titular_id: { type: "string" },
+              alienado: { type: "boolean" },
               fonte: { type: "string" },
             },
-            required: ["descricao", "titular_id", "fonte"],
+            required: ["id", "descricao", "titular_id", "alienado", "fonte"],
           },
         },
         investimentos: {
@@ -172,8 +234,8 @@ const PATRIMONIAL_TOOL = {
             properties: {
               descricao: { type: "string" },
               credor: { type: ["string", "null"] },
-              valor_2023: { type: ["number", "null"] },
-              valor_2024: { type: ["number", "null"] },
+              valor_ano_anterior: { type: ["number", "null"] },
+              valor_ano_atual: { type: ["number", "null"] },
               titular_id: { type: "string" },
               fonte: { type: "string" },
             },
@@ -218,17 +280,18 @@ const PATRIMONIAL_TOOL = {
         patrimonio_liquido: {
           type: "object",
           properties: {
-            bens_2023: { type: ["number", "null"] },
-            bens_2024: { type: ["number", "null"] },
-            dividas_2023: { type: ["number", "null"] },
-            dividas_2024: { type: ["number", "null"] },
-            liquido_2024: { type: ["number", "null"] },
+            bens_ano_anterior: { type: ["number", "null"] },
+            bens_ano_atual: { type: ["number", "null"] },
+            dividas_ano_anterior: { type: ["number", "null"] },
+            dividas_ano_atual: { type: ["number", "null"] },
+            liquido_ano_atual: { type: ["number", "null"] },
           },
         },
         meta: {
           type: "object",
           properties: {
             documentos_analisados: { type: "array", items: { type: "string" } },
+            ano_calendario: { type: ["number", "null"] },
             data_extracao: { type: "string" },
             confianca: { type: "string", enum: ["alta", "media", "baixa"] },
             observacoes_gerais: { type: ["string", "null"] },
@@ -268,7 +331,6 @@ serve(async (req) => {
 
     if (Array.isArray(files)) {
       for (const f of files) {
-        // f: { name, mimeType, base64 }
         if (!f?.base64) continue;
         const dataUrl = `data:${f.mimeType || "application/pdf"};base64,${f.base64}`;
         userContent.push({
@@ -284,7 +346,7 @@ serve(async (req) => {
 
     userContent.push({
       type: "text",
-      text: `${enrichmentPrefix}Nome da família: ${familyName}\n\nAnalise os documentos anexados e chame a ferramenta registrar_patrimonio com o JSON estruturado completo. Use a data de hoje para meta.data_extracao.`,
+      text: `${enrichmentPrefix}Nome da família: ${familyName}\n\nAnalise os documentos anexados e retorne o JSON completo conforme o schema. Extraia todos os dados disponíveis. Não omita imóveis, participações societárias ou membros identificados, mesmo que a informação seja parcial. Use a data de hoje para meta.data_extracao.`,
     });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
