@@ -306,11 +306,20 @@ export default function MapaFamilia() {
             data={data}
             checklist={checklist}
             docs={docs}
+            imoveisDb={imoveisDb}
             familiaId={familia.id}
             familiaNome={familia.nome}
             patrimonioData={familia.patrimonio_data}
             onChecklistChange={reloadChecklist}
             onDocsChange={reloadDocs}
+            onDbImovelChange={async () => {
+              const { data: imv } = await supabase
+                .from("imoveis_cliente")
+                .select("*")
+                .eq("familia_id", familia.id)
+                .order("valor_declarado", { ascending: false, nullsFirst: false });
+              setImoveisDb(imv ?? []);
+            }}
           />
         </TabsContent>
       </Tabs>
