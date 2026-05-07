@@ -87,6 +87,7 @@ export default function MapaFamilia() {
   const [data, setData] = useState<PatrimonialData | null>(null);
   const [docs, setDocs] = useState<DocumentoRow[]>([]);
   const [checklist, setChecklist] = useState<ChecklistRow[]>([]);
+  const [imoveisDb, setImoveisDb] = useState<any[]>([]);
 
   useEffect(() => {
     if (!id) return;
