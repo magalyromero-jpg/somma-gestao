@@ -47,6 +47,29 @@ export default function Usuarios() {
   const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // redefinir senha
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [pwdUser, setPwdUser] = useState<UsuarioRow | null>(null);
+  const [pwdNova, setPwdNova] = useState("");
+  const [pwdBusy, setPwdBusy] = useState(false);
+
+  async function definirSenhaExistente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pwdUser) return;
+    if (pwdNova.length < 8) return toast.error("Senha deve ter ao menos 8 caracteres");
+    setPwdBusy(true);
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: { acao: "redefinir_senha", user_id: pwdUser.user_id, senha: pwdNova },
+    });
+    setPwdBusy(false);
+    if (error || (data as any)?.error) {
+      return toast.error((data as any)?.error ?? error?.message ?? "Falha ao definir senha");
+    }
+    toast.success(`Senha definida para ${pwdUser.email}`);
+    setPwdOpen(false); setPwdNova(""); setPwdUser(null);
+    carregar();
+  }
+
   async function carregar() {
     setLoading(true);
     const [{ data: profiles }, { data: roles }] = await Promise.all([
