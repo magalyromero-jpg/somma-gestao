@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel } from "lucide-react";
+import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
