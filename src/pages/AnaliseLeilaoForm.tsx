@@ -280,11 +280,6 @@ export default function AnaliseLeilaoForm() {
                   )}
                 </div>
                 <TextField
-                  label="Número do leilão"
-                  value={dados.leilao}
-                  onChange={(v) => set("leilao", v)}
-                />
-                <TextField
                   label="Tipo do imóvel"
                   value={dados.tipo}
                   onChange={(v) => set("tipo", v)}
@@ -304,22 +299,6 @@ export default function AnaliseLeilaoForm() {
                   value={dados.areaLote}
                   onChange={(v) => set("areaLote", v)}
                 />
-                <NumField
-                  label="Testada principal (m)"
-                  value={dados.testada}
-                  onChange={(v) => set("testada", v)}
-                />
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Estrutura</Label>
-                  <Select value={dados.estrutura} onValueChange={(v) => set("estrutura", v as DadosImovel["estrutura"])}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["Alvenaria", "Metálica", "Mista", "Madeira"].map((e) => (
-                        <SelectItem key={e} value={e}>{e}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Estado de conservação</Label>
                   <Select value={dados.estadoConservacao} onValueChange={(v) => set("estadoConservacao", v as DadosImovel["estadoConservacao"])}>
@@ -336,47 +315,14 @@ export default function AnaliseLeilaoForm() {
                   value={dados.matricula}
                   onChange={(v) => set("matricula", v)}
                 />
-                <TextField
-                  label="Locatário (nome)"
-                  value={dados.locatario}
-                  onChange={(v) => set("locatario", v)}
-                />
               </div>
             </TabsContent>
 
             <TabsContent value="financeiro" className="mt-6 space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Lance mínimo, investimento total e cap rate são extraídos automaticamente do edital em PDF e exibidos na tela de resultado.
+              </p>
               <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <NumField
-                    label="Lance mínimo (R$) *"
-                    value={dados.lanceMinimoMil * 1000}
-                    onChange={(v) => set("lanceMinimoMil", v / 1000)}
-                    hint={
-                      dados.lanceMinimoMil > 0
-                        ? `Sugestão investimento: ${fmtBRL(investSugerido * 1000)} (lance + 5% comissão + 2% ITBI + 0,5% cartório)`
-                        : undefined
-                    }
-                  />
-                  {erros.lanceMinimoMil && (
-                    <p className="text-xs text-destructive mt-1">{erros.lanceMinimoMil}</p>
-                  )}
-                </div>
-                <div>
-                  <NumField
-                    label="Investimento total estimado (R$)"
-                    value={dados.investimentoTotalMil * 1000}
-                    onChange={(v) => set("investimentoTotalMil", v / 1000)}
-                  />
-                  {dados.lanceMinimoMil > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => set("investimentoTotalMil", investSugerido)}
-                      className="text-xs text-primary hover:underline mt-1"
-                    >
-                      Usar sugestão automática
-                    </button>
-                  )}
-                </div>
                 <div>
                   <NumField
                     label="Aluguel mensal inicial (R$) *"
@@ -392,10 +338,6 @@ export default function AnaliseLeilaoForm() {
                   value={dados.prazoLocacaoMeses}
                   onChange={(v) => set("prazoLocacaoMeses", v)}
                 />
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Cap rate nominal (calculado)</Label>
-                  <Input value={fmtPct(cap)} readOnly className="bg-slate-50" />
-                </div>
                 <NumField
                   label="Valor venal prefeitura (R$) — opcional"
                   value={dados.valorVenalMil * 1000}
