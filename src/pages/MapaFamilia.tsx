@@ -118,7 +118,7 @@ export default function MapaFamilia() {
           supabase.from("familias_onboarding").select("*").eq("id", id).single(),
           supabase
             .from("familia_documentos")
-            .select("id, nome_arquivo, tipo, recebido_em")
+            .select("id, nome_arquivo, tipo, recebido_em, imovel_ref, analise, storage_path")
             .eq("familia_id", id)
             .order("recebido_em", { ascending: false }),
           supabase.from("familia_diligencia_itens").select("*").eq("familia_id", id),
