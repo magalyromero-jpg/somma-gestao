@@ -132,43 +132,66 @@ export default function Familias() {
               const concluido = !!o.patrimonio_data;
               const totalImoveis = o.patrimonio_data?.imoveis?.length ?? 0;
               const totalHoldings = o.patrimonio_data?.holdings?.length ?? 0;
+              const href = concluido ? `/familias-onboarding/${o.id}` : `/onboarding/${o.id}`;
               return (
-                <Link
-                  key={o.id}
-                  to={concluido ? `/familias-onboarding/${o.id}` : `/onboarding/${o.id}`}
-                  className="group"
-                >
-                  <Card className="hover:shadow-elevated transition-shadow border-border/70 group-hover:border-gold/60 h-full">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-semibold truncate">{o.nome}</div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {o.sede ?? "Onboarding"} · atualizado{" "}
-                            {new Date(o.updated_at).toLocaleDateString("pt-BR")}
+                <div key={o.id} className="relative group">
+                  <Link to={href}>
+                    <Card className="hover:shadow-elevated transition-shadow border-border/70 group-hover:border-gold/60 h-full">
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-start justify-between gap-2 pr-8">
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">{o.nome}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {o.sede ?? "Onboarding"} · atualizado{" "}
+                              {new Date(o.updated_at).toLocaleDateString("pt-BR")}
+                            </div>
                           </div>
+                          <span
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0",
+                              concluido
+                                ? "bg-success/10 text-success border-success/30"
+                                : "bg-warning/10 text-warning border-warning/30",
+                            )}
+                          >
+                            {concluido ? "Concluído" : "Em progresso"}
+                          </span>
                         </div>
-                        <span
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0",
-                            concluido
-                              ? "bg-success/10 text-success border-success/30"
-                              : "bg-warning/10 text-warning border-warning/30",
-                          )}
+                        {concluido && (
+                          <div className="flex gap-3 text-xs text-muted-foreground">
+                            <span>{totalImoveis} imóveis</span>
+                            <span>·</span>
+                            <span>{totalHoldings} holdings</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <div className="absolute top-3 right-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          onClick={(e) => e.preventDefault()}
+                          aria-label="Ações"
                         >
-                          {concluido ? "Concluído" : "Em progresso"}
-                        </span>
-                      </div>
-                      {concluido && (
-                        <div className="flex gap-3 text-xs text-muted-foreground">
-                          <span>{totalImoveis} imóveis</span>
-                          <span>·</span>
-                          <span>{totalHoldings} holdings</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            setToDelete(o);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               );
             })}
           </div>
