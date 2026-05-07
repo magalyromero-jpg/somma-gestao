@@ -393,8 +393,9 @@ export default function OnboardingFamilia() {
               <Button variant="ghost" onClick={pularParaMapa}>
                 Pular por agora — adicionar depois
               </Button>
-              <Button onClick={analisar} disabled={files.length === 0}>
-                <Sparkles /> Analisar documentos
+              <Button onClick={analisar} disabled={files.length === 0 || uploadingCount > 0}>
+                <Sparkles />{" "}
+                {uploadingCount > 0 ? `Salvando ${uploadingCount}…` : "Analisar documentos"}
               </Button>
             </div>
           </CardContent>
