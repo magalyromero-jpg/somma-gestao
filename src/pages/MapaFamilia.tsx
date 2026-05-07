@@ -968,11 +968,11 @@ function DocumentosTab({
       <Card>
         <CardContent className="p-5 space-y-4">
           <h3 className="text-sm font-semibold">Recebidos</h3>
-          {docs.length === 0 ? (
+          {docsFamilia.length === 0 ? (
             <EmptyMsg msg="Nenhum documento ainda." />
           ) : (
             <div className="space-y-2">
-              {docs.map((d) => (
+              {docsFamilia.map((d) => (
                 <div key={d.id} className="flex items-center gap-3 p-2 border rounded-md text-sm">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="flex-1 truncate">{d.nome_arquivo}</span>
