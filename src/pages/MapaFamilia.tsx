@@ -102,13 +102,13 @@ export default function MapaFamilia() {
         ]);
         if (e1) throw e1;
         setFamilia(fam);
-        setData((fam.patrimonio_data ?? null) as PatrimonialData | null);
+        setData((fam.patrimonio_data ?? null) as unknown as PatrimonialData | null);
         setDocs((ds ?? []) as DocumentoRow[]);
         setChecklist((ck ?? []) as ChecklistRow[]);
 
         // Inicializar checklist se vazio
         if ((ck ?? []).length === 0) {
-          await semearChecklist(id, (fam.patrimonio_data ?? null) as PatrimonialData | null);
+          await semearChecklist(id, (fam.patrimonio_data ?? null) as unknown as PatrimonialData | null);
           const { data: refreshed } = await supabase
             .from("familia_diligencia_itens")
             .select("*")
