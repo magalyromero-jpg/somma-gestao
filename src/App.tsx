@@ -22,6 +22,8 @@ import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
+import OnboardingFamilia from "./pages/OnboardingFamilia";
+import MapaFamilia from "./pages/MapaFamilia";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } },
