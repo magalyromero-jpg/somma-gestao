@@ -199,18 +199,7 @@ export default function OnboardingFamilia() {
         .eq("id", familiaId);
       if (updErr) throw updErr;
 
-      if (filesPayload.length > 0) {
-        await supabase.from("familia_documentos").insert(
-          files.map((f) => ({
-            familia_id: familiaId,
-            nome_arquivo: f.name,
-            tipo: f.type,
-            storage_path: "",
-            categoria: "onboarding",
-            created_by: user.id,
-          })),
-        );
-      }
+      // documentos já foram inseridos no Storage + tabela durante o upload (Passo 2)
 
       if (Array.isArray(patrimonio.imoveis) && patrimonio.imoveis.length > 0) {
         try {
