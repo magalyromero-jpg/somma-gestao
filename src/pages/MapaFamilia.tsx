@@ -611,6 +611,15 @@ function HoldingsTab({ data, imoveisDb }: { data: PatrimonialData | null; imovei
           temDivergencia={temDivergencia}
         />
       </TabsContent>
+
+      <TabsContent value="pj" className="mt-4">
+        <ImoveisDbLista
+          imoveis={imoveisPJ}
+          defaultBadge="pj"
+          holdingNomePorCnpj={holdingNomePorCnpj}
+          temDivergencia={temDivergencia}
+        />
+      </TabsContent>
     </Tabs>
   );
 }
