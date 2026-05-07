@@ -409,52 +409,175 @@ export type Database = {
       }
       imoveis_cliente: {
         Row: {
+          admin_shortstay_email: string | null
+          admin_shortstay_nome: string | null
+          admin_shortstay_telefone: string | null
           alertas: Json
+          certidao_cnd_condominio_data: string | null
+          certidao_cnd_condominio_validade: string | null
+          certidao_cnd_energia_data: string | null
+          certidao_cnd_energia_validade: string | null
+          certidao_cnd_iptu_data: string | null
+          certidao_cnd_iptu_validade: string | null
+          certidao_matricula_data: string | null
+          certidao_matricula_validade: string | null
+          certidao_onus_data: string | null
+          certidao_onus_validade: string | null
+          condominio_admin_email: string | null
+          condominio_admin_nome: string | null
+          condominio_admin_telefone: string | null
+          condominio_nome: string | null
+          contrato_fim: string | null
+          contrato_inicio: string | null
           created_at: string
+          data_aquisicao: string | null
+          data_inicio_locacao: string | null
+          data_proximo_reajuste: string | null
+          distribuidora_energia: string | null
           endereco: string | null
           familia_id: string
+          hidrometro: string | null
           holding_cnpj: string | null
           id: string
+          imobiliaria_email: string | null
+          imobiliaria_nome: string | null
+          imobiliaria_telefone: string | null
+          indice_correcao: string | null
+          indice_locacao: string | null
           locacao: boolean
           matricula: string | null
+          matricula_agua: string | null
           nome: string
           origem: string
+          periodicidade_reajuste: string | null
+          plataforma_shortstay: string | null
+          receita_media_mensal: number | null
           ref_id: string | null
+          taxa_condominio: number | null
+          tipo_locacao: string | null
+          tipo_operacao: string | null
           titularidade: string | null
+          unidade_consumidora: string | null
           updated_at: string
+          valor_aquisicao: number | null
           valor_declarado: number | null
+          valor_locacao_atual: number | null
+          valor_locacao_inicial: number | null
+          vencimento_condominio: number | null
         }
         Insert: {
+          admin_shortstay_email?: string | null
+          admin_shortstay_nome?: string | null
+          admin_shortstay_telefone?: string | null
           alertas?: Json
+          certidao_cnd_condominio_data?: string | null
+          certidao_cnd_condominio_validade?: string | null
+          certidao_cnd_energia_data?: string | null
+          certidao_cnd_energia_validade?: string | null
+          certidao_cnd_iptu_data?: string | null
+          certidao_cnd_iptu_validade?: string | null
+          certidao_matricula_data?: string | null
+          certidao_matricula_validade?: string | null
+          certidao_onus_data?: string | null
+          certidao_onus_validade?: string | null
+          condominio_admin_email?: string | null
+          condominio_admin_nome?: string | null
+          condominio_admin_telefone?: string | null
+          condominio_nome?: string | null
+          contrato_fim?: string | null
+          contrato_inicio?: string | null
           created_at?: string
+          data_aquisicao?: string | null
+          data_inicio_locacao?: string | null
+          data_proximo_reajuste?: string | null
+          distribuidora_energia?: string | null
           endereco?: string | null
           familia_id: string
+          hidrometro?: string | null
           holding_cnpj?: string | null
           id?: string
+          imobiliaria_email?: string | null
+          imobiliaria_nome?: string | null
+          imobiliaria_telefone?: string | null
+          indice_correcao?: string | null
+          indice_locacao?: string | null
           locacao?: boolean
           matricula?: string | null
+          matricula_agua?: string | null
           nome: string
           origem?: string
+          periodicidade_reajuste?: string | null
+          plataforma_shortstay?: string | null
+          receita_media_mensal?: number | null
           ref_id?: string | null
+          taxa_condominio?: number | null
+          tipo_locacao?: string | null
+          tipo_operacao?: string | null
           titularidade?: string | null
+          unidade_consumidora?: string | null
           updated_at?: string
+          valor_aquisicao?: number | null
           valor_declarado?: number | null
+          valor_locacao_atual?: number | null
+          valor_locacao_inicial?: number | null
+          vencimento_condominio?: number | null
         }
         Update: {
+          admin_shortstay_email?: string | null
+          admin_shortstay_nome?: string | null
+          admin_shortstay_telefone?: string | null
           alertas?: Json
+          certidao_cnd_condominio_data?: string | null
+          certidao_cnd_condominio_validade?: string | null
+          certidao_cnd_energia_data?: string | null
+          certidao_cnd_energia_validade?: string | null
+          certidao_cnd_iptu_data?: string | null
+          certidao_cnd_iptu_validade?: string | null
+          certidao_matricula_data?: string | null
+          certidao_matricula_validade?: string | null
+          certidao_onus_data?: string | null
+          certidao_onus_validade?: string | null
+          condominio_admin_email?: string | null
+          condominio_admin_nome?: string | null
+          condominio_admin_telefone?: string | null
+          condominio_nome?: string | null
+          contrato_fim?: string | null
+          contrato_inicio?: string | null
           created_at?: string
+          data_aquisicao?: string | null
+          data_inicio_locacao?: string | null
+          data_proximo_reajuste?: string | null
+          distribuidora_energia?: string | null
           endereco?: string | null
           familia_id?: string
+          hidrometro?: string | null
           holding_cnpj?: string | null
           id?: string
+          imobiliaria_email?: string | null
+          imobiliaria_nome?: string | null
+          imobiliaria_telefone?: string | null
+          indice_correcao?: string | null
+          indice_locacao?: string | null
           locacao?: boolean
           matricula?: string | null
+          matricula_agua?: string | null
           nome?: string
           origem?: string
+          periodicidade_reajuste?: string | null
+          plataforma_shortstay?: string | null
+          receita_media_mensal?: number | null
           ref_id?: string | null
+          taxa_condominio?: number | null
+          tipo_locacao?: string | null
+          tipo_operacao?: string | null
           titularidade?: string | null
+          unidade_consumidora?: string | null
           updated_at?: string
+          valor_aquisicao?: number | null
           valor_declarado?: number | null
+          valor_locacao_atual?: number | null
+          valor_locacao_inicial?: number | null
+          vencimento_condominio?: number | null
         }
         Relationships: [
           {
