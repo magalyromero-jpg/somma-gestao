@@ -301,7 +301,16 @@ export default function MapaFamilia() {
         </TabsContent>
 
         <TabsContent value="diligencia" className="mt-4">
-          <DiligenciaTab data={data} checklist={checklist} />
+          <DiligenciaTab
+            data={data}
+            checklist={checklist}
+            docs={docs}
+            familiaId={familia.id}
+            familiaNome={familia.nome}
+            patrimonioData={familia.patrimonio_data}
+            onChecklistChange={reloadChecklist}
+            onDocsChange={reloadDocs}
+          />
         </TabsContent>
       </Tabs>
     </>
