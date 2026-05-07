@@ -182,10 +182,42 @@ export default function Usuarios() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Modo de criação</Label>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm"
+                        variant={modo === "convite" ? "default" : "outline"}
+                        onClick={() => setModo("convite")}>
+                        Enviar convite por e-mail
+                      </Button>
+                      <Button type="button" size="sm"
+                        variant={modo === "senha" ? "default" : "outline"}
+                        onClick={() => setModo("senha")}>
+                        Definir senha agora
+                      </Button>
+                    </div>
+                  </div>
+                  {modo === "senha" && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="senha">Senha (mín. 8 caracteres)</Label>
+                      <Input
+                        id="senha"
+                        type="text"
+                        autoComplete="new-password"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        O usuário entra direto com este e-mail e senha. E-mail já vai confirmado.
+                      </p>
+                    </div>
+                  )}
                   <DialogFooter>
                     <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
                     <Button type="submit" disabled={busy} className="bg-gold hover:bg-gold/90 text-gold-foreground">
-                      {busy ? "Enviando…" : "Enviar convite"}
+                      {busy ? "Enviando…" : modo === "senha" ? "Criar usuário" : "Enviar convite"}
                     </Button>
                   </DialogFooter>
                 </form>
