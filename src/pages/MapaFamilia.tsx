@@ -89,6 +89,23 @@ export default function MapaFamilia() {
   const [checklist, setChecklist] = useState<ChecklistRow[]>([]);
   const [imoveisDb, setImoveisDb] = useState<any[]>([]);
 
+  async function reloadDocs() {
+    const { data: ds } = await supabase
+      .from("familia_documentos")
+      .select("id, nome_arquivo, tipo, recebido_em, imovel_ref, analise, storage_path")
+      .eq("familia_id", id ?? "")
+      .order("recebido_em", { ascending: false });
+    setDocs((ds ?? []) as DocumentoRow[]);
+  }
+  async function reloadChecklist() {
+    const { data: ck } = await supabase
+      .from("familia_diligencia_itens")
+      .select("*")
+      .eq("familia_id", id ?? "");
+    setChecklist((ck ?? []) as ChecklistRow[]);
+  }
+
+
   useEffect(() => {
     if (!id) return;
     (async () => {
