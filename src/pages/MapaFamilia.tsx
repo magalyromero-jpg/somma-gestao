@@ -76,6 +76,9 @@ interface DocumentoRow {
   nome_arquivo: string;
   tipo: string | null;
   recebido_em: string;
+  imovel_ref: string | null;
+  analise: any;
+  storage_path: string | null;
 }
 
 export default function MapaFamilia() {
