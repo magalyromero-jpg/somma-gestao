@@ -5,7 +5,7 @@
 //   3. Firecrawl -> scrape de cada unidade individual, extrai preço, m², tempo no mercado
 // Persiste em market_listings + market_metrics + market_conclusions.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
