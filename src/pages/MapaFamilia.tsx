@@ -791,8 +791,6 @@ function DocumentosTab({
   const [enriching, setEnriching] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
   const [currentFile, setCurrentFile] = useState<string>("");
-  const [novoImovel, setNovoImovel] = useState("");
-  const [novoLocacao, setNovoLocacao] = useState(false);
 
   const total = checklist.length;
   const recebidos = checklist.filter((c) => c.status === "recebido").length;
