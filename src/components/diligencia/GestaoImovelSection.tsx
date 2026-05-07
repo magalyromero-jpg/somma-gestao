@@ -68,7 +68,7 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, onSaved }: Props) 
       "valor_aquisicao", "data_aquisicao", "indice_correcao",
     ];
     for (const c of campos) patch[c] = form[c] ?? null;
-    const { error } = await supabase.from("imoveis_cliente").update(patch).eq("id", dbImovel.id);
+    const { error } = await supabase.from("imoveis_cliente").update(patch as any).eq("id", dbImovel.id);
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar gestão", { description: error.message });
