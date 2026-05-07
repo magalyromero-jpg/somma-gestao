@@ -260,7 +260,7 @@ export default function MapaFamilia() {
         </TabsContent>
 
         <TabsContent value="holdings" className="mt-4">
-          <HoldingsTab data={data} />
+          <HoldingsTab data={data} imoveisDb={imoveisDb} />
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-4 space-y-6">
