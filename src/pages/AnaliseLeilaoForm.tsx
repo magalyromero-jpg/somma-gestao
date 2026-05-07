@@ -72,6 +72,7 @@ export default function AnaliseLeilaoForm() {
   const [erros, setErros] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
+  const [loadingFocus, setLoadingFocus] = useState(false);
 
   const set = <K extends keyof DadosImovel>(k: K, v: DadosImovel[K]) =>
     setDados((d) => ({ ...d, [k]: v }));
