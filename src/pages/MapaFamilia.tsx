@@ -638,6 +638,16 @@ function ImoveisDbLista({
         const diverg = temDivergencia(i);
         return (
           <div key={i.id} className="border rounded-md p-3">
+            {!isPF && holdingNome && (
+              <div className="text-[11px] uppercase tracking-wider text-orange-700 font-semibold mb-1">
+                {holdingNome}
+              </div>
+            )}
+            {isPF && (
+              <div className="text-[11px] uppercase tracking-wider text-blue-700 font-semibold mb-1">
+                Pessoa Física
+              </div>
+            )}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <div className="font-medium">{i.nome}</div>
