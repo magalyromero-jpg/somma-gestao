@@ -797,15 +797,18 @@ function DocumentosTab({
   const recebidos = checklist.filter((c) => c.status === "recebido").length;
   const pct = total ? Math.round((recebidos / total) * 100) : 0;
 
-  // Agrupar por categoria
+  // Agrupar por categoria — exclui itens vinculados a imóvel (vão para a aba Diligência)
   const grupos = useMemo(() => {
     const map = new Map<string, ChecklistRow[]>();
     for (const c of checklist) {
+      if (c.imovel_ref) continue;
       if (!map.has(c.categoria)) map.set(c.categoria, []);
       map.get(c.categoria)!.push(c);
     }
     return Array.from(map.entries());
   }, [checklist]);
+
+  const docsFamilia = useMemo(() => docs.filter((d) => !d.imovel_ref), [docs]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
