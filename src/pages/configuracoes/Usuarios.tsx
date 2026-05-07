@@ -118,6 +118,25 @@ export default function Usuarios() {
     toast.success(`Convite reenviado para ${u.email}`);
   }
 
+  async function copiarLink(u: UsuarioRow) {
+    if (!u.email) return;
+    const { data, error } = await supabase.functions.invoke("get-invite-link", {
+      body: { email: u.email },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Falha ao gerar link");
+      return;
+    }
+    const link = (data as any)?.action_link;
+    if (!link) return toast.error("Link não retornado");
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success("Link copiado! Válido por 24h.");
+    } catch {
+      toast.error("Não foi possível copiar", { description: link });
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -219,9 +238,14 @@ export default function Usuarios() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {isAdmin && u.status === "pendente" && (
-                      <Button size="sm" variant="ghost" onClick={() => reenviar(u)}>
-                        Reenviar
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => reenviar(u)}>
+                          Reenviar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => copiarLink(u)}>
+                          Copiar link
+                        </Button>
+                      </>
                     )}
                     {isAdmin && u.status !== "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "inativo")}>
