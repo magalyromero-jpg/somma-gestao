@@ -80,7 +80,7 @@ export interface Veiculo {
 }
 
 export interface PatrimonialData {
-  familia: { nome: string; sede: string | null; perfil: string | null; fonte: string };
+  familia: { nome: string; sede: string | null; perfil: string | null; email_familia?: string | null; fonte: string };
   membros: Membro[];
   holdings: Holding[];
   imoveis: Imovel[];
@@ -99,8 +99,8 @@ export interface PatrimonialData {
   dividas?: Array<{
     descricao: string;
     credor: string | null;
-    valor_2023: number | null;
-    valor_2024: number | null;
+    valor_ano_anterior: number | null;
+    valor_ano_atual: number | null;
     titular_id: string;
     fonte: string;
   }>;
@@ -114,14 +114,15 @@ export interface PatrimonialData {
   checklist_documentos?: Record<string, string | string[]>;
   alertas_gerais?: Array<{ nivel: "critico" | "atencao" | "informativo"; mensagem: string; relacionado_a: string | null }>;
   patrimonio_liquido?: {
-    bens_2023: number | null;
-    bens_2024: number | null;
-    dividas_2023: number | null;
-    dividas_2024: number | null;
-    liquido_2024: number | null;
+    bens_ano_anterior: number | null;
+    bens_ano_atual: number | null;
+    dividas_ano_anterior: number | null;
+    dividas_ano_atual: number | null;
+    liquido_ano_atual: number | null;
   };
   meta: {
     documentos_analisados: string[];
+    ano_calendario?: number | null;
     data_extracao: string;
     confianca: "alta" | "media" | "baixa";
     observacoes_gerais: string | null;
