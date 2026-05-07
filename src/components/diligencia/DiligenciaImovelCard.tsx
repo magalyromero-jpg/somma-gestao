@@ -7,13 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, FileText, Upload, Plus, RefreshCw, ExternalLink, MessageSquare } from "lucide-react";
+import { ChevronDown, FileText, Plus, RefreshCw, ExternalLink, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Imovel } from "@/lib/onboarding/types";
+import type { Imovel, PatrimonialData } from "@/lib/onboarding/types";
+import { GestaoImovelSection } from "./GestaoImovelSection";
 
 interface ChecklistRow {
   id: string;
@@ -40,6 +41,13 @@ interface ComentarioRow {
   created_at: string;
 }
 
+const TIPO_OPERACAO_OPTIONS = [
+  { value: "para_renda", label: "Para renda" },
+  { value: "para_venda", label: "Para venda" },
+  { value: "valorizacao", label: "Valorização" },
+  { value: "uso_familiar", label: "Uso familiar" },
+];
+
 export function DiligenciaImovelCard({
   imovel,
   familiaId,
@@ -48,18 +56,22 @@ export function DiligenciaImovelCard({
   prioritario,
   checklist,
   docs,
+  dbImovel,
   onChecklistChange,
   onDocsChange,
+  onDbImovelChange,
 }: {
   imovel: Imovel;
   familiaId: string;
   familiaNome: string;
-  patrimonioData: any;
+  patrimonioData: PatrimonialData | null;
   prioritario: boolean;
   checklist: ChecklistRow[];
   docs: DocRow[];
+  dbImovel: any | null;
   onChecklistChange: () => Promise<void>;
   onDocsChange: () => Promise<void>;
+  onDbImovelChange: () => Promise<void>;
 }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -67,6 +79,11 @@ export function DiligenciaImovelCard({
   const [comentarios, setComentarios] = useState<ComentarioRow[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [savingComentario, setSavingComentario] = useState(false);
+  const [tipoOperacao, setTipoOperacao] = useState<string>(dbImovel?.tipo_operacao ?? "");
+
+  useEffect(() => {
+    setTipoOperacao(dbImovel?.tipo_operacao ?? "");
+  }, [dbImovel?.id, dbImovel?.tipo_operacao]);
 
   const checklistImovel = useMemo(
     () => checklist.filter((c) => c.imovel_ref === imovel.id),
@@ -120,6 +137,33 @@ export function DiligenciaImovelCard({
     toast.success("Comentário salvo");
   }
 
+  async function salvarTipoOperacao(novo: string) {
+    setTipoOperacao(novo);
+    if (!dbImovel?.id) {
+      toast.error("Imóvel ainda não cadastrado no banco");
+      return;
+    }
+    const { error } = await supabase
+      .from("imoveis_cliente")
+      .update({ tipo_operacao: novo })
+      .eq("id", dbImovel.id);
+    if (error) {
+      toast.error("Erro ao salvar tipo de operação", { description: error.message });
+      return;
+    }
+    await onDbImovelChange();
+  }
+
+  // Proprietário
+  const proprietario = useMemo(() => {
+    if (imovel.titularidade === "PJ") {
+      const h = patrimonioData?.holdings?.find((x) => x.id === imovel.holding_id);
+      return h ? `PJ — ${h.razao_social}` : "PJ";
+    }
+    const m = patrimonioData?.membros?.find((x) => x.id === imovel.titular_id);
+    return m ? `PF — ${m.nome}` : "PF";
+  }, [imovel, patrimonioData]);
+
   const tipoBadge = imovel.titularidade === "PJ"
     ? <Badge variant="outline" className="bg-orange-500/15 text-orange-700 border-orange-500/30">PJ</Badge>
     : <Badge variant="outline" className="bg-blue-500/15 text-blue-700 border-blue-500/30">PF</Badge>;
@@ -129,43 +173,61 @@ export function DiligenciaImovelCard({
   return (
     <Card>
       <CardContent className="p-0">
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="w-full p-5 flex items-start justify-between gap-3 text-left hover:bg-muted/30 transition-colors"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold">🏠 {imovel.descricao}</h4>
-              {prioritario && (
-                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
-                  Prioritário
-                </Badge>
+        {/* Header sempre visível */}
+        <div className="p-5 border-b">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="font-semibold">🏠 {imovel.descricao}</h4>
+                {prioritario && (
+                  <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                    Prioritário
+                  </Badge>
+                )}
+                {tipoBadge}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1 truncate">{endereco}</div>
+              {imovel.matricula && (
+                <div className="text-xs text-muted-foreground">Matrícula {imovel.matricula}</div>
               )}
-              {tipoBadge}
+              <div className="text-xs text-muted-foreground">Proprietário: {proprietario}</div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-muted-foreground">Tipo de operação:</span>
+                <select
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  value={tipoOperacao}
+                  onChange={(e) => salvarTipoOperacao(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {TIPO_OPERACAO_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3 mt-3">
+                <Progress value={pct} className="h-1.5 flex-1 max-w-[240px]" />
+                <span className="text-xs text-muted-foreground">{recebidos}/{total} documentos</span>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground mt-1 truncate">{endereco}</div>
-            {imovel.matricula && (
-              <div className="text-xs text-muted-foreground">Matrícula {imovel.matricula}</div>
-            )}
-            <div className="flex items-center gap-3 mt-2">
-              <Progress value={pct} className="h-1.5 flex-1 max-w-[200px]" />
-              <span className="text-xs text-muted-foreground">{recebidos}/{total} documentos</span>
+            <div className="text-right shrink-0">
+              <div className="font-semibold">
+                {imovel.valor_declarado != null ? formatBRL(imovel.valor_declarado) : "—"}
+              </div>
+              <Button size="sm" variant="ghost" className="mt-1" onClick={() => setOpen((o) => !o)}>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                {open ? "Recolher" : "Expandir"}
+              </Button>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <div className="font-semibold">
-              {imovel.valor_declarado != null ? formatBRL(imovel.valor_declarado) : "—"}
-            </div>
-            <ChevronDown className={cn("h-4 w-4 text-muted-foreground inline-block mt-1 transition-transform", open && "rotate-180")} />
-          </div>
-        </button>
+        </div>
 
         {open && (
-          <div className="border-t px-5 pb-5 pt-4">
+          <div className="px-5 pb-5 pt-4">
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
                 <TabsTrigger value="checklist">Checklist</TabsTrigger>
                 <TabsTrigger value="documentos">Documentos ({docsImovel.length})</TabsTrigger>
+                <TabsTrigger value="gestao">Gestão</TabsTrigger>
                 <TabsTrigger value="comentarios">Comentários ({comentarios.length})</TabsTrigger>
               </TabsList>
 
@@ -197,16 +259,24 @@ export function DiligenciaImovelCard({
                 )}
               </TabsContent>
 
+              <TabsContent value="gestao" className="mt-4">
+                <GestaoImovelSection
+                  dbImovel={dbImovel}
+                  tipoOperacao={tipoOperacao}
+                  onSaved={onDbImovelChange}
+                />
+              </TabsContent>
+
               <TabsContent value="comentarios" className="mt-4 space-y-3">
                 <div className="space-y-2">
                   <Textarea
-                    placeholder="Aguardando retorno do cartório, cliente confirmou integralização em jun/2026..."
+                    placeholder="Anotações sobre o imóvel, pendências, contatos realizados, decisões tomadas..."
                     value={novoComentario}
                     onChange={(e) => setNovoComentario(e.target.value)}
                     rows={3}
                   />
                   <Button size="sm" onClick={adicionarComentario} disabled={savingComentario || novoComentario.trim().length < 2}>
-                    <MessageSquare className="h-4 w-4 mr-1" /> Salvar comentário
+                    <MessageSquare className="h-4 w-4 mr-1" /> Adicionar comentário
                   </Button>
                 </div>
                 {comentarios.length === 0 ? (
@@ -245,15 +315,14 @@ function ChecklistItemRow({
   item: ChecklistRow;
   familiaId: string;
   familiaNome: string;
-  patrimonioData: any;
+  patrimonioData: PatrimonialData | null;
   imovelRef: string;
   onChange: () => Promise<void>;
 }) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
-  async function toggle() {
-    const novo = item.status === "recebido" ? "pendente" : "recebido";
+  async function setStatus(novo: string) {
     await supabase.from("familia_diligencia_itens").update({ status: novo }).eq("id", item.id);
     await onChange();
   }
@@ -261,54 +330,48 @@ function ChecklistItemRow({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
     multiple: false,
-    noClick: false,
+    noClick: true,
     onDrop: async (accepted) => {
       if (!accepted.length) return;
-      setUploading(true);
-      try {
-        const f = accepted[0];
-        const base64 = await fileToBase64(f);
-
-        // Roda análise via extract-patrimonial
-        let analise: any = null;
-        try {
-          const { data } = await supabase.functions.invoke("extract-patrimonial", {
-            body: {
-              familyName: familiaNome,
-              files: [{ name: f.name, mimeType: f.type || "application/pdf", base64 }],
-              existingData: patrimonioData ?? null,
-            },
-          });
-          analise = data?.data ?? null;
-        } catch (e) {
-          // segue sem análise
-        }
-
-        await supabase.from("familia_documentos").insert({
-          familia_id: familiaId,
-          nome_arquivo: f.name,
-          tipo: f.type,
-          storage_path: "",
-          categoria: item.item_key,
-          imovel_ref: imovelRef,
-          analise,
-          created_by: user?.id ?? "",
-        });
-
-        await supabase
-          .from("familia_diligencia_itens")
-          .update({ status: "recebido" })
-          .eq("id", item.id);
-
-        toast.success(`${item.item_label} anexado ✓`);
-        await onChange();
-      } catch (e: any) {
-        toast.error("Erro ao anexar", { description: e?.message });
-      } finally {
-        setUploading(false);
-      }
+      await uploadArquivo(accepted[0]);
     },
   });
+
+  async function uploadArquivo(f: File) {
+    setUploading(true);
+    try {
+      const base64 = await fileToBase64(f);
+      let analise: any = null;
+      try {
+        const { data } = await supabase.functions.invoke("extract-patrimonial", {
+          body: {
+            familyName: familiaNome,
+            files: [{ name: f.name, mimeType: f.type || "application/pdf", base64 }],
+            existingData: patrimonioData ?? null,
+          },
+        });
+        analise = data?.data ?? null;
+      } catch {/* segue sem análise */}
+
+      await supabase.from("familia_documentos").insert({
+        familia_id: familiaId,
+        nome_arquivo: f.name,
+        tipo: f.type,
+        storage_path: "",
+        categoria: item.item_key,
+        imovel_ref: imovelRef,
+        analise,
+        created_by: user?.id ?? "",
+      });
+      await supabase.from("familia_diligencia_itens").update({ status: "recebido" }).eq("id", item.id);
+      toast.success(`${item.item_label} anexado ✓`);
+      await onChange();
+    } catch (e: any) {
+      toast.error("Erro ao anexar", { description: e?.message });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div
@@ -322,24 +385,43 @@ function ChecklistItemRow({
       <input {...getInputProps()} />
       <Checkbox
         checked={item.status === "recebido"}
-        onCheckedChange={toggle}
-        onClick={(e) => e.stopPropagation()}
+        onCheckedChange={() => setStatus(item.status === "recebido" ? "pendente" : "recebido")}
       />
       <span className={cn("flex-1", item.status === "recebido" && "line-through text-muted-foreground")}>
         {item.item_label}
       </span>
       {item.is_locacao && <Badge variant="outline" className="text-[10px]">locação</Badge>}
-      <Button size="sm" variant="outline" disabled={uploading}>
-        {uploading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
-        {uploading ? "Enviando..." : "Anexar"}
-      </Button>
+      <select
+        className="h-7 text-xs rounded border border-input bg-background px-1"
+        value={item.status}
+        onChange={(e) => setStatus(e.target.value)}
+      >
+        <option value="pendente">pendente</option>
+        <option value="recebido">recebido</option>
+        <option value="nao_aplicavel">não aplicável</option>
+      </select>
+      <label className="cursor-pointer">
+        <input
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) uploadArquivo(f);
+          }}
+        />
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted">
+          {uploading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+          {uploading ? "Enviando..." : "Anexar"}
+        </span>
+      </label>
     </div>
   );
 }
 
 function DocItem({
   doc,
-  familiaId,
+  familiaId: _familiaId,
   familiaNome,
   patrimonioData,
   onChange,
@@ -347,7 +429,7 @@ function DocItem({
   doc: DocRow;
   familiaId: string;
   familiaNome: string;
-  patrimonioData: any;
+  patrimonioData: PatrimonialData | null;
   onChange: () => Promise<void>;
 }) {
   const [reprocessing, setReprocessing] = useState(false);
@@ -376,7 +458,7 @@ function DocItem({
     }
   }
 
-  const resumoAnalise = resumirAnalise(doc.analise, doc.nome_arquivo);
+  const resumoAnalise = resumirAnalise(doc.analise);
 
   return (
     <div className="p-3 border rounded-md space-y-2">
@@ -389,11 +471,11 @@ function DocItem({
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <Button size="sm" variant="ghost" onClick={reprocessar} disabled={reprocessing}>
+          <Button size="sm" variant="ghost" onClick={reprocessar} disabled={reprocessing} title="Reprocessar">
             <RefreshCw className={cn("h-3.5 w-3.5", reprocessing && "animate-spin")} />
           </Button>
           {doc.storage_path && (
-            <Button size="sm" variant="ghost" asChild>
+            <Button size="sm" variant="ghost" asChild title="Ver arquivo">
               <a href={doc.storage_path} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
@@ -410,13 +492,13 @@ function DocItem({
   );
 }
 
-function resumirAnalise(analise: any, _nome: string): string | null {
+function resumirAnalise(analise: any): string | null {
   if (!analise || typeof analise !== "object") return null;
   const partes: string[] = [];
   const imv = analise?.imoveis?.[0];
   if (imv) {
     if (imv.matricula) partes.push(`Matrícula ${imv.matricula}`);
-    if (imv.cartorio) partes.push(`Cartório: ${imv.cartorio}`);
+    if (imv.area_m2) partes.push(`Área: ${imv.area_m2}m²`);
     if (imv.proprietario_anterior) partes.push(`Anterior: ${imv.proprietario_anterior}`);
     if (imv.valor_declarado) partes.push(`Valor: ${formatBRL(imv.valor_declarado)}`);
   }
