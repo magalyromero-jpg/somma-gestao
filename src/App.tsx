@@ -13,17 +13,21 @@ import Familias from "./pages/Familias";
 import FamiliaDetalhe from "./pages/FamiliaDetalhe";
 import Imoveis from "./pages/Imoveis";
 import ImovelDetalhe from "./pages/ImovelDetalhe";
+import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
 import Mercado from "./pages/Mercado";
 import PesquisaMercado from "./pages/PesquisaMercado";
 import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
 import Analytics from "./pages/Analytics";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
+import Usuarios from "./pages/configuracoes/Usuarios";
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
 import OnboardingFamilia from "./pages/OnboardingFamilia";
 import MapaFamilia from "./pages/MapaFamilia";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import SetPassword from "./pages/auth/SetPassword";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } },
@@ -38,12 +42,16 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password" element={<SetPassword mode="reset" />} />
+            <Route path="/auth/set-password" element={<SetPassword mode="set" />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
-              <Route path="/dashboard" element={<ProtectedRoute requireRole="gestor"><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
               <Route path="/familias/:id" element={<FamiliaDetalhe />} />
               <Route path="/imoveis" element={<Imoveis />} />
+              <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
               <Route path="/imoveis/:codImovel" element={<ImovelDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
               <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
@@ -54,8 +62,9 @@ const App = () => (
               <Route path="/onboarding" element={<OnboardingFamilia />} />
               <Route path="/onboarding/:familiaId" element={<OnboardingFamilia />} />
               <Route path="/familias-onboarding/:id" element={<MapaFamilia />} />
-              <Route path="/atualizacoes" element={<ProtectedRoute requireRole="gestor"><Atualizacoes /></ProtectedRoute>} />
-              <Route path="/configuracoes" element={<ProtectedRoute requireRole="gestor"><Configuracoes /></ProtectedRoute>} />
+              <Route path="/atualizacoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Atualizacoes /></ProtectedRoute>} />
+              <Route path="/configuracoes/usuarios" element={<ProtectedRoute requireRole="admin"><Usuarios /></ProtectedRoute>} />
+              <Route path="/configuracoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Configuracoes /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
