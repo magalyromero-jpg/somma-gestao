@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,15 @@ import { formatBRL, formatPct, pctClass } from "@/lib/format";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
+import { supabase } from "@/integrations/supabase/client";
+
+interface FamiliaOnboarding {
+  id: string;
+  nome: string;
+  sede: string | null;
+  patrimonio_data: any;
+  updated_at: string;
+}
 
 const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
 
