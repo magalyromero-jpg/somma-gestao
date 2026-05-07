@@ -465,6 +465,8 @@ function DocumentosTab({
   userId: string;
 }) {
   const [enriching, setEnriching] = useState(false);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [currentFile, setCurrentFile] = useState<string>("");
   const [novoImovel, setNovoImovel] = useState("");
   const [novoLocacao, setNovoLocacao] = useState(false);
 
