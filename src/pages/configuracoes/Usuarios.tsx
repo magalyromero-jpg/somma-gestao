@@ -42,7 +42,7 @@ export default function Usuarios() {
   // form
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("analista");
+  const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("gestor");
   const [modo, setModo] = useState<"convite" | "senha">("convite");
   const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
