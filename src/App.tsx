@@ -52,6 +52,7 @@ const App = () => (
               <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
               <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
               <Route path="/onboarding" element={<OnboardingFamilia />} />
+              <Route path="/onboarding/:familiaId" element={<OnboardingFamilia />} />
               <Route path="/familias-onboarding/:id" element={<MapaFamilia />} />
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole="gestor"><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole="gestor"><Configuracoes /></ProtectedRoute>} />
