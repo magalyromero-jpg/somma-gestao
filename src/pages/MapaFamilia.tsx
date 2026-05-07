@@ -666,14 +666,37 @@ function DocumentosTab({
             className={cn(
               "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
               isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-              enriching && "opacity-60 pointer-events-none",
+              enriching && "opacity-80 pointer-events-none bg-primary/5 border-primary/40",
             )}
           >
             <input {...getInputProps()} />
-            <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm">
-              {enriching ? "Processando novos documentos..." : "Adicionar mais documentos (enriquecimento)"}
-            </p>
+            {enriching ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-sm font-medium">{PROCESSING_STEPS[stepIdx]}</span>
+                </div>
+                {currentFile && (
+                  <p className="text-xs text-muted-foreground truncate">{currentFile}</p>
+                )}
+                <div className="flex justify-center gap-1">
+                  {PROCESSING_STEPS.map((_, i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-1 w-8 rounded-full transition-colors",
+                        i <= stepIdx ? "bg-primary" : "bg-border",
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm">Adicionar mais documentos (enriquecimento)</p>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
