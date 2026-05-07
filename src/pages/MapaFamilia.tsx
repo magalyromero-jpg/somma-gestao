@@ -490,6 +490,14 @@ function DocumentosTab({
     onDrop: async (accepted) => {
       if (!accepted.length) return;
       setEnriching(true);
+      setStepIdx(0);
+      setCurrentFile(accepted.map((f) => f.name).join(", "));
+      const stepTimer = setInterval(() => {
+        setStepIdx((i) => Math.min(i + 1, PROCESSING_STEPS.length - 2));
+      }, 2000);
+
+      let updatedItems = 0;
+      const detectionToasts: string[] = [];
       try {
         const filesPayload = await Promise.all(
           accepted.map(async (f) => ({
@@ -509,36 +517,64 @@ function DocumentosTab({
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        const { data: updated } = await supabase
+        await supabase
           .from("familias_onboarding")
           .update({
             patrimonio_data: data.data,
             confianca: data.data?.meta?.confianca ?? null,
           })
-          .eq("id", familia.id)
-          .select()
-          .single();
+          .eq("id", familia.id);
 
-        await supabase.from("familia_documentos").insert(
-          accepted.map((f) => ({
+        // Identificação por nome de arquivo + auto-match no checklist
+        for (const f of accepted) {
+          const det = detectarDocumento(f.name, data.data ?? familia.patrimonio_data ?? null);
+          let categoriaDoc: string = det.categoria;
+          if (det.itemKey) {
+            const matches = checklist.filter((c) => {
+              if (c.item_key !== det.itemKey) return false;
+              if (det.imovelRef) return c.imovel_ref === det.imovelRef;
+              return true;
+            });
+            for (const m of matches) {
+              if (m.status !== "recebido") {
+                await supabase
+                  .from("familia_diligencia_itens")
+                  .update({ status: "recebido" })
+                  .eq("id", m.id);
+                updatedItems += 1;
+              }
+            }
+            if (det.categoria !== "outros") {
+              detectionToasts.push(`${det.rotulo} e marcado ✓`);
+            }
+            categoriaDoc = det.categoria;
+          }
+
+          await supabase.from("familia_documentos").insert({
             familia_id: familia.id,
             nome_arquivo: f.name,
             tipo: f.type,
             storage_path: "",
-            categoria: "enriquecimento",
+            categoria: categoriaDoc,
             created_by: userId,
-          })),
+          });
+        }
+
+        clearInterval(stepTimer);
+        setStepIdx(PROCESSING_STEPS.length - 1);
+
+        for (const t of detectionToasts) toast.success(t);
+        toast.success(
+          `${accepted.map((f) => f.name).join(", ")} processado — ${updatedItems} ${updatedItems === 1 ? "item do checklist atualizado" : "itens do checklist atualizados"}`,
         );
 
-        if (updated) {
-          // Recarrega estado inline (sem F5)
-          window.location.reload();
-        }
-        toast.success("Documentos processados");
+        // pequeno delay para mostrar "Concluído ✓"
+        setTimeout(() => window.location.reload(), 600);
       } catch (e: any) {
+        clearInterval(stepTimer);
         toast.error("Erro ao processar", { description: e?.message });
-      } finally {
         setEnriching(false);
+        setCurrentFile("");
       }
     },
   });
