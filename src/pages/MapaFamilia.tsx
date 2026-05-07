@@ -248,6 +248,7 @@ export default function MapaFamilia() {
         </TabsList>
 
         <TabsContent value="familia" className="space-y-6 mt-4">
+          <FamiliaContexto familia={familia} checklist={checklist} onSaved={(patch) => setFamilia((f: any) => ({ ...f, ...patch }))} />
           <FamiliaTab membros={data?.membros ?? []} />
         </TabsContent>
 
