@@ -29,6 +29,13 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+interface OnboardingResumo {
+  id: string;
+  nome: string;
+  patrimonio_data: any;
+  updated_at: string;
+}
+
 export default function OnboardingFamilia() {
   const navigate = useNavigate();
   const { familiaId: familiaIdParam } = useParams<{ familiaId: string }>();
@@ -37,12 +44,27 @@ export default function OnboardingFamilia() {
   const [nome, setNome] = useState("");
   const [familiaId, setFamiliaId] = useState<string | null>(familiaIdParam ?? null);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [resultado, setResultado] = useState<PatrimonialData | null>(null);
   const [hydrating, setHydrating] = useState<boolean>(!!familiaIdParam);
+  const [emAndamento, setEmAndamento] = useState<OnboardingResumo[]>([]);
+  const [novo, setNovo] = useState(false);
 
-  // Hidrata estado a partir do Supabase quando vier com :familiaId na URL (sobrevive F5)
+  // Lista onboardings em andamento quando não há :familiaId e o usuário não pediu "Novo"
+  useEffect(() => {
+    if (familiaIdParam || !user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("familias_onboarding")
+        .select("id, nome, patrimonio_data, updated_at")
+        .order("updated_at", { ascending: false });
+      setEmAndamento((data ?? []) as OnboardingResumo[]);
+    })();
+  }, [familiaIdParam, user]);
+
+  // Hidrata estado a partir do Supabase quando vier com :familiaId na URL
   useEffect(() => {
     if (!familiaIdParam) return;
     (async () => {
@@ -71,7 +93,33 @@ export default function OnboardingFamilia() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
     multiple: true,
-    onDrop: (accepted) => setFiles((prev) => [...prev, ...accepted]),
+    onDrop: async (accepted) => {
+      if (!accepted.length || !familiaId || !user) return;
+      setFiles((prev) => [...prev, ...accepted]);
+      setUploadingCount((c) => c + accepted.length);
+      for (const f of accepted) {
+        try {
+          const path = `${familiaId}/onboarding/${Date.now()}-${f.name}`;
+          const { error: upErr } = await supabase.storage
+            .from("familia-documentos")
+            .upload(path, f, { upsert: false });
+          if (upErr) throw upErr;
+          const { error: insErr } = await supabase.from("familia_documentos").insert({
+            familia_id: familiaId,
+            nome_arquivo: f.name,
+            tipo: f.type,
+            storage_path: path,
+            categoria: "onboarding",
+            created_by: user.id,
+          });
+          if (insErr) throw insErr;
+        } catch (e: any) {
+          toast.error(`Falha ao salvar ${f.name}`, { description: e?.message });
+        } finally {
+          setUploadingCount((c) => Math.max(0, c - 1));
+        }
+      }
+    },
   });
 
   const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
