@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.extract-edital]
 verify_jwt = false
+
+[functions.fetch-focus]
+verify_jwt = false
