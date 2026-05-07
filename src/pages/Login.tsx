@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,6 +142,14 @@ export default function Login() {
             >
               {busy ? "Aguarde…" : mode === "signin" ? "Entrar" : "Criar conta"}
             </Button>
+
+            {mode === "signin" && (
+              <div className="text-center">
+                <Link to="/auth/forgot-password" className="text-xs font-light text-muted-foreground hover:text-foreground">
+                  Esqueci minha senha
+                </Link>
+              </div>
+            )}
           </form>
 
           <div className="text-center text-sm">

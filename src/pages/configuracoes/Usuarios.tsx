@@ -34,7 +34,7 @@ const perfilLabel: Record<Perfil, string> = {
 
 export default function Usuarios() {
   const { role } = useAuth();
-  const isAdmin = role === "admin" || role === "gestor"; // fallback inicial
+  const isAdmin = role === "admin";
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
