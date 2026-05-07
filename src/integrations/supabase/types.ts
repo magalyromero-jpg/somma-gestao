@@ -255,9 +255,11 @@ export type Database = {
           fonte: string | null
           id: string
           nome: string
+          observacoes: string | null
           patrimonio_data: Json | null
           perfil: string | null
           sede: string | null
+          tipo_perfil: string | null
           updated_at: string
         }
         Insert: {
@@ -268,9 +270,11 @@ export type Database = {
           fonte?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
           patrimonio_data?: Json | null
           perfil?: string | null
           sede?: string | null
+          tipo_perfil?: string | null
           updated_at?: string
         }
         Update: {
@@ -281,9 +285,11 @@ export type Database = {
           fonte?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
           patrimonio_data?: Json | null
           perfil?: string | null
           sede?: string | null
+          tipo_perfil?: string | null
           updated_at?: string
         }
         Relationships: []

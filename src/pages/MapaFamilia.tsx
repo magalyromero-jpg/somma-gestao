@@ -248,6 +248,7 @@ export default function MapaFamilia() {
         </TabsList>
 
         <TabsContent value="familia" className="space-y-6 mt-4">
+          <FamiliaContexto familia={familia} checklist={checklist} onSaved={(patch) => setFamilia((f: any) => ({ ...f, ...patch }))} />
           <FamiliaTab membros={data?.membros ?? []} />
         </TabsContent>
 
@@ -288,6 +289,135 @@ const KpiBox = ({ label, value }: { label: string; value: string }) => (
     </CardContent>
   </Card>
 );
+
+/* ===== Família contexto (perfil + observações + situação) ===== */
+const TIPOS_PERFIL = [
+  "Patrimônio Familiar",
+  "Empresário",
+  "Investidor",
+  "Holding Familiar",
+  "Multi-Family Office",
+];
+
+function FamiliaContexto({
+  familia,
+  checklist,
+  onSaved,
+}: {
+  familia: any;
+  checklist: ChecklistRow[];
+  onSaved: (patch: { tipo_perfil?: string | null; observacoes?: string | null }) => void;
+}) {
+  const [tipo, setTipo] = useState<string>(familia.tipo_perfil ?? "");
+  const [obs, setObs] = useState<string>(familia.observacoes ?? "");
+  const [savingObs, setSavingObs] = useState(false);
+  const obsDirty = (obs ?? "") !== (familia.observacoes ?? "");
+
+  const total = checklist.length;
+  const recebidos = checklist.filter((c) => c.status === "recebido").length;
+  const pct = total ? Math.round((recebidos / total) * 100) : 0;
+  const cor = pct >= 80 ? "green" : pct >= 1 ? "yellow" : "red";
+  const corClass =
+    cor === "green"
+      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700"
+      : cor === "yellow"
+      ? "bg-amber-500/10 border-amber-500/30 text-amber-700"
+      : "bg-red-500/10 border-red-500/30 text-red-700";
+  const icone = cor === "green" ? "🟢" : cor === "yellow" ? "🟡" : "🔴";
+
+  const recebidosCats = new Set(
+    checklist.filter((c) => c.status === "recebido").map((c) => c.categoria),
+  );
+  const pendentesCats = Array.from(
+    new Set(
+      checklist
+        .filter((c) => c.status !== "recebido")
+        .map((c) => c.categoria.replace(/^Imóvel: .+/, "matrículas")),
+    ),
+  );
+  const totalImoveis = new Set(
+    checklist.filter((c) => c.imovel_ref).map((c) => c.imovel_ref),
+  ).size;
+  const recebidosTxt = Array.from(recebidosCats).slice(0, 3).join(", ") || "nada ainda";
+  const pendentesTxt = pendentesCats.slice(0, 3).join(", ") || "—";
+  const texto =
+    cor === "red"
+      ? `Onboarding iniciado — nenhum documento recebido. ${totalImoveis} imóveis identificados.`
+      : cor === "green"
+      ? `Onboarding praticamente completo — ${recebidos}/${total} itens recebidos.`
+      : `Onboarding em progresso — ${recebidosTxt} recebido(s), ${totalImoveis} imóveis identificados. Pendente: ${pendentesTxt}.`;
+
+  async function salvarTipo(v: string) {
+    setTipo(v);
+    const { error } = await supabase
+      .from("familias_onboarding")
+      .update({ tipo_perfil: v })
+      .eq("id", familia.id);
+    if (error) toast.error("Erro ao salvar tipo", { description: error.message });
+    else {
+      onSaved({ tipo_perfil: v });
+      toast.success("Tipo de perfil atualizado");
+    }
+  }
+
+  async function salvarObs() {
+    setSavingObs(true);
+    const { error } = await supabase
+      .from("familias_onboarding")
+      .update({ observacoes: obs })
+      .eq("id", familia.id);
+    setSavingObs(false);
+    if (error) toast.error("Erro ao salvar", { description: error.message });
+    else {
+      onSaved({ observacoes: obs });
+      toast.success("Observações salvas");
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-5">
+        <div className={cn("rounded-md border px-3 py-2.5 text-sm flex items-start gap-2", corClass)}>
+          <span className="text-base leading-none mt-0.5">{icone}</span>
+          <span className="leading-snug">{texto}</span>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de perfil</Label>
+            <select
+              className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={tipo}
+              onChange={(e) => salvarTipo(e.target.value)}
+            >
+              <option value="">Selecionar…</option>
+              {TIPOS_PERFIL.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Observações</Label>
+          <textarea
+            className="mt-1.5 w-full min-h-[90px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+            placeholder="Anotações internas sobre a família, contexto do relacionamento, objetivos patrimoniais..."
+            value={obs}
+            onChange={(e) => setObs(e.target.value)}
+          />
+          {obsDirty && (
+            <div className="mt-2 flex justify-end">
+              <Button size="sm" onClick={salvarObs} disabled={savingObs}>
+                {savingObs ? "Salvando…" : "Salvar"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 /* ===== Família Tab ===== */
 function FamiliaTab({ membros }: { membros: Membro[] }) {
