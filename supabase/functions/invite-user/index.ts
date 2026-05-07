@@ -49,10 +49,10 @@ Deno.serve(async (req) => {
       return json({ error: "E-mail inválido" }, 400);
     }
 
-    const origin = req.headers.get("origin") ?? SUPABASE_URL;
+    const redirectTo = "https://somma-gestao.lovable.app/auth/set-password";
     const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { nome, perfil },
-      redirectTo: `${origin}/auth/set-password`,
+      redirectTo,
     });
     if (inviteErr || !invite?.user) {
       return json({ error: inviteErr?.message ?? "Falha ao enviar convite" }, 400);
