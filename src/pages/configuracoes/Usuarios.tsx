@@ -308,6 +308,11 @@ export default function Usuarios() {
                         </Button>
                       </>
                     )}
+                    {isAdmin && (
+                      <Button size="sm" variant="ghost" onClick={() => { setPwdUser(u); setPwdNova(""); setPwdOpen(true); }}>
+                        Definir senha
+                      </Button>
+                    )}
                     {isAdmin && u.status !== "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "inativo")}>
                         Desativar
@@ -325,6 +330,37 @@ export default function Usuarios() {
           </table>
         </div>
       </Card>
+
+      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir senha — {pwdUser?.nome ?? pwdUser?.email}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={definirSenhaExistente} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pwdNova">Nova senha (mín. 8 caracteres)</Label>
+              <Input
+                id="pwdNova"
+                type="text"
+                autoComplete="new-password"
+                value={pwdNova}
+                onChange={(e) => setPwdNova(e.target.value)}
+                minLength={8}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                O usuário poderá entrar imediatamente com este e-mail e senha.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setPwdOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={pwdBusy} className="bg-gold hover:bg-gold/90 text-gold-foreground">
+                {pwdBusy ? "Salvando…" : "Salvar senha"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
