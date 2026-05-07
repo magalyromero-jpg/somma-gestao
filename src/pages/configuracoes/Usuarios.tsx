@@ -105,6 +105,19 @@ export default function Usuarios() {
     carregar();
   }
 
+  async function reenviar(u: UsuarioRow) {
+    if (!u.email) return;
+    const perfilEnvio = (u.role && u.role !== "familia" ? u.role : "analista") as "admin" | "gestor" | "analista";
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: { nome: u.nome ?? u.email, email: u.email, perfil: perfilEnvio },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Falha ao reenviar convite");
+      return;
+    }
+    toast.success(`Convite reenviado para ${u.email}`);
+  }
+
   return (
     <>
       <PageHeader
@@ -205,6 +218,11 @@ export default function Usuarios() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    {isAdmin && u.status === "pendente" && (
+                      <Button size="sm" variant="ghost" onClick={() => reenviar(u)}>
+                        Reenviar
+                      </Button>
+                    )}
                     {isAdmin && u.status !== "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "inativo")}>
                         Desativar
