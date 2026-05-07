@@ -32,6 +32,97 @@ export type Database = {
         }
         Relationships: []
       }
+      familia_diligencia_itens: {
+        Row: {
+          categoria: string
+          created_at: string
+          familia_id: string
+          id: string
+          imovel_ref: string | null
+          is_locacao: boolean
+          item_key: string
+          item_label: string
+          ordem: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          familia_id: string
+          id?: string
+          imovel_ref?: string | null
+          is_locacao?: boolean
+          item_key: string
+          item_label: string
+          ordem?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          familia_id?: string
+          id?: string
+          imovel_ref?: string | null
+          is_locacao?: boolean
+          item_key?: string
+          item_label?: string
+          ordem?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "familia_diligencia_itens_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      familia_documentos: {
+        Row: {
+          categoria: string | null
+          created_by: string
+          familia_id: string
+          id: string
+          nome_arquivo: string
+          recebido_em: string
+          storage_path: string
+          tipo: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          created_by: string
+          familia_id: string
+          id?: string
+          nome_arquivo: string
+          recebido_em?: string
+          storage_path: string
+          tipo?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          created_by?: string
+          familia_id?: string
+          id?: string
+          nome_arquivo?: string
+          recebido_em?: string
+          storage_path?: string
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "familia_documentos_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias_onboarding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       familia_membros: {
         Row: {
           created_at: string
@@ -88,6 +179,48 @@ export type Database = {
           id?: string
           lidderar_conta_id?: number | null
           nome?: string
+        }
+        Relationships: []
+      }
+      familias_onboarding: {
+        Row: {
+          confianca: string | null
+          created_at: string
+          created_by: string
+          email_familia: string | null
+          fonte: string | null
+          id: string
+          nome: string
+          patrimonio_data: Json | null
+          perfil: string | null
+          sede: string | null
+          updated_at: string
+        }
+        Insert: {
+          confianca?: string | null
+          created_at?: string
+          created_by: string
+          email_familia?: string | null
+          fonte?: string | null
+          id?: string
+          nome: string
+          patrimonio_data?: Json | null
+          perfil?: string | null
+          sede?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confianca?: string | null
+          created_at?: string
+          created_by?: string
+          email_familia?: string | null
+          fonte?: string | null
+          id?: string
+          nome?: string
+          patrimonio_data?: Json | null
+          perfil?: string | null
+          sede?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

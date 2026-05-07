@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel } from "lucide-react";
+import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
@@ -12,6 +12,7 @@ const nav = [
   { to: "/mercado",          label: "Mercado",             icon: LineChart,       gestorOnly: false },
   { to: "/pesquisa-mercado", label: "Pesquisa de Mercado", icon: Search,          gestorOnly: false },
   { to: "/analise-leilao",   label: "Análise de Leilão",   icon: Gavel,           gestorOnly: true },
+  { to: "/onboarding",       label: "Onboarding",          icon: UserPlus,        gestorOnly: false },
   { to: "/atualizacoes",     label: "Atualizações",        icon: RefreshCw,       gestorOnly: true },
   { to: "/configuracoes",    label: "Configurações",       icon: Settings,        gestorOnly: true },
 ];
