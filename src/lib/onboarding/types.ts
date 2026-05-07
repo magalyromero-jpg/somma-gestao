@@ -59,18 +59,23 @@ export interface Imovel {
   holding_id: string | null;
   forma_aquisicao: "compra" | "permuta" | "integralizacao" | "heranca" | "doacao" | "outra" | null;
   locacao: boolean;
-  situacao_2023: number | null;
-  situacao_2024: number | null;
+  alienado?: boolean;
+  situacao_ano_anterior: number | null;
+  situacao_ano_atual: number | null;
+  benfeitorias?: Array<{ descricao: string; valor: number | null; ano: number | null }>;
   alertas: string[];
   fonte: string;
 }
 
 export interface Veiculo {
+  id?: string;
   descricao: string;
   placa: string | null;
+  renavam?: string | null;
   ano: string | null;
   valor_declarado: number | null;
   titular_id: string;
+  alienado?: boolean;
   fonte: string;
 }
 
