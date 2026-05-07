@@ -92,7 +92,7 @@ export default function Usuarios() {
     }
     toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
     setOpen(false);
-    setNome(""); setEmail(""); setPerfil("analista"); setSenha(""); setModo("convite");
+    setNome(""); setEmail(""); setPerfil("gestor"); setSenha(""); setModo("convite");
     carregar();
   }
 
