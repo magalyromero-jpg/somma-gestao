@@ -24,6 +24,17 @@ export default function Familias() {
   const { familias, isLoading: loadingF, error: errorF } = useFamilias();
   const { imoveis, isLoading: loadingI, error: errorI } = useImoveis();
   const [view, setView] = useState<"conta" | "perfil">("conta");
+  const [onboardings, setOnboardings] = useState<FamiliaOnboarding[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("familias_onboarding")
+        .select("id, nome, sede, patrimonio_data, updated_at")
+        .order("updated_at", { ascending: false });
+      setOnboardings((data ?? []) as FamiliaOnboarding[]);
+    })();
+  }, []);
 
   const isLoading = loadingF || loadingI;
   const error = errorF || errorI;
