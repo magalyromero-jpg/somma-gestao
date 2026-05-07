@@ -129,6 +129,15 @@ export default function OnboardingFamilia() {
         );
       }
 
+      // Cria imóveis e checklists automaticamente
+      if (Array.isArray(patrimonio.imoveis) && patrimonio.imoveis.length > 0) {
+        try {
+          await criarChecklistsImoveis(inserted.id, patrimonio.imoveis);
+        } catch (err) {
+          console.error("Falha ao criar checklists de imóveis", err);
+        }
+      }
+
       toast.success("Mapa patrimonial extraído!");
       // guardar id para botão final
       (window as any).__lastFamiliaId = inserted.id;
