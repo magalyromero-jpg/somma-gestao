@@ -506,13 +506,15 @@ function DocumentosTab({
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        await supabase
+        const { data: updated } = await supabase
           .from("familias_onboarding")
           .update({
             patrimonio_data: data.data,
             confianca: data.data?.meta?.confianca ?? null,
           })
-          .eq("id", familia.id);
+          .eq("id", familia.id)
+          .select()
+          .single();
 
         await supabase.from("familia_documentos").insert(
           accepted.map((f) => ({
@@ -525,7 +527,11 @@ function DocumentosTab({
           })),
         );
 
-        toast.success("Documentos processados — recarregue a página para ver o mapa atualizado");
+        if (updated) {
+          // Recarrega estado inline (sem F5)
+          window.location.reload();
+        }
+        toast.success("Documentos processados");
       } catch (e: any) {
         toast.error("Erro ao processar", { description: e?.message });
       } finally {

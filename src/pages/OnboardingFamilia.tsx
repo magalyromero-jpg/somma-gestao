@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Upload, FileText, Check, X, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { PageHeader } from "@/components/PageHeader";
@@ -31,13 +31,42 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function OnboardingFamilia() {
   const navigate = useNavigate();
+  const { familiaId: familiaIdParam } = useParams<{ familiaId: string }>();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [nome, setNome] = useState("");
+  const [familiaId, setFamiliaId] = useState<string | null>(familiaIdParam ?? null);
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [resultado, setResultado] = useState<PatrimonialData | null>(null);
+  const [hydrating, setHydrating] = useState<boolean>(!!familiaIdParam);
+
+  // Hidrata estado a partir do Supabase quando vier com :familiaId na URL (sobrevive F5)
+  useEffect(() => {
+    if (!familiaIdParam) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("familias_onboarding")
+        .select("id, nome, patrimonio_data")
+        .eq("id", familiaIdParam)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Onboarding não encontrado");
+        navigate("/onboarding", { replace: true });
+        return;
+      }
+      setFamiliaId(data.id);
+      setNome(data.nome);
+      if (data.patrimonio_data) {
+        setResultado(data.patrimonio_data as unknown as PatrimonialData);
+        setStep(3);
+      } else {
+        setStep(2);
+      }
+      setHydrating(false);
+    })();
+  }, [familiaIdParam, navigate]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
@@ -47,8 +76,13 @@ export default function OnboardingFamilia() {
 
   const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
 
-  async function criarFamiliaSemDocs() {
+  // Cria a família já no Passo 1 → sobrevive a F5
+  async function continuarPasso1() {
     if (!user) return;
+    if (familiaId) {
+      setStep(2);
+      return;
+    }
     const { data, error } = await supabase
       .from("familias_onboarding")
       .insert({
@@ -62,12 +96,18 @@ export default function OnboardingFamilia() {
       toast.error("Erro ao criar família", { description: error.message });
       return;
     }
-    toast.success("Família criada. Adicione documentos depois para análise.");
-    navigate(`/familias-onboarding/${data.id}`);
+    setFamiliaId(data.id);
+    navigate(`/onboarding/${data.id}`, { replace: true });
+    setStep(2);
+  }
+
+  async function pularParaMapa() {
+    if (!familiaId) return;
+    navigate(`/familias-onboarding/${familiaId}`);
   }
 
   async function analisar() {
-    if (!user) return;
+    if (!user || !familiaId) return;
     if (files.length === 0) {
       toast.error("Adicione ao menos um documento");
       return;
@@ -98,29 +138,23 @@ export default function OnboardingFamilia() {
       const patrimonio = data.data as PatrimonialData;
       setResultado(patrimonio);
 
-      // Salvar no banco
-      const { data: inserted, error: insertErr } = await supabase
+      // Atualiza a MESMA família já criada no Passo 1
+      const { error: updErr } = await supabase
         .from("familias_onboarding")
-        .insert({
-          nome: nome.trim(),
-          email_familia: emailDaFamilia(nome),
+        .update({
           sede: patrimonio.familia?.sede ?? null,
           perfil: patrimonio.familia?.perfil ?? null,
           fonte: patrimonio.familia?.fonte ?? null,
           patrimonio_data: patrimonio as any,
           confianca: patrimonio.meta?.confianca ?? null,
-          created_by: user.id,
         })
-        .select("id")
-        .single();
+        .eq("id", familiaId);
+      if (updErr) throw updErr;
 
-      if (insertErr) throw insertErr;
-
-      // Registrar documentos como recebidos
       if (filesPayload.length > 0) {
         await supabase.from("familia_documentos").insert(
           files.map((f) => ({
-            familia_id: inserted.id,
+            familia_id: familiaId,
             nome_arquivo: f.name,
             tipo: f.type,
             storage_path: "",
@@ -130,18 +164,15 @@ export default function OnboardingFamilia() {
         );
       }
 
-      // Cria imóveis e checklists automaticamente
       if (Array.isArray(patrimonio.imoveis) && patrimonio.imoveis.length > 0) {
         try {
-          await criarChecklistsImoveis(inserted.id, patrimonio.imoveis);
+          await criarChecklistsImoveis(familiaId, patrimonio.imoveis);
         } catch (err) {
           console.error("Falha ao criar checklists de imóveis", err);
         }
       }
 
       toast.success("Mapa patrimonial extraído!");
-      // guardar id para botão final
-      (window as any).__lastFamiliaId = inserted.id;
     } catch (e: any) {
       toast.error("Falha na análise", { description: e?.message ?? String(e) });
       setStep(2);
@@ -149,6 +180,14 @@ export default function OnboardingFamilia() {
       clearInterval(interval);
       setLoading(false);
     }
+  }
+
+  if (hydrating) {
+    return (
+      <div className="grid place-items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -199,7 +238,7 @@ export default function OnboardingFamilia() {
               </p>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={nome.trim().length < 2}>
+              <Button onClick={continuarPasso1} disabled={nome.trim().length < 2}>
                 Continuar <ArrowRight />
               </Button>
             </div>
@@ -252,7 +291,7 @@ export default function OnboardingFamilia() {
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <Button variant="ghost" onClick={criarFamiliaSemDocs}>
+              <Button variant="ghost" onClick={pularParaMapa}>
                 Pular por agora — adicionar depois
               </Button>
               <Button onClick={analisar} disabled={files.length === 0}>
@@ -298,7 +337,7 @@ export default function OnboardingFamilia() {
 
                 <Button
                   className="w-full"
-                  onClick={() => navigate(`/familias-onboarding/${(window as any).__lastFamiliaId}`)}
+                  onClick={() => navigate(`/familias-onboarding/${familiaId}`)}
                 >
                   Abrir mapa da família <ArrowRight />
                 </Button>
