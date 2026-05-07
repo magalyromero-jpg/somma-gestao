@@ -357,51 +357,63 @@ const MembroCard = ({ m, destaque }: { m: Membro; destaque?: boolean }) => (
 function HoldingsTab({ data }: { data: PatrimonialData | null }) {
   if (!data) return <EmptyMsg msg="Sem dados de holdings ainda." />;
   const imoveisPF = data.imoveis.filter((i) => i.titularidade === "PF");
+  const imoveisPJ = data.imoveis.filter((i) => i.titularidade !== "PF");
   const imoveisPorHolding = (hid: string) => data.imoveis.filter((i) => i.holding_id === hid);
 
   return (
-    <div className="space-y-6">
-      {data.holdings.length > 0 ? (
-        <Accordion type="multiple" className="space-y-2">
-          {data.holdings.map((h) => (
-            <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
-              <AccordionTrigger>
-                <div className="flex items-center gap-3 flex-wrap text-left">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{h.razao_social}</span>
-                  {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
-                  <Badge variant="outline">{h.tipo}</Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pb-4">
-                <div>
-                  <div className="text-xs uppercase text-muted-foreground mb-2">Sócios</div>
-                  <div className="space-y-1 text-sm">
-                    {h.socios.map((s, i) => {
-                      const m = data.membros.find((mm) => mm.id === s.membro_id);
-                      return (
-                        <div key={i} className="flex justify-between border-b last:border-0 py-1">
-                          <span>{m?.nome ?? s.membro_id}</span>
-                          <span className="font-medium">{s.percentual != null ? `${s.percentual}%` : "—"}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <ImoveisLista imoveis={imoveisPorHolding(h.id)} titulo="Imóveis integralizados" membros={data.membros} />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      ) : (
-        <EmptyMsg msg="Nenhuma holding identificada." />
-      )}
+    <Tabs defaultValue="holdings" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="holdings">Holdings ({data.holdings.length})</TabsTrigger>
+        <TabsTrigger value="imoveis">Imóveis ({imoveisPJ.length})</TabsTrigger>
+        <TabsTrigger value="pf">Imóveis na PF ({imoveisPF.length})</TabsTrigger>
+      </TabsList>
 
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Imóveis ainda na PF</h3>
+      <TabsContent value="holdings" className="mt-4">
+        {data.holdings.length > 0 ? (
+          <Accordion type="multiple" className="space-y-2">
+            {data.holdings.map((h) => (
+              <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
+                <AccordionTrigger>
+                  <div className="flex items-center gap-3 flex-wrap text-left">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{h.razao_social}</span>
+                    {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
+                    <Badge variant="outline">{h.tipo}</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pb-4">
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground mb-2">Sócios</div>
+                    <div className="space-y-1 text-sm">
+                      {h.socios.map((s, i) => {
+                        const m = data.membros.find((mm) => mm.id === s.membro_id);
+                        return (
+                          <div key={i} className="flex justify-between border-b last:border-0 py-1">
+                            <span>{m?.nome ?? s.membro_id}</span>
+                            <span className="font-medium">{s.percentual != null ? `${s.percentual}%` : "—"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <ImoveisLista imoveis={imoveisPorHolding(h.id)} titulo="Imóveis integralizados" membros={data.membros} />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        ) : (
+          <EmptyMsg msg="Nenhuma holding identificada." />
+        )}
+      </TabsContent>
+
+      <TabsContent value="imoveis" className="mt-4">
+        <ImoveisLista imoveis={imoveisPJ} membros={data.membros} />
+      </TabsContent>
+
+      <TabsContent value="pf" className="mt-4">
         <ImoveisLista imoveis={imoveisPF} membros={data.membros} />
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
