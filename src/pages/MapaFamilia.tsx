@@ -1075,20 +1075,24 @@ function DiligenciaTab({
   data,
   checklist,
   docs,
+  imoveisDb,
   familiaId,
   familiaNome,
   patrimonioData,
   onChecklistChange,
   onDocsChange,
+  onDbImovelChange,
 }: {
   data: PatrimonialData | null;
   checklist: ChecklistRow[];
   docs: DocumentoRow[];
+  imoveisDb: any[];
   familiaId: string;
   familiaNome: string;
   patrimonioData: any;
   onChecklistChange: () => Promise<void>;
   onDocsChange: () => Promise<void>;
+  onDbImovelChange: () => Promise<void>;
 }) {
   if (!data || !data.imoveis?.length) return <EmptyMsg msg="Nenhum imóvel identificado." />;
   const ordenados = [...data.imoveis].sort(
@@ -1096,20 +1100,25 @@ function DiligenciaTab({
   );
   return (
     <div className="space-y-3">
-      {ordenados.map((i, idx) => (
-        <DiligenciaImovelCard
-          key={i.id}
-          imovel={i}
-          familiaId={familiaId}
-          familiaNome={familiaNome}
-          patrimonioData={patrimonioData}
-          prioritario={idx < 3}
-          checklist={checklist}
-          docs={docs}
-          onChecklistChange={onChecklistChange}
-          onDocsChange={onDocsChange}
-        />
-      ))}
+      {ordenados.map((i, idx) => {
+        const dbRow = imoveisDb.find((x) => x.ref_id === i.id) ?? null;
+        return (
+          <DiligenciaImovelCard
+            key={i.id}
+            imovel={i}
+            familiaId={familiaId}
+            familiaNome={familiaNome}
+            patrimonioData={patrimonioData}
+            prioritario={idx < 3}
+            checklist={checklist}
+            docs={docs}
+            dbImovel={dbRow}
+            onChecklistChange={onChecklistChange}
+            onDocsChange={onDocsChange}
+            onDbImovelChange={onDbImovelChange}
+          />
+        );
+      })}
     </div>
   );
 }
