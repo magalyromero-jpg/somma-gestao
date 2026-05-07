@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LOADING_STEPS, emailDaFamilia, type PatrimonialData } from "@/lib/onboarding/types";
+import { criarChecklistsImoveis } from "@/lib/onboarding/checklistImovel";
 
 type Step = 1 | 2 | 3;
 
@@ -127,6 +128,15 @@ export default function OnboardingFamilia() {
             created_by: user.id,
           })),
         );
+      }
+
+      // Cria imóveis e checklists automaticamente
+      if (Array.isArray(patrimonio.imoveis) && patrimonio.imoveis.length > 0) {
+        try {
+          await criarChecklistsImoveis(inserted.id, patrimonio.imoveis);
+        } catch (err) {
+          console.error("Falha ao criar checklists de imóveis", err);
+        }
       }
 
       toast.success("Mapa patrimonial extraído!");
