@@ -1,14 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFamilias, useImoveis } from "@/hooks/useApiData";
 import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
 import { formatBRL, formatPct, pctClass } from "@/lib/format";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, MoreVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface FamiliaOnboarding {
   id: string;
