@@ -398,16 +398,22 @@ export default function AnaliseLeilaoForm() {
             </button>
             {openMacro && (
               <div className="mt-4 space-y-4">
-                <div className="grid md:grid-cols-4 gap-4">
-                  <NumField label="CDI atual (%)" value={dados.cdiAtual} onChange={(v) => set("cdiAtual", v)} />
-                  <NumField label="CDI 2026 (%)" value={dados.cdiProjeto2026} onChange={(v) => set("cdiProjeto2026", v)} />
-                  <NumField label="CDI 2027 (%)" value={dados.cdiProjeto2027} onChange={(v) => set("cdiProjeto2027", v)} />
-                  <NumField label="CDI 2028+ (%)" value={dados.cdiProjeto2028plus} onChange={(v) => set("cdiProjeto2028plus", v)} />
-                  <NumField label="IPCA 2026 (%)" value={dados.ipcaProjeto2026} onChange={(v) => set("ipcaProjeto2026", v)} />
-                  <NumField label="IPCA 2027 (%)" value={dados.ipcaProjeto2027} onChange={(v) => set("ipcaProjeto2027", v)} />
-                  <NumField label="IPCA 2028+ (%)" value={dados.ipcaProjeto2028plus} onChange={(v) => set("ipcaProjeto2028plus", v)} />
-                </div>
-                <Button variant="outline" size="sm" onClick={restaurarFocus}>
+                {loadingFocus ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Buscando Boletim Focus...
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-4 gap-4">
+                    <NumField label="CDI atual (%)" value={dados.cdiAtual} onChange={(v) => set("cdiAtual", v)} />
+                    <NumField label="CDI 2026 (%)" value={dados.cdiProjeto2026} onChange={(v) => set("cdiProjeto2026", v)} />
+                    <NumField label="CDI 2027 (%)" value={dados.cdiProjeto2027} onChange={(v) => set("cdiProjeto2027", v)} />
+                    <NumField label="CDI 2028+ (%)" value={dados.cdiProjeto2028plus} onChange={(v) => set("cdiProjeto2028plus", v)} />
+                    <NumField label="IPCA 2026 (%)" value={dados.ipcaProjeto2026} onChange={(v) => set("ipcaProjeto2026", v)} />
+                    <NumField label="IPCA 2027 (%)" value={dados.ipcaProjeto2027} onChange={(v) => set("ipcaProjeto2027", v)} />
+                    <NumField label="IPCA 2028+ (%)" value={dados.ipcaProjeto2028plus} onChange={(v) => set("ipcaProjeto2028plus", v)} />
+                  </div>
+                )}
+                <Button variant="outline" size="sm" onClick={buscarFocus} disabled={loadingFocus}>
                   <RotateCcw size={14} className="mr-1" /> Restaurar padrões Focus
                 </Button>
               </div>
