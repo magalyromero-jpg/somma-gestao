@@ -4,7 +4,7 @@ import { useAuth, AppRole } from "@/contexts/AuthContext";
 
 interface Props {
   children: ReactNode;
-  requireRole?: AppRole;
+  requireRole?: AppRole | AppRole[];
 }
 
 export const ProtectedRoute = ({ children, requireRole }: Props) => {
@@ -23,8 +23,11 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requireRole && role !== requireRole) {
-    return <Navigate to="/familias" replace />;
+  if (requireRole) {
+    const allowed = Array.isArray(requireRole) ? requireRole : [requireRole];
+    if (!role || !allowed.includes(role)) {
+      return <Navigate to="/familias" replace />;
+    }
   }
 
   return <>{children}</>;
