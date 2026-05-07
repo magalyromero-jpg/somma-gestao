@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      checklist_imovel: {
+        Row: {
+          data_recebimento: string | null
+          documento_id: string | null
+          familia_id: string
+          id: string
+          imovel_id: string
+          item_id: string
+          label: string
+          notas: string | null
+          opcional: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id: string
+          id?: string
+          imovel_id: string
+          item_id: string
+          label: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id?: string
+          id?: string
+          imovel_id?: string
+          item_id?: string
+          label?: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_imovel_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "familia_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_imovel_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias_onboarding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_imovel_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis_cliente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           chave: string
@@ -327,6 +391,65 @@ export type Database = {
             columns: ["familia_id"]
             isOneToOne: false
             referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imoveis_cliente: {
+        Row: {
+          alertas: Json
+          created_at: string
+          endereco: string | null
+          familia_id: string
+          holding_cnpj: string | null
+          id: string
+          locacao: boolean
+          matricula: string | null
+          nome: string
+          origem: string
+          ref_id: string | null
+          titularidade: string | null
+          updated_at: string
+          valor_declarado: number | null
+        }
+        Insert: {
+          alertas?: Json
+          created_at?: string
+          endereco?: string | null
+          familia_id: string
+          holding_cnpj?: string | null
+          id?: string
+          locacao?: boolean
+          matricula?: string | null
+          nome: string
+          origem?: string
+          ref_id?: string | null
+          titularidade?: string | null
+          updated_at?: string
+          valor_declarado?: number | null
+        }
+        Update: {
+          alertas?: Json
+          created_at?: string
+          endereco?: string | null
+          familia_id?: string
+          holding_cnpj?: string | null
+          id?: string
+          locacao?: boolean
+          matricula?: string | null
+          nome?: string
+          origem?: string
+          ref_id?: string | null
+          titularidade?: string | null
+          updated_at?: string
+          valor_declarado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imoveis_cliente_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias_onboarding"
             referencedColumns: ["id"]
           },
         ]
