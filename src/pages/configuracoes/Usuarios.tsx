@@ -43,6 +43,8 @@ export default function Usuarios() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("analista");
+  const [modo, setModo] = useState<"convite" | "senha">("convite");
+  const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function carregar() {
@@ -75,18 +77,22 @@ export default function Usuarios() {
 
   async function convidar(e: React.FormEvent) {
     e.preventDefault();
+    if (modo === "senha" && senha.length < 8) {
+      toast.error("Senha deve ter ao menos 8 caracteres");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.functions.invoke("invite-user", {
-      body: { nome, email, perfil },
+      body: { nome, email, perfil, ...(modo === "senha" ? { senha } : {}) },
     });
     setBusy(false);
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Falha ao convidar");
+      toast.error((data as any)?.error ?? error?.message ?? "Falha ao criar usuário");
       return;
     }
-    toast.success("Convite enviado");
+    toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
     setOpen(false);
-    setNome(""); setEmail(""); setPerfil("analista");
+    setNome(""); setEmail(""); setPerfil("analista"); setSenha(""); setModo("convite");
     carregar();
   }
 
