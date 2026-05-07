@@ -94,7 +94,7 @@ export default function MapaFamilia() {
     (async () => {
       setLoading(true);
       try {
-        const [{ data: fam, error: e1 }, { data: ds }, { data: ck }] = await Promise.all([
+        const [{ data: fam, error: e1 }, { data: ds }, { data: ck }, { data: imv }] = await Promise.all([
           supabase.from("familias_onboarding").select("*").eq("id", id).single(),
           supabase
             .from("familia_documentos")
@@ -102,12 +102,18 @@ export default function MapaFamilia() {
             .eq("familia_id", id)
             .order("recebido_em", { ascending: false }),
           supabase.from("familia_diligencia_itens").select("*").eq("familia_id", id),
+          supabase
+            .from("imoveis_cliente")
+            .select("*")
+            .eq("familia_id", id)
+            .order("valor_declarado", { ascending: false, nullsFirst: false }),
         ]);
         if (e1) throw e1;
         setFamilia(fam);
         setData((fam.patrimonio_data ?? null) as unknown as PatrimonialData | null);
         setDocs((ds ?? []) as DocumentoRow[]);
         setChecklist((ck ?? []) as ChecklistRow[]);
+        setImoveisDb(imv ?? []);
 
         // Inicializar checklist se vazio
         if ((ck ?? []).length === 0) {
