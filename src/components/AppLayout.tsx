@@ -12,6 +12,7 @@ const nav = [
   { to: "/mercado",          label: "Mercado",             icon: LineChart,       gestorOnly: false },
   { to: "/pesquisa-mercado", label: "Pesquisa de Mercado", icon: Search,          gestorOnly: false },
   { to: "/analise-leilao",   label: "Análise de Leilão",   icon: Gavel,           gestorOnly: true },
+  { to: "/onboarding",       label: "Onboarding",          icon: UserPlus,        gestorOnly: false },
   { to: "/atualizacoes",     label: "Atualizações",        icon: RefreshCw,       gestorOnly: true },
   { to: "/configuracoes",    label: "Configurações",       icon: Settings,        gestorOnly: true },
 ];
