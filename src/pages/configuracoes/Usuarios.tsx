@@ -43,6 +43,8 @@ export default function Usuarios() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("analista");
+  const [modo, setModo] = useState<"convite" | "senha">("convite");
+  const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function carregar() {
@@ -75,18 +77,22 @@ export default function Usuarios() {
 
   async function convidar(e: React.FormEvent) {
     e.preventDefault();
+    if (modo === "senha" && senha.length < 8) {
+      toast.error("Senha deve ter ao menos 8 caracteres");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.functions.invoke("invite-user", {
-      body: { nome, email, perfil },
+      body: { nome, email, perfil, ...(modo === "senha" ? { senha } : {}) },
     });
     setBusy(false);
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Falha ao convidar");
+      toast.error((data as any)?.error ?? error?.message ?? "Falha ao criar usuário");
       return;
     }
-    toast.success("Convite enviado");
+    toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
     setOpen(false);
-    setNome(""); setEmail(""); setPerfil("analista");
+    setNome(""); setEmail(""); setPerfil("analista"); setSenha(""); setModo("convite");
     carregar();
   }
 
@@ -176,10 +182,42 @@ export default function Usuarios() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Modo de criação</Label>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm"
+                        variant={modo === "convite" ? "default" : "outline"}
+                        onClick={() => setModo("convite")}>
+                        Enviar convite por e-mail
+                      </Button>
+                      <Button type="button" size="sm"
+                        variant={modo === "senha" ? "default" : "outline"}
+                        onClick={() => setModo("senha")}>
+                        Definir senha agora
+                      </Button>
+                    </div>
+                  </div>
+                  {modo === "senha" && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="senha">Senha (mín. 8 caracteres)</Label>
+                      <Input
+                        id="senha"
+                        type="text"
+                        autoComplete="new-password"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        O usuário entra direto com este e-mail e senha. E-mail já vai confirmado.
+                      </p>
+                    </div>
+                  )}
                   <DialogFooter>
                     <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
                     <Button type="submit" disabled={busy} className="bg-gold hover:bg-gold/90 text-gold-foreground">
-                      {busy ? "Enviando…" : "Enviar convite"}
+                      {busy ? "Enviando…" : modo === "senha" ? "Criar usuário" : "Enviar convite"}
                     </Button>
                   </DialogFooter>
                 </form>

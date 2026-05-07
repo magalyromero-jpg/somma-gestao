@@ -41,36 +41,58 @@ Deno.serve(async (req) => {
     if (!isAdmin) return json({ error: "Apenas administradores podem convidar usuários" }, 403);
 
     const body = await req.json().catch(() => ({}));
-    const { email, nome, perfil } = body as { email?: string; nome?: string; perfil?: Perfil };
+    const { email, nome, perfil, senha } = body as {
+      email?: string; nome?: string; perfil?: Perfil; senha?: string;
+    };
     if (!email || !nome || !perfil || !PERFIS.includes(perfil)) {
       return json({ error: "Dados inválidos: email, nome e perfil válido são obrigatórios" }, 400);
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json({ error: "E-mail inválido" }, 400);
     }
-
-    const redirectTo = "https://somma-gestao.lovable.app/auth/set-password";
-    const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { nome, perfil },
-      redirectTo,
-    });
-    if (inviteErr || !invite?.user) {
-      return json({ error: inviteErr?.message ?? "Falha ao enviar convite" }, 400);
+    if (senha != null && String(senha).length < 8) {
+      return json({ error: "Senha deve ter ao menos 8 caracteres" }, 400);
     }
 
-    const newUserId = invite.user.id;
+    let newUserId: string;
 
-    // Garante profile (handle_new_user já cria — apenas atualiza nome/status)
-    await admin.from("profiles").upsert(
-      { user_id: newUserId, nome, email, status: "pendente" },
-      { onConflict: "user_id" },
-    );
+    if (senha) {
+      // Cria diretamente com senha — já confirma e-mail, sem envio de convite.
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password: String(senha),
+        email_confirm: true,
+        user_metadata: { nome, perfil },
+      });
+      if (createErr || !created?.user) {
+        return json({ error: createErr?.message ?? "Falha ao criar usuário" }, 400);
+      }
+      newUserId = created.user.id;
+      await admin.from("profiles").upsert(
+        { user_id: newUserId, nome, email, status: "ativo" },
+        { onConflict: "user_id" },
+      );
+    } else {
+      const redirectTo = "https://somma-gestao.lovable.app/auth/set-password";
+      const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+        data: { nome, perfil },
+        redirectTo,
+      });
+      if (inviteErr || !invite?.user) {
+        return json({ error: inviteErr?.message ?? "Falha ao enviar convite" }, 400);
+      }
+      newUserId = invite.user.id;
+      await admin.from("profiles").upsert(
+        { user_id: newUserId, nome, email, status: "pendente" },
+        { onConflict: "user_id" },
+      );
+    }
 
     // Atribui o papel solicitado (handle_new_user adiciona 'familia' por padrão; substituímos)
     await admin.from("user_roles").delete().eq("user_id", newUserId);
     await admin.from("user_roles").insert({ user_id: newUserId, role: perfil });
 
-    return json({ ok: true, user_id: newUserId });
+    return json({ ok: true, user_id: newUserId, modo: senha ? "senha" : "convite" });
   } catch (e) {
     console.error("invite-user error", e);
     return json({ error: (e as Error).message ?? "Erro interno" }, 500);
