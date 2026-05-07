@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LOADING_STEPS, emailDaFamilia, type PatrimonialData } from "@/lib/onboarding/types";
+import { criarChecklistsImoveis } from "@/lib/onboarding/checklistImovel";
 
 type Step = 1 | 2 | 3;
 
