@@ -39,6 +39,7 @@ import {
   CHECKLIST_IMOVEL,
   CHECKLIST_IMOVEL_LOCACAO,
 } from "@/lib/onboarding/checklist";
+import { detectarDocumento, PROCESSING_STEPS } from "@/lib/onboarding/detectDocumento";
 import { useAuth } from "@/contexts/AuthContext";
 
 const PAPEL_LABEL: Record<Papel, string> = {
