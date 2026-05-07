@@ -904,43 +904,6 @@ function DocumentosTab({
     },
   });
 
-  async function adicionarImovel() {
-    if (novoImovel.trim().length < 2) return;
-    const categoria = `Imóvel: ${novoImovel.trim()}`;
-    const ref = `manual-${Date.now()}`;
-    const rows = [
-      ...CHECKLIST_IMOVEL.map((it, idx) => ({
-        familia_id: familia.id,
-        categoria,
-        item_key: it.key,
-        item_label: it.label,
-        status: "pendente",
-        imovel_ref: ref,
-        ordem: 1000 + idx,
-      })),
-      ...(novoLocacao
-        ? CHECKLIST_IMOVEL_LOCACAO.map((it, idx) => ({
-            familia_id: familia.id,
-            categoria,
-            item_key: it.key,
-            item_label: it.label,
-            status: "pendente",
-            imovel_ref: ref,
-            is_locacao: true,
-            ordem: 2000 + idx,
-          }))
-        : []),
-    ];
-    const { error } = await supabase.from("familia_diligencia_itens").insert(rows);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setNovoImovel("");
-    setNovoLocacao(false);
-    await onReload();
-  }
-
   return (
     <>
       <Card>
