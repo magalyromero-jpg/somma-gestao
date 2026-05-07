@@ -53,6 +53,40 @@ export default function Familias() {
     })();
   }, []);
 
+  const [toDelete, setToDelete] = useState<FamiliaOnboarding | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function excluirFamilia(id: string) {
+    setDeleting(true);
+    try {
+      // Buscar imóveis para deletar checklist por imovel_id
+      const { data: imoveis } = await supabase
+        .from("imoveis_cliente")
+        .select("id")
+        .eq("familia_id", id);
+      const imovelIds = (imoveis ?? []).map((i) => i.id);
+
+      // Deletar em ordem: checklists -> imóveis -> documentos -> diligência -> família
+      if (imovelIds.length > 0) {
+        await supabase.from("checklist_imovel").delete().in("imovel_id", imovelIds);
+      }
+      await supabase.from("checklist_imovel").delete().eq("familia_id", id);
+      await supabase.from("imoveis_cliente").delete().eq("familia_id", id);
+      await supabase.from("familia_documentos").delete().eq("familia_id", id);
+      await supabase.from("familia_diligencia_itens").delete().eq("familia_id", id);
+      const { error } = await supabase.from("familias_onboarding").delete().eq("id", id);
+      if (error) throw error;
+
+      setOnboardings((prev) => prev.filter((o) => o.id !== id));
+      toast.success("Família excluída");
+    } catch (e: any) {
+      toast.error("Erro ao excluir", { description: e?.message });
+    } finally {
+      setDeleting(false);
+      setToDelete(null);
+    }
+  }
+
   const isLoading = loadingF || loadingI;
   const error = errorF || errorI;
 
