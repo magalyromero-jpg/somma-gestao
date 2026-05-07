@@ -42,6 +42,7 @@ import {
 } from "@/lib/onboarding/checklist";
 import { detectarDocumento, PROCESSING_STEPS } from "@/lib/onboarding/detectDocumento";
 import { useAuth } from "@/contexts/AuthContext";
+import { DiligenciaImovelCard } from "@/components/diligencia/DiligenciaImovelCard";
 
 const PAPEL_LABEL: Record<Papel, string> = {
   titular: "Titular",
@@ -76,6 +77,9 @@ interface DocumentoRow {
   nome_arquivo: string;
   tipo: string | null;
   recebido_em: string;
+  imovel_ref: string | null;
+  analise: any;
+  storage_path: string | null;
 }
 
 export default function MapaFamilia() {
@@ -89,6 +93,23 @@ export default function MapaFamilia() {
   const [checklist, setChecklist] = useState<ChecklistRow[]>([]);
   const [imoveisDb, setImoveisDb] = useState<any[]>([]);
 
+  async function reloadDocs() {
+    const { data: ds } = await supabase
+      .from("familia_documentos")
+      .select("id, nome_arquivo, tipo, recebido_em, imovel_ref, analise, storage_path")
+      .eq("familia_id", id ?? "")
+      .order("recebido_em", { ascending: false });
+    setDocs((ds ?? []) as DocumentoRow[]);
+  }
+  async function reloadChecklist() {
+    const { data: ck } = await supabase
+      .from("familia_diligencia_itens")
+      .select("*")
+      .eq("familia_id", id ?? "");
+    setChecklist((ck ?? []) as ChecklistRow[]);
+  }
+
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -98,7 +119,7 @@ export default function MapaFamilia() {
           supabase.from("familias_onboarding").select("*").eq("id", id).single(),
           supabase
             .from("familia_documentos")
-            .select("id, nome_arquivo, tipo, recebido_em")
+            .select("id, nome_arquivo, tipo, recebido_em, imovel_ref, analise, storage_path")
             .eq("familia_id", id)
             .order("recebido_em", { ascending: false }),
           supabase.from("familia_diligencia_itens").select("*").eq("familia_id", id),
@@ -281,7 +302,16 @@ export default function MapaFamilia() {
         </TabsContent>
 
         <TabsContent value="diligencia" className="mt-4">
-          <DiligenciaTab data={data} checklist={checklist} />
+          <DiligenciaTab
+            data={data}
+            checklist={checklist}
+            docs={docs}
+            familiaId={familia.id}
+            familiaNome={familia.nome}
+            patrimonioData={familia.patrimonio_data}
+            onChecklistChange={reloadChecklist}
+            onDocsChange={reloadDocs}
+          />
         </TabsContent>
       </Tabs>
     </>
@@ -761,22 +791,23 @@ function DocumentosTab({
   const [enriching, setEnriching] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
   const [currentFile, setCurrentFile] = useState<string>("");
-  const [novoImovel, setNovoImovel] = useState("");
-  const [novoLocacao, setNovoLocacao] = useState(false);
 
   const total = checklist.length;
   const recebidos = checklist.filter((c) => c.status === "recebido").length;
   const pct = total ? Math.round((recebidos / total) * 100) : 0;
 
-  // Agrupar por categoria
+  // Agrupar por categoria — exclui itens vinculados a imóvel (vão para a aba Diligência)
   const grupos = useMemo(() => {
     const map = new Map<string, ChecklistRow[]>();
     for (const c of checklist) {
+      if (c.imovel_ref) continue;
       if (!map.has(c.categoria)) map.set(c.categoria, []);
       map.get(c.categoria)!.push(c);
     }
     return Array.from(map.entries());
   }, [checklist]);
+
+  const docsFamilia = useMemo(() => docs.filter((d) => !d.imovel_ref), [docs]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
@@ -873,43 +904,6 @@ function DocumentosTab({
     },
   });
 
-  async function adicionarImovel() {
-    if (novoImovel.trim().length < 2) return;
-    const categoria = `Imóvel: ${novoImovel.trim()}`;
-    const ref = `manual-${Date.now()}`;
-    const rows = [
-      ...CHECKLIST_IMOVEL.map((it, idx) => ({
-        familia_id: familia.id,
-        categoria,
-        item_key: it.key,
-        item_label: it.label,
-        status: "pendente",
-        imovel_ref: ref,
-        ordem: 1000 + idx,
-      })),
-      ...(novoLocacao
-        ? CHECKLIST_IMOVEL_LOCACAO.map((it, idx) => ({
-            familia_id: familia.id,
-            categoria,
-            item_key: it.key,
-            item_label: it.label,
-            status: "pendente",
-            imovel_ref: ref,
-            is_locacao: true,
-            ordem: 2000 + idx,
-          }))
-        : []),
-    ];
-    const { error } = await supabase.from("familia_diligencia_itens").insert(rows);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setNovoImovel("");
-    setNovoLocacao(false);
-    await onReload();
-  }
-
   return (
     <>
       <Card>
@@ -936,11 +930,11 @@ function DocumentosTab({
       <Card>
         <CardContent className="p-5 space-y-4">
           <h3 className="text-sm font-semibold">Recebidos</h3>
-          {docs.length === 0 ? (
+          {docsFamilia.length === 0 ? (
             <EmptyMsg msg="Nenhum documento ainda." />
           ) : (
             <div className="space-y-2">
-              {docs.map((d) => (
+              {docsFamilia.map((d) => (
                 <div key={d.id} className="flex items-center gap-3 p-2 border rounded-md text-sm">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="flex-1 truncate">{d.nome_arquivo}</span>
@@ -1043,23 +1037,8 @@ function DocumentosTab({
             })}
           </Accordion>
 
-          <div className="border-t pt-4 space-y-2">
-            <Label className="text-xs">+ Adicionar imóvel manualmente</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                placeholder="Endereço ou identificação"
-                value={novoImovel}
-                onChange={(e) => setNovoImovel(e.target.value)}
-                className="flex-1 min-w-[200px]"
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={novoLocacao} onCheckedChange={(v) => setNovoLocacao(!!v)} />
-                Imóvel de locação?
-              </label>
-              <Button onClick={adicionarImovel} disabled={novoImovel.trim().length < 2}>
-                <Plus /> Adicionar
-              </Button>
-            </div>
+          <div className="text-xs text-muted-foreground border-t pt-3">
+            Documentos por imóvel ficam na aba <strong>Diligência</strong>.
           </div>
         </CardContent>
       </Card>
@@ -1083,89 +1062,45 @@ const Stat = ({ label, value, color }: { label: string; value: number; color?: "
 );
 
 /* ===== Diligência Tab ===== */
-function DiligenciaTab({ data, checklist }: { data: PatrimonialData | null; checklist: ChecklistRow[] }) {
-  if (!data) return <EmptyMsg msg="Sem imóveis para diligência." />;
+function DiligenciaTab({
+  data,
+  checklist,
+  docs,
+  familiaId,
+  familiaNome,
+  patrimonioData,
+  onChecklistChange,
+  onDocsChange,
+}: {
+  data: PatrimonialData | null;
+  checklist: ChecklistRow[];
+  docs: DocumentoRow[];
+  familiaId: string;
+  familiaNome: string;
+  patrimonioData: any;
+  onChecklistChange: () => Promise<void>;
+  onDocsChange: () => Promise<void>;
+}) {
+  if (!data || !data.imoveis?.length) return <EmptyMsg msg="Nenhum imóvel identificado." />;
   const ordenados = [...data.imoveis].sort(
     (a, b) => (b.valor_declarado ?? 0) - (a.valor_declarado ?? 0),
   );
-
-  const docsFaltantesPorImovel = (imovelId: string) =>
-    checklist.filter((c) => c.imovel_ref === imovelId && c.status !== "recebido");
-
   return (
     <div className="space-y-3">
-      {ordenados.map((i, idx) => {
-        const faltantes = docsFaltantesPorImovel(i.id);
-        const prioritario = idx < 3;
-        return (
-          <Card key={i.id}>
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold">{i.descricao}</h4>
-                    <Badge
-                      variant="outline"
-                      className={
-                        prioritario
-                          ? "bg-destructive/10 text-destructive border-destructive/30"
-                          : "bg-muted text-muted-foreground"
-                      }
-                    >
-                      {prioritario ? "Prioritário" : "Secundário"}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {[i.logradouro, i.numero, i.bairro, i.municipio, i.uf].filter(Boolean).join(", ") || "—"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {i.matricula && `Matrícula ${i.matricula}`}
-                    {i.cartorio && ` · ${i.cartorio}`}
-                    {i.forma_aquisicao && ` · ${i.forma_aquisicao}`}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">
-                    {i.valor_declarado != null ? formatBRL(i.valor_declarado) : "—"}
-                  </div>
-                </div>
-              </div>
-
-              {faltantes.length > 0 && (
-                <div>
-                  <div className="text-xs uppercase text-muted-foreground mb-1.5">Documentos faltantes</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {faltantes.map((f) => (
-                      <Badge
-                        key={f.id}
-                        variant="outline"
-                        className="bg-warning/10 text-warning border-warning/30"
-                      >
-                        {f.item_label} ✗
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {i.alertas?.length > 0 && (
-                <div className="border-t pt-3">
-                  <div className="text-xs uppercase text-muted-foreground mb-1.5">Alertas</div>
-                  <div className="space-y-1">
-                    {i.alertas.map((a, ai) => (
-                      <div key={ai} className="flex items-start gap-2 text-sm">
-                        <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                        <span>{a}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-      {ordenados.length === 0 && <EmptyMsg msg="Nenhum imóvel identificado." />}
+      {ordenados.map((i, idx) => (
+        <DiligenciaImovelCard
+          key={i.id}
+          imovel={i}
+          familiaId={familiaId}
+          familiaNome={familiaNome}
+          patrimonioData={patrimonioData}
+          prioritario={idx < 3}
+          checklist={checklist}
+          docs={docs}
+          onChecklistChange={onChecklistChange}
+          onDocsChange={onDocsChange}
+        />
+      ))}
     </div>
   );
 }

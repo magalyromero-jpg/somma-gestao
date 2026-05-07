@@ -148,30 +148,36 @@ export type Database = {
       }
       familia_documentos: {
         Row: {
+          analise: Json | null
           categoria: string | null
           created_by: string
           familia_id: string
           id: string
+          imovel_ref: string | null
           nome_arquivo: string
           recebido_em: string
           storage_path: string
           tipo: string | null
         }
         Insert: {
+          analise?: Json | null
           categoria?: string | null
           created_by: string
           familia_id: string
           id?: string
+          imovel_ref?: string | null
           nome_arquivo: string
           recebido_em?: string
           storage_path: string
           tipo?: string | null
         }
         Update: {
+          analise?: Json | null
           categoria?: string | null
           created_by?: string
           familia_id?: string
           id?: string
+          imovel_ref?: string | null
           nome_arquivo?: string
           recebido_em?: string
           storage_path?: string
@@ -459,6 +465,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      imovel_comentarios: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          created_at: string
+          familia_id: string
+          id: string
+          imovel_ref: string
+          texto: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          familia_id: string
+          id?: string
+          imovel_ref: string
+          texto: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          familia_id?: string
+          id?: string
+          imovel_ref?: string
+          texto?: string
+        }
+        Relationships: []
       }
       market_conclusions: {
         Row: {
