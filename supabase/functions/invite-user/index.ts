@@ -25,12 +25,12 @@ Deno.serve(async (req) => {
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(
+    const { data: userData, error: userErr } = await userClient.auth.getUser(
       authHeader.replace("Bearer ", ""),
     );
-    if (claimsErr || !claims?.claims?.sub) return json({ error: "Não autenticado" }, 401);
+    if (userErr || !userData?.user) return json({ error: "Não autenticado" }, 401);
 
-    const callerId = claims.claims.sub;
+    const callerId = userData.user.id;
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
     // Verifica se o chamador é admin
