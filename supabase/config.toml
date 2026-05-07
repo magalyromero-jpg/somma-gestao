@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.fetch-focus]
 verify_jwt = false
+
+[functions.extract-patrimonial]
+verify_jwt = false
