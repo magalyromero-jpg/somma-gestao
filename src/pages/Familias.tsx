@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,15 @@ import { formatBRL, formatPct, pctClass } from "@/lib/format";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
+import { supabase } from "@/integrations/supabase/client";
+
+interface FamiliaOnboarding {
+  id: string;
+  nome: string;
+  sede: string | null;
+  patrimonio_data: any;
+  updated_at: string;
+}
 
 const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
 
@@ -15,6 +24,17 @@ export default function Familias() {
   const { familias, isLoading: loadingF, error: errorF } = useFamilias();
   const { imoveis, isLoading: loadingI, error: errorI } = useImoveis();
   const [view, setView] = useState<"conta" | "perfil">("conta");
+  const [onboardings, setOnboardings] = useState<FamiliaOnboarding[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("familias_onboarding")
+        .select("id, nome, sede, patrimonio_data, updated_at")
+        .order("updated_at", { ascending: false });
+      setOnboardings((data ?? []) as FamiliaOnboarding[]);
+    })();
+  }, []);
 
   const isLoading = loadingF || loadingI;
   const error = errorF || errorI;
@@ -50,6 +70,59 @@ export default function Familias() {
   return (
     <>
       <PageHeader title="Famílias" subtitle="Portfólios sob gestão Somma MFO" />
+
+      {onboardings.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+            Onboardings Somma ({onboardings.length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {onboardings.map((o) => {
+              const concluido = !!o.patrimonio_data;
+              const totalImoveis = o.patrimonio_data?.imoveis?.length ?? 0;
+              const totalHoldings = o.patrimonio_data?.holdings?.length ?? 0;
+              return (
+                <Link
+                  key={o.id}
+                  to={concluido ? `/familias-onboarding/${o.id}` : `/onboarding/${o.id}`}
+                  className="group"
+                >
+                  <Card className="hover:shadow-elevated transition-shadow border-border/70 group-hover:border-gold/60 h-full">
+                    <CardContent className="p-5 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{o.nome}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {o.sede ?? "Onboarding"} · atualizado{" "}
+                            {new Date(o.updated_at).toLocaleDateString("pt-BR")}
+                          </div>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0",
+                            concluido
+                              ? "bg-success/10 text-success border-success/30"
+                              : "bg-warning/10 text-warning border-warning/30",
+                          )}
+                        >
+                          {concluido ? "Concluído" : "Em progresso"}
+                        </span>
+                      </div>
+                      {concluido && (
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          <span>{totalImoveis} imóveis</span>
+                          <span>·</span>
+                          <span>{totalHoldings} holdings</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="inline-flex rounded-lg border border-border p-1 mb-6 bg-muted/30">
         {([

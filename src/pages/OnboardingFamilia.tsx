@@ -29,6 +29,13 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+interface OnboardingResumo {
+  id: string;
+  nome: string;
+  patrimonio_data: any;
+  updated_at: string;
+}
+
 export default function OnboardingFamilia() {
   const navigate = useNavigate();
   const { familiaId: familiaIdParam } = useParams<{ familiaId: string }>();
@@ -37,12 +44,27 @@ export default function OnboardingFamilia() {
   const [nome, setNome] = useState("");
   const [familiaId, setFamiliaId] = useState<string | null>(familiaIdParam ?? null);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [resultado, setResultado] = useState<PatrimonialData | null>(null);
   const [hydrating, setHydrating] = useState<boolean>(!!familiaIdParam);
+  const [emAndamento, setEmAndamento] = useState<OnboardingResumo[]>([]);
+  const [novo, setNovo] = useState(false);
 
-  // Hidrata estado a partir do Supabase quando vier com :familiaId na URL (sobrevive F5)
+  // Lista onboardings em andamento quando não há :familiaId e o usuário não pediu "Novo"
+  useEffect(() => {
+    if (familiaIdParam || !user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("familias_onboarding")
+        .select("id, nome, patrimonio_data, updated_at")
+        .order("updated_at", { ascending: false });
+      setEmAndamento((data ?? []) as OnboardingResumo[]);
+    })();
+  }, [familiaIdParam, user]);
+
+  // Hidrata estado a partir do Supabase quando vier com :familiaId na URL
   useEffect(() => {
     if (!familiaIdParam) return;
     (async () => {
@@ -71,7 +93,33 @@ export default function OnboardingFamilia() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
     multiple: true,
-    onDrop: (accepted) => setFiles((prev) => [...prev, ...accepted]),
+    onDrop: async (accepted) => {
+      if (!accepted.length || !familiaId || !user) return;
+      setFiles((prev) => [...prev, ...accepted]);
+      setUploadingCount((c) => c + accepted.length);
+      for (const f of accepted) {
+        try {
+          const path = `${familiaId}/onboarding/${Date.now()}-${f.name}`;
+          const { error: upErr } = await supabase.storage
+            .from("familia-documentos")
+            .upload(path, f, { upsert: false });
+          if (upErr) throw upErr;
+          const { error: insErr } = await supabase.from("familia_documentos").insert({
+            familia_id: familiaId,
+            nome_arquivo: f.name,
+            tipo: f.type,
+            storage_path: path,
+            categoria: "onboarding",
+            created_by: user.id,
+          });
+          if (insErr) throw insErr;
+        } catch (e: any) {
+          toast.error(`Falha ao salvar ${f.name}`, { description: e?.message });
+        } finally {
+          setUploadingCount((c) => Math.max(0, c - 1));
+        }
+      }
+    },
   });
 
   const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
@@ -151,18 +199,7 @@ export default function OnboardingFamilia() {
         .eq("id", familiaId);
       if (updErr) throw updErr;
 
-      if (filesPayload.length > 0) {
-        await supabase.from("familia_documentos").insert(
-          files.map((f) => ({
-            familia_id: familiaId,
-            nome_arquivo: f.name,
-            tipo: f.type,
-            storage_path: "",
-            categoria: "onboarding",
-            created_by: user.id,
-          })),
-        );
-      }
+      // documentos já foram inseridos no Storage + tabela durante o upload (Passo 2)
 
       if (Array.isArray(patrimonio.imoveis) && patrimonio.imoveis.length > 0) {
         try {
@@ -187,6 +224,68 @@ export default function OnboardingFamilia() {
       <div className="grid place-items-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  // Lista de onboardings existentes (só na rota base, sem ":familiaId" e sem clicar em "Novo")
+  if (!familiaIdParam && !novo && emAndamento.length > 0) {
+    return (
+      <>
+        <PageHeader
+          title="Onboarding de cliente"
+          subtitle="Continue um onboarding em andamento ou inicie um novo"
+        />
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => setNovo(true)}>+ Novo onboarding</Button>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {emAndamento.map((o) => {
+            const concluido = !!o.patrimonio_data;
+            return (
+              <Card key={o.id} className="hover:shadow-elevated transition-shadow">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold">{o.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Atualizado em {new Date(o.updated_at).toLocaleDateString("pt-BR")}
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider",
+                        concluido
+                          ? "bg-success/10 text-success border-success/30"
+                          : "bg-warning/10 text-warning border-warning/30",
+                      )}
+                    >
+                      {concluido ? "Concluído" : "Em progresso"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    {concluido ? (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => navigate(`/familias-onboarding/${o.id}`)}
+                      >
+                        Abrir mapa
+                      </Button>
+                    ) : (
+                      <Button
+                        className="flex-1"
+                        onClick={() => navigate(`/onboarding/${o.id}`)}
+                      >
+                        Continuar onboarding <ArrowRight />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </>
     );
   }
 
@@ -294,8 +393,9 @@ export default function OnboardingFamilia() {
               <Button variant="ghost" onClick={pularParaMapa}>
                 Pular por agora — adicionar depois
               </Button>
-              <Button onClick={analisar} disabled={files.length === 0}>
-                <Sparkles /> Analisar documentos
+              <Button onClick={analisar} disabled={files.length === 0 || uploadingCount > 0}>
+                <Sparkles />{" "}
+                {uploadingCount > 0 ? `Salvando ${uploadingCount}…` : "Analisar documentos"}
               </Button>
             </div>
           </CardContent>
