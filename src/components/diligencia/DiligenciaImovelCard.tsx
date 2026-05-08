@@ -251,6 +251,8 @@ export function DiligenciaImovelCard({
                   dbImovel={dbImovel}
                   tipoOperacao={tipoOperacao}
                   imovelIR={imovel}
+                  familiaId={familiaId}
+                  onTipoOperacaoChange={salvarTipoOperacao}
                   onSaved={onDbImovelChange}
                 />
               </TabsContent>
