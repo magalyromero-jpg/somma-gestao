@@ -297,9 +297,8 @@ const PATRIMONIAL_TOOL = {
           },
           required: ["documentos_analisados", "data_extracao", "confianca"],
         },
-      },
-      required: ["familia", "membros", "holdings", "imoveis", "meta"],
     },
+    required: ["familia", "membros", "holdings", "imoveis", "meta"],
   },
 };
 
