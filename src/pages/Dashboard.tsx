@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { useFamilias, useImoveis } from "@/hooks/useApiData";
 import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
 import { formatBRL } from "@/lib/format";
-import { Building2, Users, Wallet, TrendingUp } from "lucide-react";
+import { Building2, Users, AlertTriangle, FileWarning } from "lucide-react";
 import {
   Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Link } from "react-router-dom";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
 type Perfil = (typeof PERFIS)[number];
