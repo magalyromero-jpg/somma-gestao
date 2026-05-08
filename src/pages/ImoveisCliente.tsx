@@ -201,14 +201,26 @@ export default function ImoveisCliente() {
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <h3 className="font-medium truncate">{r.nome}</h3>
                           {prioritario && <Badge className="bg-gold/15 text-gold border-gold/40 hover:bg-gold/15">Prioritário</Badge>}
+                          {(r.titularidade ?? "").toUpperCase() === "PJ" ? (
+                            <Badge variant="outline" className="bg-orange-500/15 text-orange-700 border-orange-500/30">
+                              PJ{r.holding_nome ? ` · ${r.holding_nome}` : ""}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/15 text-blue-700 border-blue-500/30">PF</Badge>
+                          )}
+                          {r.tipo_operacao && (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground">
+                              {TIPO_OPERACAO_LABEL[r.tipo_operacao] ?? r.tipo_operacao}
+                            </Badge>
+                          )}
                           {Array.isArray(r.alertas) && r.alertas.length > 0 && (
                             <Badge variant="outline" className="border-amber-400 text-amber-700">
                               {r.alertas.length} alerta{r.alertas.length > 1 ? "s" : ""}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {r.familia_nome ?? "—"} · {r.titularidade === "PJ" ? `${r.holding_cnpj ?? "PJ"}` : "PF"}
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {r.familia_nome ?? "—"}
                         </p>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{r.endereco ?? ""}</p>
                       </div>
