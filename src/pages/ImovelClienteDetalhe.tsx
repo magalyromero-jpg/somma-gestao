@@ -160,7 +160,19 @@ export default function ImovelClienteDetalhe() {
       <Card className="p-6 shadow-card">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <h2 className="text-xl font-light">{imovel.nome}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-light">{imovel.nome}</h2>
+              <Badge variant="outline" className={imovel.titularidade === "PJ"
+                ? "bg-orange-500/15 text-orange-700 border-orange-500/30"
+                : "bg-blue-500/15 text-blue-700 border-blue-500/30"}>
+                {imovel.titularidade ?? "PF"}
+              </Badge>
+              {(imovel as any).status_atual && (
+                <Badge variant="outline" className={statusAtualBadgeClass((imovel as any).status_atual)}>
+                  {statusAtualLabel((imovel as any).status_atual)}
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">{imovel.endereco}</p>
             <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
               {imovelData?.area_m2 && <div>{imovelData.area_m2} m²</div>}
