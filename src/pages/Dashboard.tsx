@@ -34,6 +34,89 @@ export default function Dashboard() {
   const { imoveis: allImoveis, isLoading: li, error: ei } = useImoveis();
   const [perfilFilter, setPerfilFilter] = useState<Perfil | null>(null);
 
+  // KPIs reais do Supabase
+  const [sbKpis, setSbKpis] = useState<{
+    familiasTotal: number;
+    familiasOnboarding: number;
+    familiasConcluidas: number;
+    imoveisTotal: number;
+    patrimonioTotal: number;
+    docsPendentes: number;
+    imoveisCompletos: number;
+    alertasCriticos: number;
+    alertasAtencao: number;
+  } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: fams }, { data: imvs }, { data: ckImv }, { data: ckHld }, { data: ckOut }] = await Promise.all([
+        supabase.from("familias_onboarding").select("id, patrimonio_data"),
+        supabase.from("imoveis_cliente").select("id, valor_declarado"),
+        supabase.from("checklist_imovel").select("status, opcional, imovel_id"),
+        supabase.from("checklist_holding").select("status, opcional"),
+        supabase.from("checklist_outros_bens").select("status, opcional"),
+      ]);
+
+      const familiasTotal = (fams ?? []).length;
+      let familiasConcluidas = 0;
+      let alertasCriticos = 0;
+      let alertasAtencao = 0;
+      for (const f of fams ?? []) {
+        const pd: any = f.patrimonio_data ?? {};
+        const alertas: any[] = pd?.alertas_gerais ?? [];
+        for (const a of alertas) {
+          const nivel = String(a?.nivel ?? "").toLowerCase();
+          if (nivel === "critico" || nivel === "crítico") alertasCriticos += 1;
+          else if (nivel === "atencao" || nivel === "atenção") alertasAtencao += 1;
+        }
+        // "concluída" = patrimonio_data preenchido com algum imóvel/holding
+        if ((pd?.imoveis?.length ?? 0) > 0 || (pd?.holdings?.length ?? 0) > 0) {
+          familiasConcluidas += 1;
+        }
+      }
+      const familiasOnboarding = Math.max(familiasTotal - familiasConcluidas, 0);
+
+      const imoveisTotal = (imvs ?? []).length;
+      const patrimonioTotal = (imvs ?? []).reduce(
+        (s: number, i: any) => s + Number(i.valor_declarado ?? 0),
+        0,
+      );
+
+      const isPendente = (r: any) => r.status === "pendente";
+      const docsPendentes =
+        (ckImv ?? []).filter(isPendente).length +
+        (ckHld ?? []).filter(isPendente).length +
+        (ckOut ?? []).filter(isPendente).length;
+
+      // Imóveis com checklist obrigatório completo
+      const porImovel = new Map<string, { rec: number; tot: number }>();
+      for (const c of ckImv ?? []) {
+        if ((c as any).opcional) continue;
+        const id = (c as any).imovel_id as string;
+        if (!porImovel.has(id)) porImovel.set(id, { rec: 0, tot: 0 });
+        const e = porImovel.get(id)!;
+        e.tot += 1;
+        if ((c as any).status === "recebido") e.rec += 1;
+      }
+      let imoveisCompletos = 0;
+      porImovel.forEach((v) => {
+        if (v.tot > 0 && v.rec === v.tot) imoveisCompletos += 1;
+      });
+
+      setSbKpis({
+        familiasTotal,
+        familiasOnboarding,
+        familiasConcluidas,
+        imoveisTotal,
+        patrimonioTotal,
+        docsPendentes,
+        imoveisCompletos,
+        alertasCriticos,
+        alertasAtencao,
+      });
+    })();
+  }, []);
+
   const imoveis = useMemo(
     () => (perfilFilter ? allImoveis.filter((i) => i.perfis?.includes(perfilFilter)) : allImoveis),
     [allImoveis, perfilFilter],
