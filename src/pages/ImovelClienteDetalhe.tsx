@@ -59,15 +59,29 @@ export default function ImovelClienteDetalhe() {
     if (!im) { setLoading(false); return; }
     setImovel(im as any);
 
-    const [{ data: cl }, { data: fam }, { data: docsAll }] = await Promise.all([
+    const [{ data: cl }, { data: fam }] = await Promise.all([
       supabase.from("checklist_imovel").select("*").eq("imovel_id", id).order("opcional"),
       supabase.from("familias_onboarding").select("nome, patrimonio_data").eq("id", im.familia_id).maybeSingle(),
-      supabase.from("familia_documentos").select("id, nome_arquivo, recebido_em, storage_path").eq("familia_id", im.familia_id).order("recebido_em", { ascending: false }),
     ]);
-    setChecklist((cl ?? []) as any);
+    const checklistRows = (cl ?? []) as any[];
+    setChecklist(checklistRows as any);
     setFamiliaNome(fam?.nome ?? null);
     setPatrimonioData(fam?.patrimonio_data ?? null);
-    setDocs((docsAll ?? []) as any);
+
+    // Documentos do imóvel: por imovel_ref OU por documento_id vinculado no checklist
+    const docIds = checklistRows.map((c) => c.documento_id).filter(Boolean) as string[];
+    const orParts = [`imovel_ref.eq.${id}`];
+    if (docIds.length) orParts.push(`id.in.(${docIds.join(",")})`);
+    const { data: docsImovel } = await supabase
+      .from("familia_documentos")
+      .select("id, nome_arquivo, recebido_em, storage_path")
+      .eq("familia_id", im.familia_id)
+      .or(orParts.join(","))
+      .order("recebido_em", { ascending: false });
+    // dedupe por id
+    const map = new Map<string, DocRow>();
+    (docsImovel ?? []).forEach((d: any) => map.set(d.id, d));
+    setDocs(Array.from(map.values()));
     setLoading(false);
   }
 
@@ -88,6 +102,7 @@ export default function ImovelClienteDetalhe() {
           storage_path: path,
           tipo: item.item_id,
           categoria: "imovel",
+          imovel_ref: imovel.id,
           created_by: (await supabase.auth.getUser()).data.user?.id,
         } as any)
         .select()
@@ -115,6 +130,12 @@ export default function ImovelClienteDetalhe() {
   async function reabrir(item: ChecklistRow) {
     await supabase.from("checklist_imovel").update({ status: "pendente", documento_id: null, data_recebimento: null }).eq("id", item.id);
     carregar();
+  }
+
+  async function verDoc(storage_path: string) {
+    const { data, error } = await supabase.storage.from("familia-documentos").createSignedUrl(storage_path, 60);
+    if (error || !data) { toast.error("Não foi possível abrir o arquivo"); return; }
+    window.open(data.signedUrl, "_blank");
   }
 
   if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
@@ -186,7 +207,15 @@ export default function ImovelClienteDetalhe() {
                     )}
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => reabrir(it)}>Reabrir</Button>
+                <div className="flex gap-1">
+                  {it.documento_id && (() => {
+                    const d = docs.find((x) => x.id === it.documento_id);
+                    return d ? (
+                      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => verDoc(d.storage_path)}>Ver</Button>
+                    ) : null;
+                  })()}
+                  <Button size="sm" variant="ghost" onClick={() => reabrir(it)}>Reabrir</Button>
+                </div>
               </ItemRow>
             ))}
           </ChecklistCol>
@@ -254,16 +283,20 @@ export default function ImovelClienteDetalhe() {
         )}
 
         <div className="space-y-2">
+          <h4 className="text-xs uppercase tracking-wider text-muted-foreground mt-2">Documentos do imóvel ({docs.length})</h4>
           {docs.length === 0 && (
-            <p className="text-xs text-muted-foreground">Nenhum documento da família registrado ainda.</p>
+            <p className="text-xs text-muted-foreground">Nenhum documento anexado a este imóvel ainda.</p>
           )}
-          {docs.slice(0, 8).map((d) => (
+          {docs.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-2 text-xs border rounded p-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <button onClick={() => verDoc(d.storage_path)} className="flex items-center gap-2 min-w-0 hover:text-gold text-left">
                 <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="truncate">{d.nome_arquivo}</span>
+              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-muted-foreground">{new Date(d.recebido_em).toLocaleDateString("pt-BR")}</span>
+                <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => verDoc(d.storage_path)}>Ver</Button>
               </div>
-              <span className="text-muted-foreground shrink-0">{new Date(d.recebido_em).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
         </div>
