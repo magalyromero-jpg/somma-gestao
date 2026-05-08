@@ -15,7 +15,22 @@ type DbImovel = Record<string, any>;
 interface Props {
   dbImovel: DbImovel | null;
   tipoOperacao: string;
+  imovelIR?: any;
   onSaved: () => Promise<void>;
+}
+
+function parseBrDate(s?: string | null): { iso: string | null; year: number | null } {
+  if (!s) return { iso: null, year: null };
+  // ISO yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return { iso: s.slice(0, 10), year: Number(s.slice(0, 4)) };
+  }
+  // BR dd/mm/yyyy
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return { iso: `${m[3]}-${m[2]}-${m[1]}`, year: Number(m[3]) };
+  // Just year
+  if (/^\d{4}$/.test(s)) return { iso: `${s}-01-01`, year: Number(s) };
+  return { iso: null, year: null };
 }
 
 const INDICES = ["IPCA", "IGP-M", "INCC", "IPC-A"];
