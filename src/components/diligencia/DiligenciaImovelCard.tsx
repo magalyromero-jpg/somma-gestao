@@ -245,16 +245,6 @@ export function DiligenciaImovelCard({
                 )}
               </TabsContent>
 
-              <TabsContent value="gestao" className="mt-4">
-                <GestaoImovelSection
-                  dbImovel={dbImovel}
-                  tipoOperacao={tipoOperacao}
-                  imovelIR={imovel}
-                  familiaId={familiaId}
-                  onTipoOperacaoChange={salvarTipoOperacao}
-                  onSaved={onDbImovelChange}
-                />
-              </TabsContent>
 
               <TabsContent value="comentarios" className="mt-4 space-y-3">
                 <div className="space-y-2">
