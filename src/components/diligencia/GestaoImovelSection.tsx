@@ -48,7 +48,7 @@ function toBrDate(iso?: string | null) {
   return `${d}/${m}/${y}`;
 }
 
-export function GestaoImovelSection({ dbImovel, tipoOperacao, onSaved }: Props) {
+export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved }: Props) {
   const [form, setForm] = useState<DbImovel>(dbImovel ?? {});
   const [saving, setSaving] = useState(false);
 
