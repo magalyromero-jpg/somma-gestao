@@ -1,11 +1,5 @@
 project_id = "bftzfisrcivhgiejxtla"
 
-[functions.lidderar-proxy]
-verify_jwt = false
-
-[functions.lidderar-auth]
-verify_jwt = false
-
 [functions.extract-edital]
 verify_jwt = false
 
