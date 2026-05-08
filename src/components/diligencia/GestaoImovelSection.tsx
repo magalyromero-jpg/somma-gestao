@@ -29,7 +29,34 @@ const TIPO_OPERACAO_OPTIONS = [
   { value: "para_venda", label: "Para venda" },
   { value: "valorizacao", label: "Valorização" },
   { value: "uso_familiar", label: "Uso familiar" },
+  { value: "desenvolvimento_renda", label: "Desenvolvimento p/ renda" },
+  { value: "desenvolvimento_venda", label: "Desenvolvimento p/ venda" },
+  { value: "loteamento", label: "Loteamento" },
 ];
+
+export const STATUS_ATUAL_OPTIONS = [
+  { value: "locado", label: "Locado" },
+  { value: "disp_locacao", label: "Disponível para locação" },
+  { value: "a_venda", label: "À venda" },
+  { value: "em_obra", label: "Em obra" },
+  { value: "uso_proprio", label: "Uso próprio" },
+  { value: "vago", label: "Vago" },
+];
+
+export function statusAtualBadgeClass(v?: string | null) {
+  switch (v) {
+    case "locado": return "bg-emerald-500/15 text-emerald-700 border-emerald-500/30";
+    case "disp_locacao": return "bg-blue-500/15 text-blue-700 border-blue-500/30";
+    case "a_venda": return "bg-purple-500/15 text-purple-700 border-purple-500/30";
+    case "em_obra": return "bg-amber-500/15 text-amber-700 border-amber-500/30";
+    case "uso_proprio": return "bg-indigo-500/15 text-indigo-700 border-indigo-500/30";
+    case "vago": return "bg-muted text-muted-foreground border-border";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
+}
+export function statusAtualLabel(v?: string | null) {
+  return STATUS_ATUAL_OPTIONS.find((o) => o.value === v)?.label ?? null;
+}
 
 function parseBrDate(s?: string | null): { iso: string | null; year: number | null } {
   if (!s) return { iso: null, year: null };
@@ -56,6 +83,8 @@ function toBrDate(iso?: string | null) {
 }
 
 const CAMPOS_SALVAR = [
+  "status_atual",
+  "mes_referencia_energia", "inscricao_municipal",
   "tipo_locacao", "contrato_inicio", "contrato_fim",
   "imobiliaria_nome", "imobiliaria_email", "imobiliaria_telefone",
   "valor_locacao_atual", "valor_locacao_inicial", "data_inicio_locacao",
@@ -64,7 +93,7 @@ const CAMPOS_SALVAR = [
   "admin_shortstay_telefone", "receita_media_mensal",
   "condominio_nome", "condominio_admin_nome", "condominio_admin_email",
   "condominio_admin_telefone", "taxa_condominio", "vencimento_condominio",
-  "unidade_consumidora", "distribuidora_energia", "hidrometro", "matricula_agua",
+  "unidade_consumidora", "distribuidora", "distribuidora_energia", "hidrometro", "matricula_agua",
   "valor_aquisicao", "data_aquisicao", "indice_correcao",
   "taxa_administracao_pct", "valor_iptu_anual",
   // certidões (usando colunas existentes)
