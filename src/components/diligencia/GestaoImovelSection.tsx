@@ -281,21 +281,12 @@ export function GestaoImovelSection({
 
       {/* Utilidades */}
       {showUtilidades && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h5 className="font-semibold text-sm">⚡ Utilidades</h5>
-            <div className="grid md:grid-cols-2 gap-3">
-              <Field label="Unidade consumidora (energia)" value={form.unidade_consumidora} onChange={(v) => set("unidade_consumidora", v)} />
-              <Field label="Distribuidora" value={form.distribuidora_energia} onChange={(v) => set("distribuidora_energia", v)} />
-              <Field label="Hidrômetro" value={form.hidrometro} onChange={(v) => set("hidrometro", v)} />
-              <Field label="Matrícula de água" value={form.matricula_agua} onChange={(v) => set("matricula_agua", v)} />
-            </div>
-          </CardContent>
-        </Card>
+        <UtilidadesBlock form={form} set={set} />
       )}
 
-      {/* Certidões */}
-      <CertidoesBlock form={form} set={set} />
+      {/* Certidões — vinculadas ao checklist do imóvel */}
+      <CertidoesBlock dbImovel={dbImovel} form={form} set={set} familiaId={familiaId} onSaved={onSaved} />
+
 
       <div className="flex justify-end">
         <Button onClick={salvar} disabled={saving}>
