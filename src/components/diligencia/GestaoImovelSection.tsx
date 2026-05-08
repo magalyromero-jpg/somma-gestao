@@ -144,21 +144,38 @@ export function GestaoImovelSection({
 
   return (
     <div className="space-y-6">
-      {/* Tipo de operação */}
+      {/* Tipo de operação + Status atual */}
       <Card>
-        <CardContent className="p-4 space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
-          <div className="flex flex-wrap gap-2">
-            {TIPO_OPERACAO_OPTIONS.map((o) => (
-              <Button
-                key={o.value}
-                size="sm"
-                variant={tipoOperacao === o.value ? "default" : "outline"}
-                onClick={() => onTipoOperacaoChange?.(o.value)}
-              >
-                {o.label}
-              </Button>
-            ))}
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
+            <div className="flex flex-wrap gap-2">
+              {TIPO_OPERACAO_OPTIONS.map((o) => (
+                <Button
+                  key={o.value}
+                  size="sm"
+                  variant={tipoOperacao === o.value ? "default" : "outline"}
+                  onClick={() => onTipoOperacaoChange?.(o.value)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_ATUAL_OPTIONS.map((o) => (
+                <Button
+                  key={o.value}
+                  size="sm"
+                  variant={form.status_atual === o.value ? "default" : "outline"}
+                  onClick={() => set("status_atual", o.value)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
