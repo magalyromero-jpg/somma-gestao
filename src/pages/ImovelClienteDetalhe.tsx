@@ -9,6 +9,7 @@ import { formatBRL } from "@/lib/format";
 import { calcularProgresso } from "@/lib/onboarding/checklistImovel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { GestaoImovelSection } from "@/components/diligencia/GestaoImovelSection";
 
 interface ImovelDetalhe {
   id: string;
@@ -300,6 +301,29 @@ export default function ImovelClienteDetalhe() {
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* Gestão completa */}
+      <Card className="p-6 shadow-card">
+        <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">Gestão do imóvel</h3>
+        <GestaoImovelSection
+          dbImovel={imovel}
+          tipoOperacao={(imovel as any)?.tipo_operacao ?? ""}
+          imovelIR={imovelData}
+          familiaId={imovel.familia_id}
+          onTipoOperacaoChange={async (novo) => {
+            const { error } = await supabase
+              .from("imoveis_cliente")
+              .update({ tipo_operacao: novo })
+              .eq("id", imovel.id);
+            if (error) {
+              toast.error("Erro ao salvar", { description: error.message });
+              return;
+            }
+            await carregar();
+          }}
+          onSaved={carregar}
+        />
       </Card>
     </div>
   );
