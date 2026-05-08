@@ -60,10 +60,9 @@ export function HoldingsChecklist({
       if (cancel) return;
       const existing = (data ?? []) as ChecklistHoldingRow[];
 
-      // Seed missing items for each non-encerrada holding
+      // Seed missing items for every holding
       const toInsert: any[] = [];
       for (const h of holdings) {
-        if (String((h as any).tipo) === "encerrada") continue;
         for (const item of CHECKLIST_HOLDING) {
           const has = existing.some(
             (r) => r.holding_id === h.id && r.item_id === item.item_id,
