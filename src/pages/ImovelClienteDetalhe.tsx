@@ -283,16 +283,20 @@ export default function ImovelClienteDetalhe() {
         )}
 
         <div className="space-y-2">
+          <h4 className="text-xs uppercase tracking-wider text-muted-foreground mt-2">Documentos do imóvel ({docs.length})</h4>
           {docs.length === 0 && (
-            <p className="text-xs text-muted-foreground">Nenhum documento da família registrado ainda.</p>
+            <p className="text-xs text-muted-foreground">Nenhum documento anexado a este imóvel ainda.</p>
           )}
-          {docs.slice(0, 8).map((d) => (
+          {docs.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-2 text-xs border rounded p-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <button onClick={() => verDoc(d.storage_path)} className="flex items-center gap-2 min-w-0 hover:text-gold text-left">
                 <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="truncate">{d.nome_arquivo}</span>
+              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-muted-foreground">{new Date(d.recebido_em).toLocaleDateString("pt-BR")}</span>
+                <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => verDoc(d.storage_path)}>Ver</Button>
               </div>
-              <span className="text-muted-foreground shrink-0">{new Date(d.recebido_em).toLocaleDateString("pt-BR")}</span>
             </div>
           ))}
         </div>
