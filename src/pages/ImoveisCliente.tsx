@@ -191,11 +191,6 @@ export default function ImoveisCliente() {
                           ) : (
                             <Badge variant="outline" className="bg-blue-500/15 text-blue-700 border-blue-500/30">PF</Badge>
                           )}
-                          {r.tipo_operacao && (
-                            <Badge variant="outline" className="bg-muted text-muted-foreground">
-                              {TIPO_OPERACAO_LABEL[r.tipo_operacao] ?? r.tipo_operacao}
-                            </Badge>
-                          )}
                           {Array.isArray(r.alertas) && r.alertas.length > 0 && (
                             <Badge variant="outline" className="border-amber-400 text-amber-700">
                               {r.alertas.length} alerta{r.alertas.length > 1 ? "s" : ""}
