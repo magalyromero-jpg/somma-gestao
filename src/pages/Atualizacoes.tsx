@@ -25,11 +25,9 @@ export default function Atualizacoes() {
 
       <Card className="mb-6">
         <CardContent className="p-6">
-          <h2 className="text-base font-extralight text-foreground mb-1">Atualização em massa</h2>
+          <h2 className="text-base font-extralight text-foreground mb-1">Histórico de revisões</h2>
           <p className="text-sm font-light text-muted-foreground">
-            Conecte o token Lidderar em <strong>Configurações</strong> para listar imóveis reais e
-            aplicar variações em lote. As edições serão registradas automaticamente no histórico
-            abaixo.
+            Edições de valor de mercado feitas no portfólio aparecem registradas abaixo.
           </p>
         </CardContent>
       </Card>
