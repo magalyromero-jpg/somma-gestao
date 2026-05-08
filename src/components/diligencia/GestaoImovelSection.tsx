@@ -15,7 +15,22 @@ type DbImovel = Record<string, any>;
 interface Props {
   dbImovel: DbImovel | null;
   tipoOperacao: string;
+  imovelIR?: any;
   onSaved: () => Promise<void>;
+}
+
+function parseBrDate(s?: string | null): { iso: string | null; year: number | null } {
+  if (!s) return { iso: null, year: null };
+  // ISO yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return { iso: s.slice(0, 10), year: Number(s.slice(0, 4)) };
+  }
+  // BR dd/mm/yyyy
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return { iso: `${m[3]}-${m[2]}-${m[1]}`, year: Number(m[3]) };
+  // Just year
+  if (/^\d{4}$/.test(s)) return { iso: `${s}-01-01`, year: Number(s) };
+  return { iso: null, year: null };
 }
 
 const INDICES = ["IPCA", "IGP-M", "INCC", "IPC-A"];
@@ -33,7 +48,7 @@ function toBrDate(iso?: string | null) {
   return `${d}/${m}/${y}`;
 }
 
-export function GestaoImovelSection({ dbImovel, tipoOperacao, onSaved }: Props) {
+export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved }: Props) {
   const [form, setForm] = useState<DbImovel>(dbImovel ?? {});
   const [saving, setSaving] = useState(false);
 
@@ -136,23 +151,13 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, onSaved }: Props) 
         </Card>
       )}
 
-      {/* BLOCO 2 — Valorização do ativo */}
+      {/* BLOCO 2 — Histórico de valor */}
       {!showUso && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h5 className="font-semibold text-sm">📈 Valorização do ativo</h5>
-            <div className="grid md:grid-cols-3 gap-3">
-              <Field label="Valor de aquisição (R$)" type="number" value={form.valor_aquisicao} onChange={(v) => set("valor_aquisicao", v ? Number(v) : null)} />
-              <Field label="Data de aquisição" type="date" value={form.data_aquisicao} onChange={(v) => set("data_aquisicao", v)} />
-              <SelectField label="Índice de correção" value={form.indice_correcao} options={INDICES} onChange={(v) => set("indice_correcao", v)} />
-            </div>
-            <CorrecaoMonetariaWidget
-              valor={form.valor_aquisicao}
-              dataInicial={form.data_aquisicao}
-              indice={form.indice_correcao}
-            />
-          </CardContent>
-        </Card>
+        <HistoricoValorBlock
+          form={form}
+          set={set}
+          imovelIR={imovelIR}
+        />
       )}
 
       {/* BLOCO 3 — Correção do contrato de locação */}
@@ -314,6 +319,162 @@ function CorrecaoMonetariaWidget({
         </div>
       )}
     </div>
+  );
+}
+
+function HistoricoValorBlock({
+  form, set, imovelIR,
+}: { form: DbImovel; set: (k: string, v: any) => void; imovelIR?: any }) {
+  const irParsed = parseBrDate(imovelIR?.data_aquisicao ?? null);
+  const irYear = irParsed.year;
+  const irValor = imovelIR?.valor_declarado ?? null;
+
+  const dbParsed = parseBrDate(form.data_aquisicao ?? null);
+  const ano = dbParsed.year ?? null;
+  const valor = form.valor_aquisicao ?? null;
+  const indice = form.indice_correcao ?? "IPCA";
+
+  const [loading, setLoading] = useState(false);
+  const [res, setRes] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  // auto-prefill from IR when DB empty
+  useEffect(() => {
+    if (!form.valor_aquisicao && irValor) set("valor_aquisicao", Number(irValor));
+    if (!form.data_aquisicao && irParsed.iso) set("data_aquisicao", irParsed.iso);
+    if (!form.indice_correcao) set("indice_correcao", "IPCA");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imovelIR?.id]);
+
+  async function calcular() {
+    if (!valor || !dbParsed.iso) return;
+    setLoading(true); setErr(null);
+    const hoje = new Date();
+    const dataFinal = `${String(hoje.getDate()).padStart(2,"0")}/${String(hoje.getMonth()+1).padStart(2,"0")}/${hoje.getFullYear()}`;
+    const { data, error } = await supabase.functions.invoke("correcao-monetaria", {
+      body: { indice, dataInicial: toBrDate(dbParsed.iso), dataFinal, valorInicial: valor },
+    });
+    setLoading(false);
+    if (error || data?.error) { setErr(data?.error ?? error?.message ?? "Erro ao calcular"); return; }
+    setRes(data);
+  }
+
+  // recalc when ano/valor/indice change
+  useEffect(() => {
+    setRes(null);
+    if (valor && dbParsed.iso && indice) calcular();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valor, dbParsed.iso, indice]);
+
+  const semAno = !ano;
+  const anoHoje = new Date().getFullYear();
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h5 className="font-semibold text-sm">📈 Histórico de valor</h5>
+          {irYear && (!form.data_aquisicao || !form.valor_aquisicao) && (
+            <Button size="sm" variant="outline" onClick={() => {
+              if (irParsed.iso) set("data_aquisicao", irParsed.iso);
+              if (irValor) set("valor_aquisicao", Number(irValor));
+            }}>Aplicar valores do IR</Button>
+          )}
+        </div>
+
+        {semAno ? (
+          <div className="rounded-md border-2 border-dashed border-amber-400 bg-amber-50 p-4 space-y-3">
+            <div className="text-sm text-amber-800 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Informe o ano de aquisição para calcular a valorização
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Ano de aquisição *</Label>
+                <Input
+                  type="number"
+                  placeholder="Ex: 2018"
+                  className="border-amber-400 focus-visible:ring-amber-500"
+                  value={ano ?? ""}
+                  onChange={(e) => {
+                    const y = e.target.value ? Number(e.target.value) : null;
+                    set("data_aquisicao", y ? `${y}-01-01` : null);
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Valor de aquisição (R$){irValor ? " — pré-preenchido do IR" : ""}</Label>
+                <Input
+                  type="number"
+                  value={valor ?? ""}
+                  onChange={(e) => set("valor_aquisicao", e.target.value ? Number(e.target.value) : null)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Ano de aquisição</Label>
+                <Input
+                  type="number"
+                  value={ano}
+                  onChange={(e) => {
+                    const y = e.target.value ? Number(e.target.value) : null;
+                    set("data_aquisicao", y ? `${y}-01-01` : null);
+                  }}
+                />
+              </div>
+              <Field
+                label={`Valor de aquisição (R$)${irValor && Number(irValor) === Number(valor) ? " — IR" : ""}`}
+                type="number"
+                value={valor}
+                onChange={(v) => set("valor_aquisicao", v ? Number(v) : null)}
+              />
+              <SelectField label="Índice de correção" value={indice} options={INDICES} onChange={(v) => set("indice_correcao", v)} />
+            </div>
+
+            {/* Linha do tempo */}
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 text-center">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Compra</div>
+                  <div className="text-lg font-semibold">{ano}</div>
+                  <div className="text-sm text-muted-foreground">{valor ? formatBRL(valor) : "—"}</div>
+                </div>
+                <div className="flex-[2] flex flex-col items-center">
+                  <div className="w-full h-0.5 bg-gradient-to-r from-muted-foreground/30 via-gold to-emerald-500 relative">
+                    <div className="absolute -top-1.5 left-0 h-3.5 w-3.5 rounded-full bg-muted-foreground/40 border-2 border-background" />
+                    <div className="absolute -top-1.5 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-background" />
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-2">
+                    {anoHoje - ano} anos · corrigido por {indice}
+                  </div>
+                </div>
+                <div className="flex-1 text-center">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Hoje</div>
+                  <div className="text-lg font-semibold">{anoHoje}</div>
+                  <div className={cn("text-sm font-medium", res ? "text-emerald-600" : "text-muted-foreground")}>
+                    {loading ? "calculando…" : res ? formatBRL(res.valorCorrigido) : (valor ? "—" : "Informe o valor")}
+                  </div>
+                </div>
+              </div>
+              {res && (
+                <div className="mt-3 pt-3 border-t flex justify-between text-xs">
+                  <span className="text-muted-foreground">Correção acumulada</span>
+                  <span className="font-medium text-emerald-700">+{res.percentualAcumulado}% · ganho de {formatBRL(res.ganhoNominal)}</span>
+                </div>
+              )}
+              {err && <div className="mt-2 text-xs text-destructive">{err}</div>}
+              <div className="text-[11px] text-muted-foreground pt-2">
+                Estimativa baseada apenas na correção monetária pelo índice. Não considera valorização de mercado.
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
