@@ -169,7 +169,7 @@ export function OutrosBensSection({
   }
 
   const investTotal =
-    (investimentos?.total ?? null) ??
+    investimentos?.total ??
     [
       investimentos?.renda_fixa,
       investimentos?.previdencia_privada,
