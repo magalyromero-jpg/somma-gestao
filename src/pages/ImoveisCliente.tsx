@@ -18,10 +18,19 @@ interface ImovelRow {
   valor_declarado: number | null;
   titularidade: string | null;
   holding_cnpj: string | null;
+  tipo_operacao: string | null;
   alertas: any;
   familia_nome?: string;
+  holding_nome?: string | null;
   checklist: Array<{ status: string; opcional: boolean }>;
 }
+
+const TIPO_OPERACAO_LABEL: Record<string, string> = {
+  renda: "Para renda",
+  venda: "Para venda",
+  valorizacao: "Valorização",
+  uso_familiar: "Uso familiar",
+};
 
 function pctColorClass(pct: number) {
   if (pct === 100) return "bg-emerald-500";
@@ -36,6 +45,8 @@ export default function ImoveisCliente() {
   const [loading, setLoading] = useState(true);
   const [familia, setFamilia] = useState("todas");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [pjFilter, setPjFilter] = useState("todos");
   const [q, setQ] = useState("");
 
   useEffect(() => {
@@ -43,19 +54,29 @@ export default function ImoveisCliente() {
       setLoading(true);
       const { data } = await supabase
         .from("imoveis_cliente")
-        .select("id, familia_id, nome, endereco, valor_declarado, titularidade, holding_cnpj, alertas, checklist_imovel(status, opcional)")
-        .order("valor_declarado", { ascending: false });
-      const { data: fams } = await supabase
-        .from("familias_onboarding")
-        .select("id, nome");
+        .select(
+          "id, familia_id, nome, endereco, valor_declarado, titularidade, holding_cnpj, tipo_operacao, alertas, checklist_imovel(status, opcional)",
+        )
+        .order("valor_declarado", { ascending: false, nullsFirst: false });
+      const { data: fams } = await supabase.from("familias_onboarding").select("id, nome, patrimonio_data");
       const famMap = new Map((fams ?? []).map((f: any) => [f.id, f.nome]));
+      // Map de holdings (cnpj -> razao_social) por família
+      const holdingByCnpj = new Map<string, string>();
+      (fams ?? []).forEach((f: any) => {
+        for (const h of f?.patrimonio_data?.holdings ?? []) {
+          if (h.cnpj) holdingByCnpj.set(String(h.cnpj).replace(/\D/g, ""), h.razao_social);
+        }
+      });
       const mapped: ImovelRow[] = (data ?? []).map((r: any) => ({
         ...r,
         familia_nome: famMap.get(r.familia_id),
+        holding_nome: r.holding_cnpj
+          ? holdingByCnpj.get(String(r.holding_cnpj).replace(/\D/g, "")) ?? null
+          : null,
         checklist: r.checklist_imovel ?? [],
       }));
       setRows(mapped);
-      setFamilias((fams ?? []) as any);
+      setFamilias(((fams ?? []) as any).map((f: any) => ({ id: f.id, nome: f.nome })));
       setLoading(false);
     })();
   }, []);
@@ -65,11 +86,15 @@ export default function ImoveisCliente() {
       if (familia !== "todas" && r.familia_id !== familia) return false;
       const prog = calcularProgresso(r.checklist as any);
       if (statusFilter === "completos" && prog.pct !== 100) return false;
-      if (statusFilter === "pendentes" && prog.pct === 100) return false;
+      if (statusFilter === "andamento" && (prog.pct === 100 || prog.recebidos === 0)) return false;
+      if (statusFilter === "nao_iniciado" && prog.recebidos !== 0) return false;
+      if (tipoFilter !== "todos" && (r.tipo_operacao ?? "") !== tipoFilter) return false;
+      if (pjFilter === "PF" && (r.titularidade ?? "").toUpperCase() !== "PF") return false;
+      if (pjFilter === "PJ" && (r.titularidade ?? "").toUpperCase() !== "PJ") return false;
       if (q && !`${r.nome} ${r.endereco ?? ""} ${r.familia_nome ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [rows, familia, statusFilter, q]);
+  }, [rows, familia, statusFilter, tipoFilter, pjFilter, q]);
 
   const kpis = useMemo(() => {
     const totalImoveis = rows.length;
