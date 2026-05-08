@@ -18,10 +18,19 @@ interface ImovelRow {
   valor_declarado: number | null;
   titularidade: string | null;
   holding_cnpj: string | null;
+  tipo_operacao: string | null;
   alertas: any;
   familia_nome?: string;
+  holding_nome?: string | null;
   checklist: Array<{ status: string; opcional: boolean }>;
 }
+
+const TIPO_OPERACAO_LABEL: Record<string, string> = {
+  renda: "Para renda",
+  venda: "Para venda",
+  valorizacao: "Valorização",
+  uso_familiar: "Uso familiar",
+};
 
 function pctColorClass(pct: number) {
   if (pct === 100) return "bg-emerald-500";
@@ -36,6 +45,8 @@ export default function ImoveisCliente() {
   const [loading, setLoading] = useState(true);
   const [familia, setFamilia] = useState("todas");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [pjFilter, setPjFilter] = useState("todos");
   const [q, setQ] = useState("");
 
   useEffect(() => {
@@ -43,19 +54,29 @@ export default function ImoveisCliente() {
       setLoading(true);
       const { data } = await supabase
         .from("imoveis_cliente")
-        .select("id, familia_id, nome, endereco, valor_declarado, titularidade, holding_cnpj, alertas, checklist_imovel(status, opcional)")
-        .order("valor_declarado", { ascending: false });
-      const { data: fams } = await supabase
-        .from("familias_onboarding")
-        .select("id, nome");
+        .select(
+          "id, familia_id, nome, endereco, valor_declarado, titularidade, holding_cnpj, tipo_operacao, alertas, checklist_imovel(status, opcional)",
+        )
+        .order("valor_declarado", { ascending: false, nullsFirst: false });
+      const { data: fams } = await supabase.from("familias_onboarding").select("id, nome, patrimonio_data");
       const famMap = new Map((fams ?? []).map((f: any) => [f.id, f.nome]));
+      // Map de holdings (cnpj -> razao_social) por família
+      const holdingByCnpj = new Map<string, string>();
+      (fams ?? []).forEach((f: any) => {
+        for (const h of f?.patrimonio_data?.holdings ?? []) {
+          if (h.cnpj) holdingByCnpj.set(String(h.cnpj).replace(/\D/g, ""), h.razao_social);
+        }
+      });
       const mapped: ImovelRow[] = (data ?? []).map((r: any) => ({
         ...r,
         familia_nome: famMap.get(r.familia_id),
+        holding_nome: r.holding_cnpj
+          ? holdingByCnpj.get(String(r.holding_cnpj).replace(/\D/g, "")) ?? null
+          : null,
         checklist: r.checklist_imovel ?? [],
       }));
       setRows(mapped);
-      setFamilias((fams ?? []) as any);
+      setFamilias(((fams ?? []) as any).map((f: any) => ({ id: f.id, nome: f.nome })));
       setLoading(false);
     })();
   }, []);
@@ -65,11 +86,15 @@ export default function ImoveisCliente() {
       if (familia !== "todas" && r.familia_id !== familia) return false;
       const prog = calcularProgresso(r.checklist as any);
       if (statusFilter === "completos" && prog.pct !== 100) return false;
-      if (statusFilter === "pendentes" && prog.pct === 100) return false;
+      if (statusFilter === "andamento" && (prog.pct === 100 || prog.recebidos === 0)) return false;
+      if (statusFilter === "nao_iniciado" && prog.recebidos !== 0) return false;
+      if (tipoFilter !== "todos" && (r.tipo_operacao ?? "") !== tipoFilter) return false;
+      if (pjFilter === "PF" && (r.titularidade ?? "").toUpperCase() !== "PF") return false;
+      if (pjFilter === "PJ" && (r.titularidade ?? "").toUpperCase() !== "PJ") return false;
       if (q && !`${r.nome} ${r.endereco ?? ""} ${r.familia_nome ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [rows, familia, statusFilter, q]);
+  }, [rows, familia, statusFilter, tipoFilter, pjFilter, q]);
 
   const kpis = useMemo(() => {
     const totalImoveis = rows.length;
@@ -109,8 +134,8 @@ export default function ImoveisCliente() {
       </div>
 
       <Card className="p-4 shadow-card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome, endereço ou família" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
           </div>
@@ -125,8 +150,27 @@ export default function ImoveisCliente() {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="completos">Checklist completo</SelectItem>
-              <SelectItem value="pendentes">Com pendências</SelectItem>
+              <SelectItem value="completos">Completo</SelectItem>
+              <SelectItem value="andamento">Em andamento</SelectItem>
+              <SelectItem value="nao_iniciado">Não iniciado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tipoFilter} onValueChange={setTipoFilter}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os tipos</SelectItem>
+              <SelectItem value="renda">Para renda</SelectItem>
+              <SelectItem value="venda">Para venda</SelectItem>
+              <SelectItem value="valorizacao">Valorização</SelectItem>
+              <SelectItem value="uso_familiar">Uso familiar</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={pjFilter} onValueChange={setPjFilter}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">PF e PJ</SelectItem>
+              <SelectItem value="PF">Pessoa Física</SelectItem>
+              <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -157,14 +201,26 @@ export default function ImoveisCliente() {
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <h3 className="font-medium truncate">{r.nome}</h3>
                           {prioritario && <Badge className="bg-gold/15 text-gold border-gold/40 hover:bg-gold/15">Prioritário</Badge>}
+                          {(r.titularidade ?? "").toUpperCase() === "PJ" ? (
+                            <Badge variant="outline" className="bg-orange-500/15 text-orange-700 border-orange-500/30">
+                              PJ{r.holding_nome ? ` · ${r.holding_nome}` : ""}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/15 text-blue-700 border-blue-500/30">PF</Badge>
+                          )}
+                          {r.tipo_operacao && (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground">
+                              {TIPO_OPERACAO_LABEL[r.tipo_operacao] ?? r.tipo_operacao}
+                            </Badge>
+                          )}
                           {Array.isArray(r.alertas) && r.alertas.length > 0 && (
                             <Badge variant="outline" className="border-amber-400 text-amber-700">
                               {r.alertas.length} alerta{r.alertas.length > 1 ? "s" : ""}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {r.familia_nome ?? "—"} · {r.titularidade === "PJ" ? `${r.holding_cnpj ?? "PJ"}` : "PF"}
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {r.familia_nome ?? "—"}
                         </p>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{r.endereco ?? ""}</p>
                       </div>

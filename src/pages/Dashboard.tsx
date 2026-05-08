@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { useFamilias, useImoveis } from "@/hooks/useApiData";
 import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
 import { formatBRL } from "@/lib/format";
-import { Building2, Users, Wallet, TrendingUp } from "lucide-react";
+import { Building2, Users, AlertTriangle, FileWarning } from "lucide-react";
 import {
   Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Link } from "react-router-dom";
 import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
 type Perfil = (typeof PERFIS)[number];
@@ -32,6 +33,89 @@ export default function Dashboard() {
   const { familias, isLoading: lf, error: ef } = useFamilias();
   const { imoveis: allImoveis, isLoading: li, error: ei } = useImoveis();
   const [perfilFilter, setPerfilFilter] = useState<Perfil | null>(null);
+
+  // KPIs reais do Supabase
+  const [sbKpis, setSbKpis] = useState<{
+    familiasTotal: number;
+    familiasOnboarding: number;
+    familiasConcluidas: number;
+    imoveisTotal: number;
+    patrimonioTotal: number;
+    docsPendentes: number;
+    imoveisCompletos: number;
+    alertasCriticos: number;
+    alertasAtencao: number;
+  } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: fams }, { data: imvs }, { data: ckImv }, { data: ckHld }, { data: ckOut }] = await Promise.all([
+        supabase.from("familias_onboarding").select("id, patrimonio_data"),
+        supabase.from("imoveis_cliente").select("id, valor_declarado"),
+        supabase.from("checklist_imovel").select("status, opcional, imovel_id"),
+        supabase.from("checklist_holding").select("status, opcional"),
+        supabase.from("checklist_outros_bens").select("status, opcional"),
+      ]);
+
+      const familiasTotal = (fams ?? []).length;
+      let familiasConcluidas = 0;
+      let alertasCriticos = 0;
+      let alertasAtencao = 0;
+      for (const f of fams ?? []) {
+        const pd: any = f.patrimonio_data ?? {};
+        const alertas: any[] = pd?.alertas_gerais ?? [];
+        for (const a of alertas) {
+          const nivel = String(a?.nivel ?? "").toLowerCase();
+          if (nivel === "critico" || nivel === "crítico") alertasCriticos += 1;
+          else if (nivel === "atencao" || nivel === "atenção") alertasAtencao += 1;
+        }
+        // "concluída" = patrimonio_data preenchido com algum imóvel/holding
+        if ((pd?.imoveis?.length ?? 0) > 0 || (pd?.holdings?.length ?? 0) > 0) {
+          familiasConcluidas += 1;
+        }
+      }
+      const familiasOnboarding = Math.max(familiasTotal - familiasConcluidas, 0);
+
+      const imoveisTotal = (imvs ?? []).length;
+      const patrimonioTotal = (imvs ?? []).reduce(
+        (s: number, i: any) => s + Number(i.valor_declarado ?? 0),
+        0,
+      );
+
+      const isPendente = (r: any) => r.status === "pendente";
+      const docsPendentes =
+        (ckImv ?? []).filter(isPendente).length +
+        (ckHld ?? []).filter(isPendente).length +
+        (ckOut ?? []).filter(isPendente).length;
+
+      // Imóveis com checklist obrigatório completo
+      const porImovel = new Map<string, { rec: number; tot: number }>();
+      for (const c of ckImv ?? []) {
+        if ((c as any).opcional) continue;
+        const id = (c as any).imovel_id as string;
+        if (!porImovel.has(id)) porImovel.set(id, { rec: 0, tot: 0 });
+        const e = porImovel.get(id)!;
+        e.tot += 1;
+        if ((c as any).status === "recebido") e.rec += 1;
+      }
+      let imoveisCompletos = 0;
+      porImovel.forEach((v) => {
+        if (v.tot > 0 && v.rec === v.tot) imoveisCompletos += 1;
+      });
+
+      setSbKpis({
+        familiasTotal,
+        familiasOnboarding,
+        familiasConcluidas,
+        imoveisTotal,
+        patrimonioTotal,
+        docsPendentes,
+        imoveisCompletos,
+        alertasCriticos,
+        alertasAtencao,
+      });
+    })();
+  }, []);
 
   const imoveis = useMemo(
     () => (perfilFilter ? allImoveis.filter((i) => i.perfis?.includes(perfilFilter)) : allImoveis),
@@ -131,10 +215,52 @@ export default function Dashboard() {
       {!isLoading && !error && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <KpiCard label="Famílias" value={String(k.total_familias)} icon={<Users className="h-4 w-4" />} hint="ativas" />
-            <KpiCard label="Imóveis" value={String(k.total_imoveis)} icon={<Building2 className="h-4 w-4" />} hint="no portfólio" />
-            <KpiCard label="Valor de mercado" value={formatBRL(k.valor_mercado, { compact: true })} icon={<TrendingUp className="h-4 w-4" />} />
-            <KpiCard label="Receita mensal" value={formatBRL(k.receita_mensal, { compact: true })} icon={<Wallet className="h-4 w-4" />} hint="aluguéis ativos" />
+            <Link to="/familias" className="block">
+              <KpiCard
+                label="Famílias"
+                value={String(sbKpis?.familiasTotal ?? 0)}
+                icon={<Users className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${sbKpis.familiasOnboarding} em onboarding · ${sbKpis.familiasConcluidas} concluídos`
+                    : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/imoveis" className="block">
+              <KpiCard
+                label="Imóveis"
+                value={String(sbKpis?.imoveisTotal ?? 0)}
+                icon={<Building2 className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${formatBRL(sbKpis.patrimonioTotal, { compact: true })} patrimônio total`
+                    : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/imoveis?status=pendentes" className="block">
+              <KpiCard
+                label="Documentos pendentes"
+                value={String(sbKpis?.docsPendentes ?? 0)}
+                icon={<FileWarning className="h-4 w-4" />}
+                hint={
+                  sbKpis ? `${sbKpis.imoveisCompletos} imóveis com checklist completo` : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/familias" className="block">
+              <KpiCard
+                label="Alertas"
+                value={String((sbKpis?.alertasCriticos ?? 0) + (sbKpis?.alertasAtencao ?? 0))}
+                icon={<AlertTriangle className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${sbKpis.alertasCriticos} críticos · ${sbKpis.alertasAtencao} atenção`
+                    : "carregando…"
+                }
+              />
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
