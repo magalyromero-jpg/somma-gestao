@@ -191,19 +191,6 @@ export function DiligenciaImovelCard({
                 <div className="text-xs text-muted-foreground">Matrícula {imovel.matricula}</div>
               )}
               <div className="text-xs text-muted-foreground">Proprietário: {proprietario}</div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-muted-foreground">Tipo de operação:</span>
-                <select
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                  value={tipoOperacao}
-                  onChange={(e) => salvarTipoOperacao(e.target.value)}
-                >
-                  <option value="">—</option>
-                  {TIPO_OPERACAO_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
               <div className="flex items-center gap-3 mt-3">
                 <Progress value={pct} className="h-1.5 flex-1 max-w-[240px]" />
                 <span className="text-xs text-muted-foreground">{recebidos}/{total} documentos</span>
