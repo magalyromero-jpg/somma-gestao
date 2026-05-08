@@ -52,7 +52,7 @@ export async function criarChecklistsImoveis(familiaId: string, imoveis: Imovel[
           endereco: enderecoCompleto(imovel),
           valor_declarado: imovel.valor_declarado,
           matricula: imovel.matricula,
-          titularidade: imovel.titularidade,
+          titularidade: imovel.holding_id ? "PJ" : (imovel.titularidade ?? "PF"),
           holding_cnpj: imovel.holding_id,
           locacao: imovel.locacao ?? false,
           alertas: (imovel.alertas ?? []) as any,
