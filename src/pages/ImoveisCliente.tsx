@@ -25,12 +25,6 @@ interface ImovelRow {
   checklist: Array<{ status: string; opcional: boolean }>;
 }
 
-const TIPO_OPERACAO_LABEL: Record<string, string> = {
-  renda: "Para renda",
-  venda: "Para venda",
-  valorizacao: "Valorização",
-  uso_familiar: "Uso familiar",
-};
 
 function pctColorClass(pct: number) {
   if (pct === 100) return "bg-emerald-500";
