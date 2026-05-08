@@ -325,6 +325,9 @@ export default function ImovelClienteDetalhe() {
           onSaved={carregar}
         />
       </Card>
+    </div>
+  );
+}
 
 function ChecklistCol({ titulo, cor, children }: { titulo: string; cor: string; children: React.ReactNode }) {
   return (
