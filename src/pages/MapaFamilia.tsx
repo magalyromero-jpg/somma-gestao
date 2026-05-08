@@ -544,126 +544,17 @@ type ImovelDb = {
   alertas: any;
 };
 
-function HoldingsTab({ data, imoveisDb }: { data: PatrimonialData | null; imoveisDb: ImovelDb[] }) {
-  // Normaliza CNPJ para comparação
-  const normCnpj = (s?: string | null) => (s ?? "").replace(/\D/g, "");
-
-  const sorted = [...imoveisDb].sort(
-    (a, b) => (Number(b.valor_declarado ?? 0) - Number(a.valor_declarado ?? 0)),
-  );
-  const imoveisPF = sorted.filter((i) => (i.titularidade ?? "").toUpperCase() === "PF");
-  const imoveisPJ = sorted.filter((i) => (i.titularidade ?? "").toUpperCase() !== "PF");
-
+function HoldingsTab({
+  data,
+  familiaId,
+  userId,
+}: {
+  data: PatrimonialData | null;
+  familiaId: string;
+  userId: string;
+}) {
   const holdings = data?.holdings ?? [];
-  const membros = data?.membros ?? [];
-
-  const imoveisPorHolding = (cnpj?: string | null) => {
-    const c = normCnpj(cnpj);
-    if (!c) return [];
-    return sorted.filter((i) => normCnpj(i.holding_cnpj) === c);
-  };
-
-  const holdingNomePorCnpj = (cnpj?: string | null) => {
-    const c = normCnpj(cnpj);
-    return holdings.find((h) => normCnpj(h.cnpj) === c)?.razao_social ?? null;
-  };
-
-  const temDivergencia = (i: ImovelDb) => {
-    const arr = Array.isArray(i.alertas) ? i.alertas : [];
-    return arr.some((a: any) => String(a).toLowerCase().includes("titular") || String(a).toLowerCase().includes("diverg"));
-  };
-
-  return (
-    <Tabs defaultValue="holdings" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="holdings">Holdings ({holdings.length})</TabsTrigger>
-        <TabsTrigger value="imoveis">Imóveis ({sorted.length})</TabsTrigger>
-        <TabsTrigger value="pf">Imóveis na PF ({imoveisPF.length})</TabsTrigger>
-        <TabsTrigger value="pj">Imóveis na PJ ({imoveisPJ.length})</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="holdings" className="mt-4">
-        {holdings.length > 0 ? (
-          <Accordion type="multiple" className="space-y-2">
-            {holdings.map((h) => {
-              const imvs = imoveisPorHolding(h.cnpj);
-              return (
-                <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-3 flex-wrap text-left">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{h.razao_social}</span>
-                      {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
-                      <Badge variant="outline">{h.tipo}</Badge>
-                      {imvs.length > 0 && (
-                        <Badge className="bg-orange-500/15 text-orange-700 border-orange-500/30" variant="outline">
-                          {imvs.length} imóve{imvs.length === 1 ? "l" : "is"}
-                        </Badge>
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pb-4">
-                    <div>
-                      <div className="text-xs uppercase text-muted-foreground mb-2">Sócios</div>
-                      <div className="space-y-1 text-sm">
-                        {h.socios.map((s, i) => {
-                          const m = membros.find((mm) => mm.id === s.membro_id);
-                          return (
-                            <div key={i} className="flex justify-between border-b last:border-0 py-1">
-                              <span>{m?.nome ?? s.membro_id}</span>
-                              <span className="font-medium">{s.percentual != null ? `${s.percentual}%` : "—"}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase text-muted-foreground mb-2">Imóveis vinculados</div>
-                      <ImoveisDbLista
-                        imoveis={imvs}
-                        defaultBadge="pj"
-                        holdingNomePorCnpj={holdingNomePorCnpj}
-                        temDivergencia={temDivergencia}
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        ) : (
-          <EmptyMsg msg="Nenhuma holding identificada." />
-        )}
-      </TabsContent>
-
-      <TabsContent value="imoveis" className="mt-4">
-        <ImoveisDbLista
-          imoveis={sorted}
-          showLocal
-          holdingNomePorCnpj={holdingNomePorCnpj}
-          temDivergencia={temDivergencia}
-        />
-      </TabsContent>
-
-      <TabsContent value="pf" className="mt-4">
-        <ImoveisDbLista
-          imoveis={imoveisPF}
-          defaultBadge="pf"
-          holdingNomePorCnpj={holdingNomePorCnpj}
-          temDivergencia={temDivergencia}
-        />
-      </TabsContent>
-
-      <TabsContent value="pj" className="mt-4">
-        <ImoveisDbLista
-          imoveis={imoveisPJ}
-          defaultBadge="pj"
-          holdingNomePorCnpj={holdingNomePorCnpj}
-          temDivergencia={temDivergencia}
-        />
-      </TabsContent>
-    </Tabs>
-  );
+  return <HoldingsChecklist familiaId={familiaId} holdings={holdings} userId={userId} />;
 }
 
 function ImoveisDbLista({
