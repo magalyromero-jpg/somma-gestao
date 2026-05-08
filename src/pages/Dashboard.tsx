@@ -215,10 +215,52 @@ export default function Dashboard() {
       {!isLoading && !error && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <KpiCard label="Famílias" value={String(k.total_familias)} icon={<Users className="h-4 w-4" />} hint="ativas" />
-            <KpiCard label="Imóveis" value={String(k.total_imoveis)} icon={<Building2 className="h-4 w-4" />} hint="no portfólio" />
-            <KpiCard label="Valor de mercado" value={formatBRL(k.valor_mercado, { compact: true })} icon={<TrendingUp className="h-4 w-4" />} />
-            <KpiCard label="Receita mensal" value={formatBRL(k.receita_mensal, { compact: true })} icon={<Wallet className="h-4 w-4" />} hint="aluguéis ativos" />
+            <Link to="/familias" className="block">
+              <KpiCard
+                label="Famílias"
+                value={String(sbKpis?.familiasTotal ?? 0)}
+                icon={<Users className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${sbKpis.familiasOnboarding} em onboarding · ${sbKpis.familiasConcluidas} concluídos`
+                    : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/imoveis" className="block">
+              <KpiCard
+                label="Imóveis"
+                value={String(sbKpis?.imoveisTotal ?? 0)}
+                icon={<Building2 className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${formatBRL(sbKpis.patrimonioTotal, { compact: true })} patrimônio total`
+                    : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/imoveis?status=pendentes" className="block">
+              <KpiCard
+                label="Documentos pendentes"
+                value={String(sbKpis?.docsPendentes ?? 0)}
+                icon={<FileWarning className="h-4 w-4" />}
+                hint={
+                  sbKpis ? `${sbKpis.imoveisCompletos} imóveis com checklist completo` : "carregando…"
+                }
+              />
+            </Link>
+            <Link to="/familias" className="block">
+              <KpiCard
+                label="Alertas"
+                value={String((sbKpis?.alertasCriticos ?? 0) + (sbKpis?.alertasAtencao ?? 0))}
+                icon={<AlertTriangle className="h-4 w-4" />}
+                hint={
+                  sbKpis
+                    ? `${sbKpis.alertasCriticos} críticos · ${sbKpis.alertasAtencao} atenção`
+                    : "carregando…"
+                }
+              />
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
