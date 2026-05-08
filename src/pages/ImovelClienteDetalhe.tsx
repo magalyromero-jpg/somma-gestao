@@ -290,6 +290,8 @@ export default function ImovelClienteDetalhe() {
             <DataRow label="Cartório" value={imovelData.cartorio ?? "—"} />
             <DataRow label="Data de aquisição" value={imovelData.data_aquisicao ?? "—"} />
             <DataRow label="CEP" value={imovelData.cep ?? "—"} />
+            <DataRow label="Unidade consumidora (energia)" value={(imovel as any).unidade_consumidora ?? "—"} />
+            <DataRow label="Inscrição municipal (IPTU)" value={(imovel as any).inscricao_municipal ?? "—"} />
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Sem dados extraídos para este imóvel ainda.</p>
