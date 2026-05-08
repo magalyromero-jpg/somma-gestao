@@ -941,7 +941,7 @@ function DocumentosTab({
           </Accordion>
 
           <div className="text-xs text-muted-foreground border-t pt-3">
-            Documentos por imóvel ficam na aba <strong>Diligência</strong>.
+            Documentos por imóvel ficam na aba <strong>Imóveis</strong>.
           </div>
         </CardContent>
       </Card>
