@@ -2,12 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { useFamilias, useImoveis } from "@/hooks/useApiData";
-import { computeFamiliaKpis } from "@/lib/lidderar-adapters";
-import { formatBRL, formatPct, pctClass } from "@/lib/format";
-import { ArrowUpRight, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowUpRight, MoreVertical, Trash2, Building2, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LoadingSkeleton, ErrorState } from "@/components/LoadingState";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
@@ -26,8 +22,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { LoadingSkeleton } from "@/components/LoadingState";
 
-interface FamiliaOnboarding {
+interface FamiliaRow {
   id: string;
   nome: string;
   sede: string | null;
@@ -35,49 +32,58 @@ interface FamiliaOnboarding {
   updated_at: string;
 }
 
-const PERFIS = ["Family Office", "Banco de Dados", "Lidderar"] as const;
+const CORES = ["#CC8B15", "#185FA5", "#2D7A4F", "#8B2D5F", "#5F2D8B", "#A55A1B"];
+const corPara = (id: string) => CORES[id.charCodeAt(0) % CORES.length];
 
 export default function Familias() {
-  const { familias, isLoading: loadingF, error: errorF } = useFamilias();
-  const { imoveis, isLoading: loadingI, error: errorI } = useImoveis();
-  const [view, setView] = useState<"conta" | "perfil">("conta");
-  const [onboardings, setOnboardings] = useState<FamiliaOnboarding[]>([]);
+  const [familias, setFamilias] = useState<FamiliaRow[]>([]);
+  const [imoveisCount, setImoveisCount] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [toDelete, setToDelete] = useState<FamiliaRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("familias_onboarding")
-        .select("id, nome, sede, patrimonio_data, updated_at")
-        .order("updated_at", { ascending: false });
-      setOnboardings((data ?? []) as FamiliaOnboarding[]);
+      setLoading(true);
+      const [{ data: fams }, { data: ims }] = await Promise.all([
+        supabase
+          .from("familias_onboarding")
+          .select("id, nome, sede, patrimonio_data, updated_at")
+          .order("updated_at", { ascending: false }),
+        supabase.from("imoveis_cliente").select("familia_id"),
+      ]);
+      setFamilias((fams ?? []) as FamiliaRow[]);
+      const counts: Record<string, number> = {};
+      (ims ?? []).forEach((i: any) => {
+        counts[i.familia_id] = (counts[i.familia_id] ?? 0) + 1;
+      });
+      setImoveisCount(counts);
+      setLoading(false);
     })();
   }, []);
-
-  const [toDelete, setToDelete] = useState<FamiliaOnboarding | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   async function excluirFamilia(id: string) {
     setDeleting(true);
     try {
-      // Buscar imóveis para deletar checklist por imovel_id
       const { data: imoveis } = await supabase
         .from("imoveis_cliente")
         .select("id")
         .eq("familia_id", id);
       const imovelIds = (imoveis ?? []).map((i) => i.id);
 
-      // Deletar em ordem: checklists -> imóveis -> documentos -> diligência -> família
       if (imovelIds.length > 0) {
         await supabase.from("checklist_imovel").delete().in("imovel_id", imovelIds);
       }
       await supabase.from("checklist_imovel").delete().eq("familia_id", id);
+      await supabase.from("checklist_holding").delete().eq("familia_id", id);
+      await supabase.from("checklist_outros_bens").delete().eq("familia_id", id);
       await supabase.from("imoveis_cliente").delete().eq("familia_id", id);
       await supabase.from("familia_documentos").delete().eq("familia_id", id);
       await supabase.from("familia_diligencia_itens").delete().eq("familia_id", id);
       const { error } = await supabase.from("familias_onboarding").delete().eq("id", id);
       if (error) throw error;
 
-      setOnboardings((prev) => prev.filter((o) => o.id !== id));
+      setFamilias((prev) => prev.filter((o) => o.id !== id));
       toast.success("Família excluída");
     } catch (e: any) {
       toast.error("Erro ao excluir", { description: e?.message });
@@ -87,166 +93,118 @@ export default function Familias() {
     }
   }
 
-  const isLoading = loadingF || loadingI;
-  const error = errorF || errorI;
-
-  // Aggregate by perfil for "Por Perfil" view.
-  const perfilGroups = useMemo(() => {
-    return PERFIS.map((perfil) => {
-      const list = imoveis.filter((i) => i.perfis?.includes(perfil));
-      const valor_mercado = list.reduce((s, i) => s + i.valor_mercado, 0);
-      const valor_compra = list.reduce((s, i) => s + i.valor_compra, 0);
-      const receita_mensal = list.reduce(
-        (s, i) => s + (i.status === "Locado" ? i.valor_aluguel_mensal : 0),
-        0,
-      );
-      const valorizacao = valor_compra > 0 ? ((valor_mercado - valor_compra) / valor_compra) * 100 : 0;
-      return {
-        id: perfil,
-        nome: perfil,
-        cor_avatar: perfil === "Family Office" ? "#CC8B15" : perfil === "Banco de Dados" ? "#185FA5" : "#2D7A4F",
-        total: list.length,
-        valor_mercado,
-        valor_compra,
-        receita_mensal,
-        valorizacao,
-        locados: list.filter((i) => i.status === "Locado").length,
-        vagos: list.filter((i) => i.status === "Vago").length,
-        carencia: list.filter((i) => i.status === "Carencia").length,
-        inativos: list.filter((i) => ["Inativo", "Vendido", "Doado"].includes(i.status)).length,
-      };
-    });
-  }, [imoveis]);
+  const cards = useMemo(
+    () =>
+      familias.map((f) => {
+        const concluido = !!f.patrimonio_data;
+        const sede = f.patrimonio_data?.familia?.sede ?? f.sede ?? null;
+        const holdings = f.patrimonio_data?.holdings?.length ?? 0;
+        const imoveis = imoveisCount[f.id] ?? f.patrimonio_data?.imoveis?.length ?? 0;
+        return { f, concluido, sede, holdings, imoveis };
+      }),
+    [familias, imoveisCount],
+  );
 
   return (
     <>
       <PageHeader title="Famílias" subtitle="Portfólios sob gestão Somma MFO" />
 
-      {onboardings.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-            Onboardings Somma ({onboardings.length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {onboardings.map((o) => {
-              const concluido = !!o.patrimonio_data;
-              const totalImoveis = o.patrimonio_data?.imoveis?.length ?? 0;
-              const totalHoldings = o.patrimonio_data?.holdings?.length ?? 0;
-              const href = concluido ? `/familias-onboarding/${o.id}` : `/onboarding/${o.id}`;
-              return (
-                <div key={o.id} className="relative group">
-                  <Link to={href}>
-                    <Card className="hover:shadow-elevated transition-shadow border-border/70 group-hover:border-gold/60 h-full">
-                      <CardContent className="p-5 space-y-3">
-                        <div className="flex items-start justify-between gap-2 pr-8">
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate">{o.nome}</div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {o.sede ?? "Onboarding"} · atualizado{" "}
-                              {new Date(o.updated_at).toLocaleDateString("pt-BR")}
-                            </div>
-                          </div>
-                          <span
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0",
-                              concluido
-                                ? "bg-success/10 text-success border-success/30"
-                                : "bg-warning/10 text-warning border-warning/30",
-                            )}
-                          >
-                            {concluido ? "Concluído" : "Em progresso"}
-                          </span>
-                        </div>
-                        {concluido && (
-                          <div className="flex gap-3 text-xs text-muted-foreground">
-                            <span>{totalImoveis} imóveis</span>
-                            <span>·</span>
-                            <span>{totalHoldings} holdings</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  <div className="absolute top-3 right-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          onClick={(e) => e.preventDefault()}
-                          aria-label="Ações"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            setToDelete(o);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+      {loading && <LoadingSkeleton rows={6} />}
+
+      {!loading && familias.length === 0 && (
+        <Card className="p-8 text-center text-muted-foreground">
+          Nenhuma família cadastrada. Inicie um onboarding para começar.
+        </Card>
       )}
 
-      <div className="inline-flex rounded-lg border border-border p-1 mb-6 bg-muted/30">
-        {([
-          { id: "conta", label: "Por Conta" },
-          { id: "perfil", label: "Por Perfil" },
-        ] as const).map((opt) => (
-          <button
-            key={opt.id}
-            onClick={() => setView(opt.id)}
-            className={cn(
-              "px-4 py-1.5 text-xs font-medium rounded-md transition-colors",
-              view === opt.id
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {error && <ErrorState error={error} hint="Verifique o token Lidderar em /configuracoes." />}
-      {isLoading && <LoadingSkeleton rows={6} />}
-
-      {!isLoading && !error && (
+      {!loading && familias.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {view === "conta" &&
-            familias.map((f) => {
-              const k = computeFamiliaKpis(imoveis, f.id);
-              return (
-                <FamiliaCard
-                  key={f.id}
-                  href={`/familias/${f.id}`}
-                  nome={f.nome}
-                  cor={f.cor_avatar}
-                  k={k}
-                />
-              );
-            })}
+          {cards.map(({ f, concluido, sede, holdings, imoveis }) => {
+            const cor = corPara(f.id);
+            const href = concluido ? `/familias-onboarding/${f.id}` : `/onboarding/${f.id}`;
+            return (
+              <div key={f.id} className="relative group">
+                <Link to={href}>
+                  <Card className="shadow-card hover:shadow-elevated transition-all border-border/70 group-hover:border-gold/60 h-full">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4 mb-5 pr-8">
+                        <div
+                          className="h-12 w-12 rounded-full grid place-items-center text-white font-semibold shrink-0"
+                          style={{ backgroundColor: cor }}
+                        >
+                          {f.nome.split(" ").pop()?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-foreground truncate">{f.nome}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {sede ?? "Sede não informada"}
+                          </div>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-gold transition-colors" />
+                      </div>
 
-          {view === "perfil" &&
-            perfilGroups.map((g) => (
-              <FamiliaCard key={g.id} nome={g.nome} cor={g.cor_avatar} k={g} />
-            ))}
+                      <div className="flex items-center justify-between mb-4">
+                        <span
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider",
+                            concluido
+                              ? "bg-success/10 text-success border-success/30"
+                              : "bg-warning/10 text-warning border-warning/30",
+                          )}
+                        >
+                          {concluido ? "Concluído" : "Em progresso"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          atualizado {new Date(f.updated_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
 
-          {view === "conta" && familias.length === 0 && (
-            <Card className="p-8 text-center text-muted-foreground col-span-full">
-              Nenhuma família retornada pela API Lidderar.
-            </Card>
-          )}
+                      <div className="grid grid-cols-2 gap-3 pt-4 border-t">
+                        <div className="flex items-center gap-2">
+                          <Home className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-base font-semibold leading-none">{imoveis}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">Imóveis</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-base font-semibold leading-none">{holdings}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">Holdings</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <div className="absolute top-3 right-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        onClick={(e) => e.preventDefault()}
+                        aria-label="Ações"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setToDelete(f);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -277,89 +235,3 @@ export default function Familias() {
     </>
   );
 }
-
-interface KpiShape {
-  total: number;
-  valor_mercado: number;
-  valorizacao: number;
-  receita_mensal: number;
-  locados: number;
-  vagos: number;
-  carencia: number;
-  inativos: number;
-}
-
-const FamiliaCard = ({
-  href,
-  nome,
-  cor,
-  k,
-}: {
-  href?: string;
-  nome: string;
-  cor: string;
-  k: KpiShape;
-}) => {
-  const inner = (
-    <Card className="shadow-card hover:shadow-elevated transition-all border-border/70 group-hover:border-gold/60 h-full">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4 mb-5">
-          <div
-            className="h-12 w-12 rounded-full grid place-items-center text-white font-semibold shrink-0"
-            style={{ backgroundColor: cor }}
-          >
-            {nome.split(" ").pop()?.[0]}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground truncate">{nome}</div>
-            <div className="text-xs text-muted-foreground">{k.total} imóveis</div>
-          </div>
-          {href && <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-gold transition-colors" />}
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">Valor de mercado</span>
-            <span className="text-lg font-semibold">{formatBRL(k.valor_mercado, { compact: true })}</span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">Valorização</span>
-            <span className={cn("text-sm", pctClass(k.valorizacao))}>{formatPct(k.valorizacao)}</span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">Receita mensal</span>
-            <span className="text-sm font-medium">{formatBRL(k.receita_mensal, { compact: true })}</span>
-          </div>
-        </div>
-
-        <div className="mt-5 pt-4 border-t flex flex-wrap gap-2">
-          <Pill color="success" label={`${k.locados} Locados`} />
-          {k.carencia > 0 && <Pill color="warning" label={`${k.carencia} Carência`} />}
-          {k.vagos > 0 && <Pill color="destructive" label={`${k.vagos} Vagos`} />}
-          {k.inativos > 0 && <Pill color="neutral" label={`${k.inativos} Inativos`} />}
-        </div>
-      </CardContent>
-    </Card>
-  );
-  return href ? (
-    <Link to={href} className="group">
-      {inner}
-    </Link>
-  ) : (
-    <div className="group">{inner}</div>
-  );
-};
-
-const Pill = ({ color, label }: { color: "success" | "warning" | "destructive" | "neutral"; label: string }) => (
-  <span
-    className={cn(
-      "inline-flex items-center text-[11px] px-2 py-0.5 rounded-full border",
-      color === "success" && "bg-success/10 text-success border-success/30",
-      color === "warning" && "bg-warning/10 text-warning border-warning/30",
-      color === "destructive" && "bg-destructive/10 text-destructive border-destructive/30",
-      color === "neutral" && "bg-neutral/10 text-neutral border-neutral/30",
-    )}
-  >
-    {label}
-  </span>
-);
