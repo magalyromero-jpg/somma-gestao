@@ -29,7 +29,34 @@ const TIPO_OPERACAO_OPTIONS = [
   { value: "para_venda", label: "Para venda" },
   { value: "valorizacao", label: "Valorização" },
   { value: "uso_familiar", label: "Uso familiar" },
+  { value: "desenvolvimento_renda", label: "Desenvolvimento p/ renda" },
+  { value: "desenvolvimento_venda", label: "Desenvolvimento p/ venda" },
+  { value: "loteamento", label: "Loteamento" },
 ];
+
+export const STATUS_ATUAL_OPTIONS = [
+  { value: "locado", label: "Locado" },
+  { value: "disp_locacao", label: "Disponível para locação" },
+  { value: "a_venda", label: "À venda" },
+  { value: "em_obra", label: "Em obra" },
+  { value: "uso_proprio", label: "Uso próprio" },
+  { value: "vago", label: "Vago" },
+];
+
+export function statusAtualBadgeClass(v?: string | null) {
+  switch (v) {
+    case "locado": return "bg-emerald-500/15 text-emerald-700 border-emerald-500/30";
+    case "disp_locacao": return "bg-blue-500/15 text-blue-700 border-blue-500/30";
+    case "a_venda": return "bg-purple-500/15 text-purple-700 border-purple-500/30";
+    case "em_obra": return "bg-amber-500/15 text-amber-700 border-amber-500/30";
+    case "uso_proprio": return "bg-indigo-500/15 text-indigo-700 border-indigo-500/30";
+    case "vago": return "bg-muted text-muted-foreground border-border";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
+}
+export function statusAtualLabel(v?: string | null) {
+  return STATUS_ATUAL_OPTIONS.find((o) => o.value === v)?.label ?? null;
+}
 
 function parseBrDate(s?: string | null): { iso: string | null; year: number | null } {
   if (!s) return { iso: null, year: null };
@@ -56,6 +83,8 @@ function toBrDate(iso?: string | null) {
 }
 
 const CAMPOS_SALVAR = [
+  "status_atual",
+  "mes_referencia_energia", "inscricao_municipal",
   "tipo_locacao", "contrato_inicio", "contrato_fim",
   "imobiliaria_nome", "imobiliaria_email", "imobiliaria_telefone",
   "valor_locacao_atual", "valor_locacao_inicial", "data_inicio_locacao",
@@ -64,7 +93,7 @@ const CAMPOS_SALVAR = [
   "admin_shortstay_telefone", "receita_media_mensal",
   "condominio_nome", "condominio_admin_nome", "condominio_admin_email",
   "condominio_admin_telefone", "taxa_condominio", "vencimento_condominio",
-  "unidade_consumidora", "distribuidora_energia", "hidrometro", "matricula_agua",
+  "unidade_consumidora", "distribuidora", "distribuidora_energia", "hidrometro", "matricula_agua",
   "valor_aquisicao", "data_aquisicao", "indice_correcao",
   "taxa_administracao_pct", "valor_iptu_anual",
   // certidões (usando colunas existentes)
@@ -81,7 +110,7 @@ export function GestaoImovelSection({
   const [form, setForm] = useState<DbImovel>(dbImovel ?? {});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setForm(dbImovel ?? {}); }, [dbImovel?.id]);
+  useEffect(() => { setForm(dbImovel ?? {}); }, [dbImovel?.id, dbImovel?.updated_at]);
 
   if (!dbImovel) {
     return (
@@ -115,21 +144,38 @@ export function GestaoImovelSection({
 
   return (
     <div className="space-y-6">
-      {/* Tipo de operação */}
+      {/* Tipo de operação + Status atual */}
       <Card>
-        <CardContent className="p-4 space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
-          <div className="flex flex-wrap gap-2">
-            {TIPO_OPERACAO_OPTIONS.map((o) => (
-              <Button
-                key={o.value}
-                size="sm"
-                variant={tipoOperacao === o.value ? "default" : "outline"}
-                onClick={() => onTipoOperacaoChange?.(o.value)}
-              >
-                {o.label}
-              </Button>
-            ))}
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
+            <div className="flex flex-wrap gap-2">
+              {TIPO_OPERACAO_OPTIONS.map((o) => (
+                <Button
+                  key={o.value}
+                  size="sm"
+                  variant={tipoOperacao === o.value ? "default" : "outline"}
+                  onClick={() => onTipoOperacaoChange?.(o.value)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_ATUAL_OPTIONS.map((o) => (
+                <Button
+                  key={o.value}
+                  size="sm"
+                  variant={form.status_atual === o.value ? "default" : "outline"}
+                  onClick={() => set("status_atual", o.value)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -235,21 +281,12 @@ export function GestaoImovelSection({
 
       {/* Utilidades */}
       {showUtilidades && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h5 className="font-semibold text-sm">⚡ Utilidades</h5>
-            <div className="grid md:grid-cols-2 gap-3">
-              <Field label="Unidade consumidora (energia)" value={form.unidade_consumidora} onChange={(v) => set("unidade_consumidora", v)} />
-              <Field label="Distribuidora" value={form.distribuidora_energia} onChange={(v) => set("distribuidora_energia", v)} />
-              <Field label="Hidrômetro" value={form.hidrometro} onChange={(v) => set("hidrometro", v)} />
-              <Field label="Matrícula de água" value={form.matricula_agua} onChange={(v) => set("matricula_agua", v)} />
-            </div>
-          </CardContent>
-        </Card>
+        <UtilidadesBlock form={form} set={set} />
       )}
 
-      {/* Certidões */}
-      <CertidoesBlock form={form} set={set} />
+      {/* Certidões — vinculadas ao checklist do imóvel */}
+      <CertidoesBlock dbImovel={dbImovel} form={form} set={set} familiaId={familiaId} onSaved={onSaved} />
+
 
       <div className="flex justify-end">
         <Button onClick={salvar} disabled={saving}>
@@ -753,56 +790,263 @@ function badgeCertidao(validade?: string | null) {
   return { cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30", txt: "🟢 Válida" };
 }
 
-function CertidoesBlock({
+/* ============== UTILIDADES (com badge de extração) ============== */
+function UtilidadesBlock({
   form, set,
 }: { form: DbImovel; set: (k: string, v: any) => void }) {
-  const [editing, setEditing] = useState<string | null>(null);
+  const meta = form.extracao_meta ?? {};
+  const fields: Array<{ k: string; label: string }> = [
+    { k: "unidade_consumidora", label: "Unidade consumidora (energia)" },
+    { k: "distribuidora", label: "Distribuidora" },
+    { k: "mes_referencia_energia", label: "Mês referência energia (MM/YYYY)" },
+    { k: "hidrometro", label: "Hidrômetro" },
+    { k: "matricula_agua", label: "Matrícula de água" },
+    { k: "inscricao_municipal", label: "Inscrição municipal (IPTU)" },
+  ];
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
-        <h5 className="font-semibold text-sm flex items-center gap-2"><FileCheck className="h-4 w-4" /> Certidões</h5>
-        <div className="space-y-2">
-          {CERTIDOES.map((c) => {
-            const b = badgeCertidao(form[c.val]);
+        <h5 className="font-semibold text-sm">⚡ Utilidades</h5>
+        <div className="grid md:grid-cols-2 gap-3">
+          {fields.map((f) => {
+            const m = meta?.[f.k];
             return (
-              <div
-                key={c.key}
-                className="flex items-center justify-between gap-3 p-2.5 border rounded-md text-sm cursor-pointer hover:bg-muted/40"
-                onClick={() => setEditing(editing === c.key ? null : c.key)}
-              >
-                <div className="flex-1">
-                  <div className="font-medium">{c.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Emissão: {form[c.emi] ? new Date(form[c.emi]).toLocaleDateString("pt-BR") : "—"} · Validade: {form[c.val] ? new Date(form[c.val]).toLocaleDateString("pt-BR") : "—"}
-                  </div>
-                </div>
-                <Badge variant="outline" className={b.cls}>{b.txt}</Badge>
+              <div key={f.k} className="space-y-1">
+                <Label className="text-xs">{f.label}</Label>
+                <Input value={form[f.k] ?? ""} onChange={(e) => set(f.k, e.target.value)} />
+                {m?.fonte && (
+                  <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] font-normal">
+                    Extraído de {m.fonte}{m.ref ? ` · ref. ${m.ref}` : ""}
+                  </Badge>
+                )}
               </div>
             );
           })}
         </div>
-
-        {editing && (() => {
-          const c = CERTIDOES.find((x) => x.key === editing)!;
-          return (
-            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
-              <div className="text-sm font-medium">{c.label}</div>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Data de emissão" type="date" value={form[c.emi]} onChange={(v) => set(c.emi, v || null)} />
-                <Field label="Validade" type="date" value={form[c.val]} onChange={(v) => set(c.val, v || null)} />
-              </div>
-              <div className="text-[11px] text-muted-foreground">
-                Anexe o documento na aba <strong>Documentos</strong> ou via Checklist com a categoria correspondente. As datas são salvas ao clicar em <strong>Salvar gestão</strong>.
-              </div>
-              <div className="flex justify-end">
-                <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Fechar</Button>
-              </div>
-            </div>
-          );
-        })()}
       </CardContent>
     </Card>
   );
+}
+
+/* ============== CERTIDÕES (document-driven via checklist) ============== */
+function CertidoesBlock({
+  dbImovel, form, set, familiaId, onSaved,
+}: {
+  dbImovel: DbImovel;
+  form: DbImovel;
+  set: (k: string, v: any) => void;
+  familiaId?: string;
+  onSaved: () => Promise<void>;
+}) {
+  const [items, setItems] = useState<any[]>([]);
+  const [docs, setDocs] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [manualEdit, setManualEdit] = useState<string | null>(null);
+
+  async function carregar() {
+    if (!dbImovel?.id) return;
+    setLoading(true);
+    const itemIds = CERTIDOES.map((c) => c.key);
+    const { data: cl } = await supabase
+      .from("checklist_imovel")
+      .select("id, item_id, status, documento_id, data_recebimento")
+      .eq("imovel_id", dbImovel.id)
+      .in("item_id", itemIds);
+    setItems(cl ?? []);
+    const docIds = (cl ?? []).map((c: any) => c.documento_id).filter(Boolean);
+    if (docIds.length) {
+      const { data: ds } = await supabase
+        .from("familia_documentos")
+        .select("id, nome_arquivo, storage_path, recebido_em")
+        .in("id", docIds);
+      const map: Record<string, any> = {};
+      (ds ?? []).forEach((d: any) => { map[d.id] = d; });
+      setDocs(map);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [dbImovel?.id]);
+
+  async function anexar(certidao: typeof CERTIDOES[number], file: File) {
+    if (!dbImovel?.id || !familiaId) return;
+    setUploading(certidao.key);
+    try {
+      const path = `${familiaId}/${dbImovel.id}/${certidao.key}-${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("familia-documentos").upload(path, file);
+      if (upErr) throw upErr;
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { data: doc, error: docErr } = await supabase
+        .from("familia_documentos")
+        .insert({
+          familia_id: familiaId,
+          nome_arquivo: file.name,
+          storage_path: path,
+          tipo: certidao.key,
+          categoria: "imovel",
+          imovel_ref: dbImovel.id,
+          created_by: userId,
+        } as any)
+        .select()
+        .single();
+      if (docErr) throw docErr;
+
+      // ensure checklist row exists
+      let checklistRow = items.find((i) => i.item_id === certidao.key);
+      if (!checklistRow) {
+        const { data: novo } = await supabase
+          .from("checklist_imovel")
+          .insert({
+            imovel_id: dbImovel.id,
+            familia_id: familiaId,
+            item_id: certidao.key,
+            label: certidao.label,
+            opcional: true,
+            status: "recebido",
+            documento_id: doc!.id,
+            data_recebimento: new Date().toISOString(),
+          } as any)
+          .select()
+          .single();
+        checklistRow = novo;
+      } else {
+        await supabase
+          .from("checklist_imovel")
+          .update({ status: "recebido", documento_id: doc!.id, data_recebimento: new Date().toISOString() })
+          .eq("id", checklistRow.id);
+      }
+
+      // chamar extração via Claude
+      let extraidos = false;
+      try {
+        const base64 = await fileToBase64(file);
+        const { data: extr } = await supabase.functions.invoke("extract-imovel-doc", {
+          body: { file: { name: file.name, mimeType: file.type || "application/pdf", base64 }, hint: certidao.key },
+        });
+        const result = extr?.data;
+        const patch: any = {};
+        if (result?.certidao?.data_emissao) patch[certidao.emi] = result.certidao.data_emissao;
+        if (result?.certidao?.validade) patch[certidao.val] = result.certidao.validade;
+
+        // utilidades
+        const u = result?.utilidades ?? {};
+        const meta: any = { ...(form.extracao_meta ?? {}) };
+        const ref = u.mes_referencia ?? null;
+        const utilFields: Array<[string, any]> = [
+          ["unidade_consumidora", u.unidade_consumidora],
+          ["distribuidora", u.distribuidora],
+          ["mes_referencia_energia", u.mes_referencia],
+          ["hidrometro", u.hidrometro],
+          ["matricula_agua", u.matricula_agua],
+          ["inscricao_municipal", u.inscricao_municipal],
+        ];
+        for (const [k, v] of utilFields) {
+          if (v) {
+            patch[k] = v;
+            meta[k] = { fonte: file.name, ref };
+          }
+        }
+        if (Object.keys(meta).length) patch.extracao_meta = meta;
+
+        if (Object.keys(patch).length) {
+          await supabase.from("imoveis_cliente").update(patch).eq("id", dbImovel.id);
+          extraidos = true;
+        }
+      } catch (e) {
+        console.warn("Extração falhou:", e);
+      }
+
+      toast.success(extraidos ? `${certidao.label} anexada e dados extraídos ✓` : `${certidao.label} anexada — preencha as datas manualmente`);
+      if (!extraidos) setManualEdit(certidao.key);
+      await carregar();
+      await onSaved();
+    } catch (e: any) {
+      toast.error("Erro ao anexar", { description: e?.message });
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function verArquivo(storage_path: string) {
+    const { data } = await supabase.storage.from("familia-documentos").createSignedUrl(storage_path, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <h5 className="font-semibold text-sm flex items-center gap-2"><FileCheck className="h-4 w-4" /> Certidões e documentos do imóvel</h5>
+        {loading ? (
+          <div className="text-xs text-muted-foreground">Carregando…</div>
+        ) : (
+          <div className="space-y-2">
+            {CERTIDOES.map((c) => {
+              const item = items.find((i) => i.item_id === c.key);
+              const doc = item?.documento_id ? docs[item.documento_id] : null;
+              const b = badgeCertidao(form[c.val]);
+              const recebido = item?.status === "recebido";
+              return (
+                <div key={c.key} className="border rounded-md p-2.5 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        {recebido ? "✓" : "☐"} {c.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Emissão: {form[c.emi] ? new Date(form[c.emi]).toLocaleDateString("pt-BR") : "—"} · Validade: {form[c.val] ? new Date(form[c.val]).toLocaleDateString("pt-BR") : "—"}
+                        {doc && <> · <button onClick={() => verArquivo(doc.storage_path)} className="underline hover:text-foreground">{doc.nome_arquivo}</button></>}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={b.cls}>{b.txt}</Badge>
+                    <label className={cn(
+                      "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border cursor-pointer hover:bg-muted",
+                      uploading === c.key && "opacity-50 cursor-wait",
+                    )}>
+                      <Plus className="h-3 w-3" />
+                      {uploading === c.key ? "..." : (recebido ? "Substituir" : "Anexar")}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="hidden"
+                        disabled={uploading === c.key}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) anexar(c, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => setManualEdit(manualEdit === c.key ? null : c.key)}>
+                      Editar datas
+                    </Button>
+                  </div>
+                  {manualEdit === c.key && (
+                    <div className="grid md:grid-cols-2 gap-3 pt-2 border-t">
+                      <Field label="Data de emissão" type="date" value={form[c.emi]} onChange={(v) => set(c.emi, v || null)} />
+                      <Field label="Validade" type="date" value={form[c.val]} onChange={(v) => set(c.val, v || null)} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-muted-foreground">
+          Ao anexar uma certidão, datas de emissão e validade são extraídas automaticamente. Se a extração falhar, edite manualmente.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve((r.result as string).split(",")[1] ?? "");
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 }
 
 function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {

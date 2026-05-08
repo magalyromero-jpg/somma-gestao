@@ -578,8 +578,10 @@ export type Database = {
           data_aquisicao: string | null
           data_inicio_locacao: string | null
           data_proximo_reajuste: string | null
+          distribuidora: string | null
           distribuidora_energia: string | null
           endereco: string | null
+          extracao_meta: Json | null
           familia_id: string
           hidrometro: string | null
           holding_cnpj: string | null
@@ -589,15 +591,18 @@ export type Database = {
           imobiliaria_telefone: string | null
           indice_correcao: string | null
           indice_locacao: string | null
+          inscricao_municipal: string | null
           locacao: boolean
           matricula: string | null
           matricula_agua: string | null
+          mes_referencia_energia: string | null
           nome: string
           origem: string
           periodicidade_reajuste: string | null
           plataforma_shortstay: string | null
           receita_media_mensal: number | null
           ref_id: string | null
+          status_atual: string | null
           taxa_administracao_pct: number | null
           taxa_condominio: number | null
           tipo_locacao: string | null
@@ -637,8 +642,10 @@ export type Database = {
           data_aquisicao?: string | null
           data_inicio_locacao?: string | null
           data_proximo_reajuste?: string | null
+          distribuidora?: string | null
           distribuidora_energia?: string | null
           endereco?: string | null
+          extracao_meta?: Json | null
           familia_id: string
           hidrometro?: string | null
           holding_cnpj?: string | null
@@ -648,15 +655,18 @@ export type Database = {
           imobiliaria_telefone?: string | null
           indice_correcao?: string | null
           indice_locacao?: string | null
+          inscricao_municipal?: string | null
           locacao?: boolean
           matricula?: string | null
           matricula_agua?: string | null
+          mes_referencia_energia?: string | null
           nome: string
           origem?: string
           periodicidade_reajuste?: string | null
           plataforma_shortstay?: string | null
           receita_media_mensal?: number | null
           ref_id?: string | null
+          status_atual?: string | null
           taxa_administracao_pct?: number | null
           taxa_condominio?: number | null
           tipo_locacao?: string | null
@@ -696,8 +706,10 @@ export type Database = {
           data_aquisicao?: string | null
           data_inicio_locacao?: string | null
           data_proximo_reajuste?: string | null
+          distribuidora?: string | null
           distribuidora_energia?: string | null
           endereco?: string | null
+          extracao_meta?: Json | null
           familia_id?: string
           hidrometro?: string | null
           holding_cnpj?: string | null
@@ -707,15 +719,18 @@ export type Database = {
           imobiliaria_telefone?: string | null
           indice_correcao?: string | null
           indice_locacao?: string | null
+          inscricao_municipal?: string | null
           locacao?: boolean
           matricula?: string | null
           matricula_agua?: string | null
+          mes_referencia_energia?: string | null
           nome?: string
           origem?: string
           periodicidade_reajuste?: string | null
           plataforma_shortstay?: string | null
           receita_media_mensal?: number | null
           ref_id?: string | null
+          status_atual?: string | null
           taxa_administracao_pct?: number | null
           taxa_condominio?: number | null
           tipo_locacao?: string | null
