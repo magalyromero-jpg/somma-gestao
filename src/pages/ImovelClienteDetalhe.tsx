@@ -302,9 +302,29 @@ export default function ImovelClienteDetalhe() {
           ))}
         </div>
       </Card>
-    </div>
-  );
-}
+
+      {/* Gestão completa */}
+      <Card className="p-6 shadow-card">
+        <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">Gestão do imóvel</h3>
+        <GestaoImovelSection
+          dbImovel={imovel}
+          tipoOperacao={(imovel as any)?.tipo_operacao ?? ""}
+          imovelIR={imovelData}
+          familiaId={imovel.familia_id}
+          onTipoOperacaoChange={async (novo) => {
+            const { error } = await supabase
+              .from("imoveis_cliente")
+              .update({ tipo_operacao: novo })
+              .eq("id", imovel.id);
+            if (error) {
+              toast.error("Erro ao salvar", { description: error.message });
+              return;
+            }
+            await carregar();
+          }}
+          onSaved={carregar}
+        />
+      </Card>
 
 function ChecklistCol({ titulo, cor, children }: { titulo: string; cor: string; children: React.ReactNode }) {
   return (
