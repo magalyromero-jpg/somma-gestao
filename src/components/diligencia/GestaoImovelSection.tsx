@@ -147,20 +147,18 @@ export function GestaoImovelSection({
       {/* Tipo de operação + Status atual */}
       <Card>
         <CardContent className="p-4 space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-sm">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
-            <div className="flex flex-wrap gap-2">
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={tipoOperacao ?? ""}
+              onChange={(e) => onTipoOperacaoChange?.(e.target.value)}
+            >
+              <option value="">Selecione…</option>
               {TIPO_OPERACAO_OPTIONS.map((o) => (
-                <Button
-                  key={o.value}
-                  size="sm"
-                  variant={tipoOperacao === o.value ? "default" : "outline"}
-                  onClick={() => onTipoOperacaoChange?.(o.value)}
-                >
-                  {o.label}
-                </Button>
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
-            </div>
+            </select>
           </div>
           <div className="space-y-2 pt-2 border-t">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>
