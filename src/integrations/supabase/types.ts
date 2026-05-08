@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          acao: string
+          antes: Json | null
+          autor_id: string | null
+          autor_nome: string | null
+          created_at: string
+          depois: Json | null
+          entidade: string
+          entidade_id: string | null
+          familia_id: string | null
+          id: string
+        }
+        Insert: {
+          acao: string
+          antes?: Json | null
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          depois?: Json | null
+          entidade: string
+          entidade_id?: string | null
+          familia_id?: string | null
+          id?: string
+        }
+        Update: {
+          acao?: string
+          antes?: Json | null
+          autor_id?: string | null
+          autor_nome?: string | null
+          created_at?: string
+          depois?: Json | null
+          entidade?: string
+          entidade_id?: string | null
+          familia_id?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      checklist_holding: {
+        Row: {
+          data_recebimento: string | null
+          documento_id: string | null
+          familia_id: string
+          holding_id: string
+          id: string
+          item_id: string
+          label: string
+          notas: string | null
+          opcional: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id: string
+          holding_id: string
+          id?: string
+          item_id: string
+          label: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id?: string
+          holding_id?: string
+          id?: string
+          item_id?: string
+          label?: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_holding_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "familia_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_imovel: {
         Row: {
           data_recebimento: string | null
@@ -74,6 +163,62 @@ export type Database = {
             columns: ["imovel_id"]
             isOneToOne: false
             referencedRelation: "imoveis_cliente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_outros_bens: {
+        Row: {
+          bem_descricao: string | null
+          bem_ref_id: string | null
+          bem_tipo: string
+          data_recebimento: string | null
+          documento_id: string | null
+          familia_id: string
+          id: string
+          item_id: string
+          label: string
+          notas: string | null
+          opcional: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bem_descricao?: string | null
+          bem_ref_id?: string | null
+          bem_tipo: string
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id: string
+          id?: string
+          item_id: string
+          label: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bem_descricao?: string | null
+          bem_ref_id?: string | null
+          bem_tipo?: string
+          data_recebimento?: string | null
+          documento_id?: string | null
+          familia_id?: string
+          id?: string
+          item_id?: string
+          label?: string
+          notas?: string | null
+          opcional?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_outros_bens_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "familia_documentos"
             referencedColumns: ["id"]
           },
         ]

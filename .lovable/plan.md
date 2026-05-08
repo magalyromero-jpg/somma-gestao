@@ -1,112 +1,87 @@
+## Objetivo
+Reorganizar abas do Mapa da Família, criar checklists para Holdings e Outros Bens (com geração automática ao processar IR) e adicionar nova seção de Veículos/Investimentos/Cripto/Exterior.
 
-# Escopo
+## Parte 1 — Renomeações de abas (`src/pages/MapaFamilia.tsx`)
+- Aba `Diligência` → **Imóveis**
+- Aba `Holdings & Imóveis` → **Holdings**
+- Em `HoldingsTab`: remover sub-abas `Imóveis`, `Imóveis na PF`, `Imóveis na PJ`. Manter apenas conteúdo de holdings (sem `Tabs` interno).
+- Atualizar texto auxiliar: "Documentos por imóvel ficam na aba **Imóveis**".
 
-Duas frentes independentes, entregues no mesmo ciclo:
+## Parte 2 — Checklist por Holding
+**Banco** (`supabase--migration`):
+```sql
+CREATE TABLE public.checklist_holding (
+  id uuid PK default gen_random_uuid(),
+  holding_id text NOT NULL,
+  familia_id uuid NOT NULL,  -- referencia familias_onboarding(id) (padrão usado nas outras checklists)
+  item_id text NOT NULL,
+  label text NOT NULL,
+  opcional boolean DEFAULT false,
+  status text DEFAULT 'pendente',
+  documento_id uuid REFERENCES familia_documentos(id),
+  data_recebimento timestamptz,
+  notas text,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(holding_id, familia_id, item_id)
+);
+-- RLS: mesmo padrão de checklist_imovel (acesso via familias_onboarding.created_by ou role gestor)
+```
+Observação: o spec menciona `familias(id)` e `documentos_cliente(id)`, mas o projeto usa `familias_onboarding` + `familia_documentos` — vou alinhar com o padrão existente.
 
-1. **Gestão de usuários** com convite por email, reset de senha e 3 perfis (admin/gestor/analista).
-2. **Tela de imóveis redesenhada** sobre `imoveis_cliente` + `checklist_imovel`, com aba que preserva o acesso ao Lidderar atual.
+**Constante** em novo arquivo `src/lib/onboarding/checklistHolding.ts` com `CHECKLIST_HOLDING`.
 
-Para a Parte 3 (convite), assumindo o caminho default: edge function `invite-user` usando service role + templates de email padrão do Supabase. Customização de templates fica como passo opcional posterior.
+**Geração automática**: na etapa que processa IR e cria holdings (procurar em `OnboardingFamilia.tsx` / `enrich-patrimonial`), após salvar holdings, fazer upsert dos itens do checklist. Pular `tipo === "encerrada"`.
 
----
+**UI** em `HoldingsTab` (MapaFamilia):
+- Cada holding vira card expansível (`Collapsible`) com:
+  - Header: razão social, CNPJ, badge tipo, contador `X/N documentos`.
+  - Conteúdo: lista de itens do checklist com checkbox de status + botão "Anexar" (abre upload contextual existente, ou placeholder por ora vinculando a `familia_documentos`).
 
-# Parte 1 — Gestão de usuários
-
-## Banco
-
-- Estender enum `app_role`: adicionar `'admin'` e `'analista'` (mantém `'gestor'` e `'familia'`).
-- Migrar usuários atuais com role `'gestor'` para `'admin'` (admin = pode convidar; gestor = acesso total exceto gestão de usuários).
-- Função `has_role()` continua funcionando sem mudanças.
-- Adicionar coluna `status` em `profiles` (`pendente` | `ativo` | `inativo`, default `pendente`).
-- Trigger `on_auth_user_email_confirmed`: ao confirmar email, marca `profiles.status = 'ativo'`.
-- Política nova em `user_roles`: admins podem gerenciar roles; gestores apenas leem.
-
-## Edge function `invite-user`
-
-- Verifica que o chamador é `admin` (via JWT + `has_role`).
-- Valida payload com zod (`nome`, `email`, `perfil`).
-- Chama `auth.admin.inviteUserByEmail` com `redirectTo = {SITE_URL}/auth/set-password` e metadata `{ nome_completo, perfil }`.
-- Insere/atualiza `profiles` (nome, email, status `pendente`) e `user_roles` (perfil escolhido).
-
-## Frontend
-
-- Nova rota `/configuracoes/usuarios` (protegida — só admin).
-- Item adicional no menu (ou subnav dentro de Configurações).
-- Tabela: Nome · Email · Perfil · Status · ações (mudar perfil, desativar/reativar).
-- Modal "Convidar usuário": nome, email, select de perfil. Submit → `supabase.functions.invoke('invite-user', ...)`.
-- Páginas públicas:
-  - `/auth/forgot-password` — formulário de email + `resetPasswordForEmail`.
-  - `/auth/reset-password` — captura recovery do hash, `updateUser({ password })`.
-  - `/auth/set-password` — primeiro acesso via convite, mesmo fluxo.
-- Link "Esqueci minha senha" na tela de Login.
-
----
-
-# Parte 2 — Tela de imóveis
-
-## Rota `/imoveis` redesenhada com tabs
-
-```text
-[ Imóveis dos clientes ]   [ Lidderar (sincronizados) ]
+## Parte 3 — Outros Bens
+**Banco**:
+```sql
+CREATE TABLE public.checklist_outros_bens (
+  id uuid PK default gen_random_uuid(),
+  familia_id uuid NOT NULL,
+  bem_tipo text NOT NULL,        -- 'veiculo' | etc
+  bem_ref_id text,
+  bem_descricao text,
+  item_id text NOT NULL,
+  label text NOT NULL,
+  opcional boolean DEFAULT false,
+  status text DEFAULT 'pendente',
+  documento_id uuid REFERENCES familia_documentos(id),
+  data_recebimento timestamptz,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(familia_id, bem_ref_id, item_id)
+);
+-- RLS análogo
 ```
 
-A aba "Lidderar (sincronizados)" mantém o conteúdo atual da página, intocado, para não perder operação. A aba default é "Imóveis dos clientes".
+**Constante** `CHECKLIST_VEICULO` em `src/lib/onboarding/checklistOutrosBens.ts`.
 
-## Aba "Imóveis dos clientes"
+**Geração automática**: ao processar IR, iterar `dados.veiculos` (ignorando `alienado`) e fazer upsert.
 
-- Header: filtros (família, status do checklist, busca) + botão "+ Adicionar imóvel" (manual).
-- 4 cards de KPI: total imóveis, docs recebidos (X/Y + %), imóveis 100% completos, total de alertas.
-- Lista ordenada por `valor_declarado` desc. Cada card:
-  - Nome + endereço + valor.
-  - Família + holding/PJ.
-  - Barra de progresso (verde/amarelo/laranja/vermelho) com `recebidos/total`.
-  - Badges: prioritário (top 3 valor) + `forma_aquisicao`.
-- Query: `imoveis_cliente` join `familias_onboarding(nome)` + `checklist_imovel(*)`. Progresso calculado client-side com helper já existente em `checklistImovel.ts`.
+**UI** — nova seção "Outros Bens" na aba **Família** (após Holdings) em `MapaFamilia.tsx`:
+- **Veículos**: card por veículo com header (descrição, placa, ano, valor, titular) + checklist 0/2 com botões "Anexar".
+- **Investimentos**: card resumo somando renda fixa, previdência, fundos, exterior — usa `data.investimentos`.
+- **Criptoativos**: lista nome/valor + alerta visual se algum em recuperação judicial.
+- **Bens no Exterior**: lista descrição/país/valor.
 
-## Detalhe `/imoveis/cliente/:id`
+Sem checklist detalhado para investimentos/cripto/exterior nesta entrega.
 
-Para não conflitar com a rota Lidderar atual (`/imoveis/:codImovel`), a rota do cliente fica em `/imoveis/cliente/:id`.
+## Parte 4 — Upload contextual
+Reaproveitar fluxo de upload já existente em `familia_documentos`. Em cada item de checklist (holding ou veículo), botão "Anexar" abre input file → upload para storage `familia-documentos` no path `{familia_id}/holdings/{holding_id}/{item_id}-{filename}` (ou `outros/{bem_ref_id}/...`), insere em `familia_documentos`, e atualiza `documento_id` + `status='recebido'` + `data_recebimento` no item.
 
-Três seções:
+## Parte 5 — Audit Log
+**Nota**: o título menciona "Audit Log" mas o corpo da spec não detalha campos/escopo. Vou registrar mudanças de status de checklist (holding + outros bens) em uma tabela genérica `audit_log` (familia_id, entidade, entidade_id, acao, antes, depois, autor_id, created_at) e logar via trigger ou no client. **Pergunta a confirmar**: o usuário quer escopo amplo ou só checklists? Vou implementar só checklists por enquanto e perguntar depois se precisa expandir.
 
-1. **Resumo** — endereço completo, área, matrícula, cartório, data aquisição, forma, titularidade, alertas.
-2. **Checklist** — três grupos (Recebidos / Pendentes / N/A). Botão "+ Anexar" em cada pendente: upload para bucket `familia-documentos`, marca item como recebido (`status='recebido'`, `data_recebimento=now()`, `documento_id`), opcional dispara `enrich-patrimonial` se PDF.
-3. **Análise do documento** — lista `familia_documentos` ligados ao imóvel, mostra dados extraídos do `patrimonio_data` da família. Documentos não processados ganham botão "Processar documento" → invoca `enrich-patrimonial`.
-
----
-
-# Detalhes técnicos
-
-## Migrations
-- `ALTER TYPE app_role ADD VALUE 'admin'` + `'analista'` (em transações separadas).
-- `UPDATE user_roles SET role='admin' WHERE role='gestor'`.
-- `ALTER TABLE profiles ADD COLUMN status TEXT NOT NULL DEFAULT 'pendente'`.
-- Trigger `AFTER UPDATE ON auth.users WHEN OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL`.
-- RLS: novas policies em `user_roles` para admins; manter policy "Usuario ve seus roles".
-
-## Edge functions
-- `supabase/functions/invite-user/index.ts` — service role client, valida admin, chama `inviteUserByEmail`.
-- Reaproveita `LOVABLE_API_KEY`/`SUPABASE_SERVICE_ROLE_KEY` já existentes.
-
-## Frontend
-- `src/pages/auth/ForgotPassword.tsx`, `ResetPassword.tsx`, `SetPassword.tsx`.
-- `src/pages/configuracoes/Usuarios.tsx`.
-- `src/pages/ImoveisCliente.tsx` (lista, dentro da aba) + `src/pages/ImovelClienteDetalhe.tsx`.
-- Refator de `Imoveis.tsx` para envolver Tabs.
-- Rotas atualizadas em `App.tsx`. Rotas `/auth/*` ficam fora do `ProtectedRoute`.
-
-## Fora de escopo (proposto)
-- Customização branded dos emails de auth (Lovable Emails) — pode ser próximo passo.
-- Função "desativar usuário" via Supabase admin (não há API direta; faremos via flag `status='inativo'` que bloqueia login no `AuthContext`).
-
----
-
-# Ordem de execução
-
-1. Migration (enum + status + trigger + policies).
-2. Edge function `invite-user`.
-3. Páginas auth (forgot/reset/set-password) + link no Login.
-4. Página `/configuracoes/usuarios` + modal convite.
-5. Refator `/imoveis` com Tabs (preservando Lidderar).
-6. Lista de imóveis cliente + KPIs.
-7. Detalhe + checklist + upload + análise.
+## Ordem de execução
+1. Migration (cria 2 tabelas + RLS + audit_log).
+2. Constantes de checklist.
+3. Hook de criação automática no processamento de IR.
+4. Renomear abas e remover sub-abas.
+5. Implementar UI de checklist em HoldingsTab.
+6. Implementar seção Outros Bens.
+7. Componente de upload reutilizável.
+8. QA visual no preview.
