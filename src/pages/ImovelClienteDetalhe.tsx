@@ -9,7 +9,7 @@ import { formatBRL } from "@/lib/format";
 import { calcularProgresso } from "@/lib/onboarding/checklistImovel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { GestaoImovelSection } from "@/components/diligencia/GestaoImovelSection";
+import { GestaoImovelSection, statusAtualBadgeClass, statusAtualLabel } from "@/components/diligencia/GestaoImovelSection";
 
 interface ImovelDetalhe {
   id: string;
