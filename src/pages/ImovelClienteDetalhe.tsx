@@ -132,6 +132,12 @@ export default function ImovelClienteDetalhe() {
     carregar();
   }
 
+  async function verDoc(storage_path: string) {
+    const { data, error } = await supabase.storage.from("familia-documentos").createSignedUrl(storage_path, 60);
+    if (error || !data) { toast.error("Não foi possível abrir o arquivo"); return; }
+    window.open(data.signedUrl, "_blank");
+  }
+
   if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
   if (!imovel) return <div className="text-sm text-muted-foreground py-8 text-center">Imóvel não encontrado.</div>;
 
