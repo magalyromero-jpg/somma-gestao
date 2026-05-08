@@ -76,9 +76,8 @@ const PATRIMONIAL_TOOL = {
   description: "Registra o mapa patrimonial completo extraído dos documentos.",
   input_schema: {
     description: "Registra o mapa patrimonial completo extraído dos documentos.",
-    parameters: {
-      type: "object",
-      properties: {
+    type: "object",
+    properties: {
         familia: {
           type: "object",
           properties: {
