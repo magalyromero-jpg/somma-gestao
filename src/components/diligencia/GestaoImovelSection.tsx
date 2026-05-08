@@ -151,23 +151,13 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
         </Card>
       )}
 
-      {/* BLOCO 2 — Valorização do ativo */}
+      {/* BLOCO 2 — Histórico de valor */}
       {!showUso && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h5 className="font-semibold text-sm">📈 Valorização do ativo</h5>
-            <div className="grid md:grid-cols-3 gap-3">
-              <Field label="Valor de aquisição (R$)" type="number" value={form.valor_aquisicao} onChange={(v) => set("valor_aquisicao", v ? Number(v) : null)} />
-              <Field label="Data de aquisição" type="date" value={form.data_aquisicao} onChange={(v) => set("data_aquisicao", v)} />
-              <SelectField label="Índice de correção" value={form.indice_correcao} options={INDICES} onChange={(v) => set("indice_correcao", v)} />
-            </div>
-            <CorrecaoMonetariaWidget
-              valor={form.valor_aquisicao}
-              dataInicial={form.data_aquisicao}
-              indice={form.indice_correcao}
-            />
-          </CardContent>
-        </Card>
+        <HistoricoValorBlock
+          form={form}
+          set={set}
+          imovelIR={imovelIR}
+        />
       )}
 
       {/* BLOCO 3 — Correção do contrato de locação */}
