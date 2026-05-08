@@ -110,7 +110,7 @@ export function GestaoImovelSection({
   const [form, setForm] = useState<DbImovel>(dbImovel ?? {});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setForm(dbImovel ?? {}); }, [dbImovel?.id]);
+  useEffect(() => { setForm(dbImovel ?? {}); }, [dbImovel?.id, dbImovel?.updated_at]);
 
   if (!dbImovel) {
     return (
