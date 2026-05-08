@@ -1,14 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { RefreshCw, TrendingUp, AlertCircle } from "lucide-react";
+import { RefreshCw, TrendingUp, AlertCircle, Plus, FileCheck } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DbImovel = Record<string, any>;
 
@@ -16,19 +19,23 @@ interface Props {
   dbImovel: DbImovel | null;
   tipoOperacao: string;
   imovelIR?: any;
+  familiaId?: string;
+  onTipoOperacaoChange?: (novo: string) => Promise<void> | void;
   onSaved: () => Promise<void>;
 }
 
+const TIPO_OPERACAO_OPTIONS = [
+  { value: "para_renda", label: "Para renda" },
+  { value: "para_venda", label: "Para venda" },
+  { value: "valorizacao", label: "Valorização" },
+  { value: "uso_familiar", label: "Uso familiar" },
+];
+
 function parseBrDate(s?: string | null): { iso: string | null; year: number | null } {
   if (!s) return { iso: null, year: null };
-  // ISO yyyy-mm-dd
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    return { iso: s.slice(0, 10), year: Number(s.slice(0, 4)) };
-  }
-  // BR dd/mm/yyyy
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return { iso: s.slice(0, 10), year: Number(s.slice(0, 4)) };
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (m) return { iso: `${m[3]}-${m[2]}-${m[1]}`, year: Number(m[3]) };
-  // Just year
   if (/^\d{4}$/.test(s)) return { iso: `${s}-01-01`, year: Number(s) };
   return { iso: null, year: null };
 }
@@ -48,13 +55,33 @@ function toBrDate(iso?: string | null) {
   return `${d}/${m}/${y}`;
 }
 
-export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved }: Props) {
+const CAMPOS_SALVAR = [
+  "tipo_locacao", "contrato_inicio", "contrato_fim",
+  "imobiliaria_nome", "imobiliaria_email", "imobiliaria_telefone",
+  "valor_locacao_atual", "valor_locacao_inicial", "data_inicio_locacao",
+  "indice_locacao", "periodicidade_reajuste", "data_proximo_reajuste",
+  "plataforma_shortstay", "admin_shortstay_nome", "admin_shortstay_email",
+  "admin_shortstay_telefone", "receita_media_mensal",
+  "condominio_nome", "condominio_admin_nome", "condominio_admin_email",
+  "condominio_admin_telefone", "taxa_condominio", "vencimento_condominio",
+  "unidade_consumidora", "distribuidora_energia", "hidrometro", "matricula_agua",
+  "valor_aquisicao", "data_aquisicao", "indice_correcao",
+  "taxa_administracao_pct", "valor_iptu_anual",
+  // certidões (usando colunas existentes)
+  "certidao_cnd_condominio_data", "certidao_cnd_condominio_validade",
+  "certidao_cnd_iptu_data", "certidao_cnd_iptu_validade",
+  "certidao_cnd_energia_data", "certidao_cnd_energia_validade",
+  "certidao_onus_data", "certidao_onus_validade",
+  "certidao_matricula_data", "certidao_matricula_validade",
+];
+
+export function GestaoImovelSection({
+  dbImovel, tipoOperacao, imovelIR, familiaId, onTipoOperacaoChange, onSaved,
+}: Props) {
   const [form, setForm] = useState<DbImovel>(dbImovel ?? {});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setForm(dbImovel ?? {});
-  }, [dbImovel?.id]);
+  useEffect(() => { setForm(dbImovel ?? {}); }, [dbImovel?.id]);
 
   if (!dbImovel) {
     return (
@@ -70,41 +97,44 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
   async function salvar() {
     setSaving(true);
     const patch: DbImovel = {};
-    const campos = [
-      "tipo_locacao", "contrato_inicio", "contrato_fim",
-      "imobiliaria_nome", "imobiliaria_email", "imobiliaria_telefone",
-      "valor_locacao_atual", "valor_locacao_inicial", "data_inicio_locacao",
-      "indice_locacao", "periodicidade_reajuste", "data_proximo_reajuste",
-      "plataforma_shortstay", "admin_shortstay_nome", "admin_shortstay_email",
-      "admin_shortstay_telefone", "receita_media_mensal",
-      "condominio_nome", "condominio_admin_nome", "condominio_admin_email",
-      "condominio_admin_telefone", "taxa_condominio", "vencimento_condominio",
-      "unidade_consumidora", "distribuidora_energia", "hidrometro", "matricula_agua",
-      "valor_aquisicao", "data_aquisicao", "indice_correcao",
-    ];
-    for (const c of campos) patch[c] = form[c] ?? null;
+    for (const c of CAMPOS_SALVAR) patch[c] = form[c] ?? null;
     const { error } = await supabase.from("imoveis_cliente").update(patch as any).eq("id", dbImovel.id);
     setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar gestão", { description: error.message });
-      return;
-    }
+    if (error) { toast.error("Erro ao salvar gestão", { description: error.message }); return; }
     toast.success("Gestão atualizada");
     await onSaved();
   }
 
   const showRenda = tipoOperacao === "para_renda";
-  const showVenda = tipoOperacao === "para_venda";
   const showValorizacao = tipoOperacao === "valorizacao";
   const showUso = tipoOperacao === "uso_familiar";
-  const showCondominio = true; // todos
+  const showCondominio = true;
   const showUtilidades = !showValorizacao;
   const showLongStay = showRenda && form.tipo_locacao === "long_stay";
   const showShortStay = showRenda && form.tipo_locacao === "short_stay";
 
   return (
     <div className="space-y-6">
-      {/* BLOCO 1 — Contrato de locação */}
+      {/* Tipo de operação */}
+      <Card>
+        <CardContent className="p-4 space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo de operação</Label>
+          <div className="flex flex-wrap gap-2">
+            {TIPO_OPERACAO_OPTIONS.map((o) => (
+              <Button
+                key={o.value}
+                size="sm"
+                variant={tipoOperacao === o.value ? "default" : "outline"}
+                onClick={() => onTipoOperacaoChange?.(o.value)}
+              >
+                {o.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contrato de locação */}
       {showRenda && (
         <Card>
           <CardContent className="p-4 space-y-4">
@@ -132,7 +162,10 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
                 <Field label="Imobiliária — nome" value={form.imobiliaria_nome} onChange={(v) => set("imobiliaria_nome", v)} />
                 <Field label="Imobiliária — e-mail" value={form.imobiliaria_email} onChange={(v) => set("imobiliaria_email", v)} />
                 <Field label="Imobiliária — telefone" value={form.imobiliaria_telefone} onChange={(v) => set("imobiliaria_telefone", v)} />
-                <Field label="Valor atual locação (R$)" type="number" value={form.valor_locacao_atual} onChange={(v) => set("valor_locacao_atual", v ? Number(v) : null)} />
+                <Field label="Taxa de administração (%)" type="number" value={form.taxa_administracao_pct} onChange={(v) => set("taxa_administracao_pct", v ? Number(v) : null)} />
+                <Field label="Valor inicial do aluguel (R$)" type="number" value={form.valor_locacao_inicial} onChange={(v) => set("valor_locacao_inicial", v ? Number(v) : null)} />
+                <Field label="Início da locação" type="date" value={form.data_inicio_locacao} onChange={(v) => set("data_inicio_locacao", v)} />
+                <Field label="Valor atual do aluguel (R$)" type="number" value={form.valor_locacao_atual} onChange={(v) => set("valor_locacao_atual", v ? Number(v) : null)} />
                 <SelectField label="Índice de reajuste" value={form.indice_locacao} options={INDICES} onChange={(v) => set("indice_locacao", v)} />
                 <SelectField label="Periodicidade" value={form.periodicidade_reajuste} options={["Anual", "Semestral"]} onChange={(v) => set("periodicidade_reajuste", v)} />
                 <Field label="Próximo reajuste" type="date" value={form.data_proximo_reajuste} onChange={(v) => set("data_proximo_reajuste", v)} />
@@ -145,42 +178,44 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
                 <Field label="E-mail do administrador" value={form.admin_shortstay_email} onChange={(v) => set("admin_shortstay_email", v)} />
                 <Field label="Telefone do administrador" value={form.admin_shortstay_telefone} onChange={(v) => set("admin_shortstay_telefone", v)} />
                 <Field label="Receita média mensal (R$)" type="number" value={form.receita_media_mensal} onChange={(v) => set("receita_media_mensal", v ? Number(v) : null)} />
+                <Field label="Taxa de administração (%)" type="number" value={form.taxa_administracao_pct} onChange={(v) => set("taxa_administracao_pct", v ? Number(v) : null)} />
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* BLOCO 2 — Histórico de valor */}
+      {/* Histórico de valor */}
       {!showUso && (
-        <HistoricoValorBlock
-          form={form}
-          set={set}
-          imovelIR={imovelIR}
-        />
+        <HistoricoValorBlock form={form} set={set} imovelIR={imovelIR} />
       )}
 
-      {/* BLOCO 3 — Correção do contrato de locação */}
+      {/* Correção do aluguel — tabela ano a ano */}
       {showLongStay && (
         <Card>
           <CardContent className="p-4 space-y-4">
-            <h5 className="font-semibold text-sm">💰 Correção do aluguel</h5>
-            <div className="grid md:grid-cols-3 gap-3">
-              <Field label="Valor inicial do aluguel (R$)" type="number" value={form.valor_locacao_inicial} onChange={(v) => set("valor_locacao_inicial", v ? Number(v) : null)} />
-              <Field label="Início da locação" type="date" value={form.data_inicio_locacao} onChange={(v) => set("data_inicio_locacao", v)} />
-              <SelectField label="Índice contratual" value={form.indice_locacao} options={INDICES} onChange={(v) => set("indice_locacao", v)} />
-            </div>
-            <CorrecaoAluguelWidget
+            <h5 className="font-semibold text-sm">💰 Correção do aluguel — ano a ano</h5>
+            <CorrecaoAluguelAnualTabela
               valorInicial={form.valor_locacao_inicial}
               dataInicial={form.data_inicio_locacao}
-              indice={form.indice_locacao}
+              indice={form.indice_locacao || "IPCA"}
               valorAtual={form.valor_locacao_atual}
             />
           </CardContent>
         </Card>
       )}
 
-      {/* BLOCO 4 — Condomínio */}
+      {/* Mini fluxo financeiro */}
+      {showRenda && (
+        <FluxoFinanceiroCard form={form} />
+      )}
+
+      {/* Repasses */}
+      {showRenda && familiaId && (
+        <RepassesAluguel imovelId={dbImovel.id} familiaId={familiaId} />
+      )}
+
+      {/* Condomínio */}
       {showCondominio && (
         <Card>
           <CardContent className="p-4 space-y-4">
@@ -192,12 +227,13 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
               <Field label="Telefone do administrador" value={form.condominio_admin_telefone} onChange={(v) => set("condominio_admin_telefone", v)} />
               <Field label="Taxa condominial (R$)" type="number" value={form.taxa_condominio} onChange={(v) => set("taxa_condominio", v ? Number(v) : null)} />
               <Field label="Dia de vencimento" type="number" value={form.vencimento_condominio} onChange={(v) => set("vencimento_condominio", v ? Number(v) : null)} />
+              <Field label="IPTU anual (R$)" type="number" value={form.valor_iptu_anual} onChange={(v) => set("valor_iptu_anual", v ? Number(v) : null)} />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* BLOCO 5 — Utilidades */}
+      {/* Utilidades */}
       {showUtilidades && (
         <Card>
           <CardContent className="p-4 space-y-4">
@@ -212,16 +248,8 @@ export function GestaoImovelSection({ dbImovel, tipoOperacao, imovelIR, onSaved 
         </Card>
       )}
 
-      {/* BLOCO 6 — Comparativo de mercado (placeholder) */}
-      <Card className="border-dashed">
-        <CardContent className="p-4 text-center space-y-2">
-          <div className="text-sm font-semibold">📊 Comparativo de Mercado</div>
-          <div className="text-xs text-muted-foreground">
-            Busca automática em ZAP Imóveis e OLX para benchmark de valor de venda e locação com imóveis similares na mesma região.
-          </div>
-          <Button size="sm" variant="outline" disabled>Buscar no mercado</Button>
-        </CardContent>
-      </Card>
+      {/* Certidões */}
+      <CertidoesBlock form={form} set={set} />
 
       <div className="flex justify-end">
         <Button onClick={salvar} disabled={saving}>
@@ -271,57 +299,7 @@ function ContratoStatusBadge({ fim }: { fim?: string | null }) {
   return <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30">🟢 Vigente</Badge>;
 }
 
-function CorrecaoMonetariaWidget({
-  valor, dataInicial, indice,
-}: { valor: number | null; dataInicial: string | null; indice: string | null }) {
-  const [loading, setLoading] = useState(false);
-  const [res, setRes] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function calcular() {
-    if (!valor || !dataInicial || !indice) {
-      toast.error("Preencha valor, data e índice");
-      return;
-    }
-    setLoading(true);
-    setErr(null);
-    const hoje = new Date();
-    const dataFinal = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
-    const { data, error } = await supabase.functions.invoke("correcao-monetaria", {
-      body: { indice, dataInicial: toBrDate(dataInicial), dataFinal, valorInicial: valor },
-    });
-    setLoading(false);
-    if (error || data?.error) {
-      setErr(data?.error ?? error?.message ?? "Erro ao calcular");
-      return;
-    }
-    setRes(data);
-  }
-
-  return (
-    <div className="space-y-2">
-      <Button size="sm" variant="outline" onClick={calcular} disabled={loading}>
-        {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" /> : <TrendingUp className="h-3.5 w-3.5 mr-1" />}
-        Calcular correção
-      </Button>
-      {err && <div className="text-xs text-destructive">{err}</div>}
-      {res && (
-        <div className="rounded-md border p-3 text-sm space-y-1 bg-muted/30">
-          <Row k="Valor de compra" v={formatBRL(res.valorInicial)} />
-          <Row k="Índice" v={`${res.indice} (${res.totalMeses} meses)`} />
-          <Row k="Correção acumulada" v={`+${res.percentualAcumulado}%`} />
-          <div className="border-t my-2" />
-          <Row k="Valor atualizado (est.)" v={formatBRL(res.valorCorrigido)} bold />
-          <Row k="Ganho nominal estimado" v={formatBRL(res.ganhoNominal)} />
-          <div className="text-[11px] text-muted-foreground pt-1">
-            Estimativa baseada apenas na correção monetária pelo índice. Não considera valorização de mercado.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
+/* ============== Histórico de valor ============== */
 function HistoricoValorBlock({
   form, set, imovelIR,
 }: { form: DbImovel; set: (k: string, v: any) => void; imovelIR?: any }) {
@@ -338,7 +316,6 @@ function HistoricoValorBlock({
   const [res, setRes] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // auto-prefill from IR when DB empty
   useEffect(() => {
     if (!form.valor_aquisicao && irValor) set("valor_aquisicao", Number(irValor));
     if (!form.data_aquisicao && irParsed.iso) set("data_aquisicao", irParsed.iso);
@@ -359,7 +336,6 @@ function HistoricoValorBlock({
     setRes(data);
   }
 
-  // recalc when ano/valor/indice change
   useEffect(() => {
     setRes(null);
     if (valor && dbParsed.iso && indice) calcular();
@@ -404,11 +380,7 @@ function HistoricoValorBlock({
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Valor de aquisição (R$){irValor ? " — pré-preenchido do IR" : ""}</Label>
-                <Input
-                  type="number"
-                  value={valor ?? ""}
-                  onChange={(e) => set("valor_aquisicao", e.target.value ? Number(e.target.value) : null)}
-                />
+                <Input type="number" value={valor ?? ""} onChange={(e) => set("valor_aquisicao", e.target.value ? Number(e.target.value) : null)} />
               </div>
             </div>
           </div>
@@ -417,25 +389,15 @@ function HistoricoValorBlock({
             <div className="grid md:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Ano de aquisição</Label>
-                <Input
-                  type="number"
-                  value={ano}
-                  onChange={(e) => {
-                    const y = e.target.value ? Number(e.target.value) : null;
-                    set("data_aquisicao", y ? `${y}-01-01` : null);
-                  }}
-                />
+                <Input type="number" value={ano} onChange={(e) => {
+                  const y = e.target.value ? Number(e.target.value) : null;
+                  set("data_aquisicao", y ? `${y}-01-01` : null);
+                }} />
               </div>
-              <Field
-                label={`Valor de aquisição (R$)${irValor && Number(irValor) === Number(valor) ? " — IR" : ""}`}
-                type="number"
-                value={valor}
-                onChange={(v) => set("valor_aquisicao", v ? Number(v) : null)}
-              />
+              <Field label={`Valor de aquisição (R$)${irValor && Number(irValor) === Number(valor) ? " — IR" : ""}`} type="number" value={valor} onChange={(v) => set("valor_aquisicao", v ? Number(v) : null)} />
               <SelectField label="Índice de correção" value={indice} options={INDICES} onChange={(v) => set("indice_correcao", v)} />
             </div>
 
-            {/* Linha do tempo */}
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex-1 text-center">
@@ -467,9 +429,6 @@ function HistoricoValorBlock({
                 </div>
               )}
               {err && <div className="mt-2 text-xs text-destructive">{err}</div>}
-              <div className="text-[11px] text-muted-foreground pt-2">
-                Estimativa baseada apenas na correção monetária pelo índice. Não considera valorização de mercado.
-              </div>
             </div>
           </>
         )}
@@ -478,67 +437,377 @@ function HistoricoValorBlock({
   );
 }
 
-function CorrecaoAluguelWidget({
+/* ============== Correção do aluguel ano a ano ============== */
+function CorrecaoAluguelAnualTabela({
   valorInicial, dataInicial, indice, valorAtual,
 }: { valorInicial: number | null; dataInicial: string | null; indice: string | null; valorAtual: number | null }) {
+  const [linhas, setLinhas] = useState<Array<{ ano: number; valorCorrigido: number }> | null>(null);
   const [loading, setLoading] = useState(false);
-  const [res, setRes] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
 
   async function calcular() {
-    if (!valorInicial || !dataInicial || !indice) {
-      toast.error("Preencha valor inicial, data e índice");
-      return;
+    if (!valorInicial || !dataInicial || !indice) return;
+    setLoading(true); setErr(null);
+    try {
+      const inicio = new Date(dataInicial);
+      const anoIni = inicio.getFullYear();
+      const anoHoje = new Date().getFullYear();
+      const out: Array<{ ano: number; valorCorrigido: number }> = [];
+      out.push({ ano: anoIni, valorCorrigido: Number(valorInicial) });
+      const dia = String(inicio.getDate()).padStart(2,"0");
+      const mes = String(inicio.getMonth()+1).padStart(2,"0");
+      for (let y = anoIni + 1; y <= anoHoje; y++) {
+        const dataFinal = `${dia}/${mes}/${y}`;
+        const { data, error } = await supabase.functions.invoke("correcao-monetaria", {
+          body: { indice, dataInicial: toBrDate(dataInicial), dataFinal, valorInicial },
+        });
+        if (error || data?.error) { setErr(data?.error ?? error?.message ?? "Erro ao calcular"); break; }
+        out.push({ ano: y, valorCorrigido: Number(data.valorCorrigido) });
+      }
+      setLinhas(out);
+    } catch (e: any) {
+      setErr(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
     }
-    setLoading(true);
-    setErr(null);
-    const hoje = new Date();
-    const dataFinal = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
-    const { data, error } = await supabase.functions.invoke("correcao-monetaria", {
-      body: { indice, dataInicial: toBrDate(dataInicial), dataFinal, valorInicial },
-    });
-    setLoading(false);
-    if (error || data?.error) {
-      setErr(data?.error ?? error?.message ?? "Erro ao calcular");
-      return;
-    }
-    setRes(data);
   }
 
-  const diff = res && valorAtual != null ? Number(valorAtual) - res.valorCorrigido : null;
-  const abaixo = diff != null && diff < 0;
+  useEffect(() => {
+    setLinhas(null);
+    if (valorInicial && dataInicial && indice) calcular();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valorInicial, dataInicial, indice]);
+
+  if (!valorInicial || !dataInicial) {
+    return <div className="text-xs text-muted-foreground">Preencha valor inicial e data de início para calcular.</div>;
+  }
+  if (loading) {
+    return <div className="text-xs text-muted-foreground flex items-center gap-2"><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Calculando série anual...</div>;
+  }
+  if (err) return <div className="text-xs text-destructive">{err}</div>;
+  if (!linhas) return null;
+
+  const ultima = linhas[linhas.length - 1];
+  const praticado = valorAtual != null ? Number(valorAtual) : null;
+  const diffAtual = praticado != null ? praticado - ultima.valorCorrigido : null;
+  const abaixo = diffAtual != null && diffAtual < 0;
 
   return (
-    <div className="space-y-2">
-      <Button size="sm" variant="outline" onClick={calcular} disabled={loading}>
-        {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" /> : <TrendingUp className="h-3.5 w-3.5 mr-1" />}
-        Calcular correção do aluguel
-      </Button>
-      {err && <div className="text-xs text-destructive">{err}</div>}
-      {res && (
-        <div className="rounded-md border p-3 text-sm space-y-1 bg-muted/30">
-          <Row k="Valor original do aluguel" v={formatBRL(res.valorInicial)} />
-          <Row k="Índice" v={`${res.indice}`} />
-          <Row k="Variação acumulada" v={`+${res.percentualAcumulado}%`} />
-          <div className="border-t my-2" />
-          <Row k="Valor corrigido pelo índice" v={formatBRL(res.valorCorrigido)} />
-          {valorAtual != null && (
-            <>
-              <Row k="Valor praticado atual" v={formatBRL(Number(valorAtual))} />
-              <div className={cn("font-semibold", abaixo ? "text-destructive" : "text-emerald-600")}>
-                {abaixo ? "Abaixo do índice: " : "Acima/igual ao índice: "}{formatBRL(diff!)}
-              </div>
-            </>
-          )}
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground border-b">
+            <tr>
+              <th className="text-left py-2 pr-3">Ano</th>
+              <th className="text-right py-2 px-3">Contratual corrigido ({indice})</th>
+              <th className="text-right py-2 px-3">Valor praticado</th>
+              <th className="text-right py-2 px-3">Diferença</th>
+              <th className="text-center py-2 pl-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l, i) => {
+              const isUltima = i === linhas.length - 1;
+              const prat = isUltima && praticado != null ? praticado : null;
+              const diff = prat != null ? prat - l.valorCorrigido : null;
+              const ab = diff != null && diff < 0;
+              return (
+                <tr key={l.ano} className="border-b last:border-0">
+                  <td className="py-2 pr-3 font-medium">{l.ano}</td>
+                  <td className="py-2 px-3 text-right">{formatBRL(l.valorCorrigido)}</td>
+                  <td className="py-2 px-3 text-right">{prat != null ? formatBRL(prat) : "—"}</td>
+                  <td className={cn("py-2 px-3 text-right", diff != null && (ab ? "text-destructive" : "text-emerald-600"))}>
+                    {diff != null ? `${diff >= 0 ? "+" : ""}${formatBRL(diff)}` : "—"}
+                  </td>
+                  <td className="py-2 pl-3 text-center">
+                    {prat == null ? "—" : ab ? "🔴" : "🟢"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {praticado != null && (
+        <div className={cn("rounded-md p-3 text-sm", abaixo ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700")}>
+          Desde {toBrDate(dataInicial)}, deveria estar em <strong>{formatBRL(ultima.valorCorrigido)}</strong> pelo {indice}. Praticado: <strong>{formatBRL(praticado)}</strong>. Diferença: <strong>{diffAtual! >= 0 ? "+" : ""}{formatBRL(diffAtual!)}</strong>.
         </div>
       )}
     </div>
   );
 }
 
+/* ============== Mini fluxo financeiro ============== */
+function FluxoFinanceiroCard({ form }: { form: DbImovel }) {
+  const receitaBruta = Number(form.valor_locacao_atual ?? form.receita_media_mensal ?? 0) || 0;
+  const taxaPct = Number(form.taxa_administracao_pct ?? 0) || 0;
+  const taxaAdm = receitaBruta * (taxaPct / 100);
+  const condominio = Number(form.taxa_condominio ?? 0) || 0;
+  const iptuMensal = (Number(form.valor_iptu_anual ?? 0) || 0) / 12;
+  const liquido = receitaBruta - taxaAdm - condominio - iptuMensal;
+  const valorImovel = Number(form.valor_aquisicao ?? form.valor_declarado ?? 0) || 0;
+  const yieldMensal = valorImovel > 0 ? (liquido / valorImovel) * 100 : 0;
+  const yieldAnual = yieldMensal * 12;
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-2">
+        <h5 className="font-semibold text-sm">💸 Resultado mensal estimado</h5>
+        <div className="text-sm divide-y">
+          <Row k="Receita bruta (aluguel atual)" v={formatBRL(receitaBruta)} />
+          <Row k={`(-) Taxa adm imobiliária (${taxaPct}%)`} v={`-${formatBRL(taxaAdm)}`} />
+          <Row k="(-) Condomínio" v={`-${formatBRL(condominio)}`} />
+          <Row k="(-) IPTU mensal (÷12)" v={`-${formatBRL(iptuMensal)}`} />
+          <div className="flex justify-between gap-3 py-2 font-semibold">
+            <span>= Resultado líquido estimado</span>
+            <span className={cn(liquido >= 0 ? "text-emerald-600" : "text-destructive")}>{formatBRL(liquido)}</span>
+          </div>
+        </div>
+        {valorImovel > 0 && (
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+            <div>
+              <div className="text-xs text-muted-foreground">Yield mensal</div>
+              <div className="font-semibold">{yieldMensal.toFixed(2)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Yield anual</div>
+              <div className="font-semibold">{yieldAnual.toFixed(2)}% a.a.</div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ============== Repasses ============== */
+interface Repasse {
+  id: string;
+  competencia: string;
+  valor_bruto: number;
+  taxa_adm: number | null;
+  valor_liquido: number | null;
+  data_repasse: string | null;
+  observacoes: string | null;
+}
+
+function RepassesAluguel({ imovelId, familiaId }: { imovelId: string; familiaId: string }) {
+  const { user } = useAuth();
+  const [list, setList] = useState<Repasse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<any>({
+    competencia: "",
+    valor_bruto: "",
+    taxa_adm: "",
+    valor_liquido: "",
+    data_repasse: "",
+    observacoes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function carregar() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("repasses_aluguel" as any)
+      .select("*")
+      .eq("imovel_id", imovelId)
+      .order("competencia", { ascending: false });
+    setList(((data as any) ?? []) as Repasse[]);
+    setLoading(false);
+  }
+
+  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [imovelId]);
+
+  async function salvarRepasse() {
+    if (!form.competencia || !form.valor_bruto) {
+      toast.error("Preencha competência e valor bruto");
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      imovel_id: imovelId,
+      familia_id: familiaId,
+      competencia: form.competencia,
+      valor_bruto: Number(form.valor_bruto),
+      taxa_adm: form.taxa_adm ? Number(form.taxa_adm) : null,
+      valor_liquido: form.valor_liquido ? Number(form.valor_liquido) : null,
+      data_repasse: form.data_repasse || null,
+      observacoes: form.observacoes || null,
+      created_by: user?.id ?? null,
+    };
+    const { error } = await supabase.from("repasses_aluguel" as any).insert(payload as any);
+    setSaving(false);
+    if (error) { toast.error("Erro ao registrar", { description: error.message }); return; }
+    toast.success("Repasse registrado");
+    setOpen(false);
+    setForm({ competencia: "", valor_bruto: "", taxa_adm: "", valor_liquido: "", data_repasse: "", observacoes: "" });
+    await carregar();
+  }
+
+  const totaisPorAno = useMemo(() => {
+    const m = new Map<number, { soma: number; count: number }>();
+    for (const r of list) {
+      const ano = new Date(r.competencia).getFullYear();
+      const liq = r.valor_liquido ?? r.valor_bruto;
+      const cur = m.get(ano) ?? { soma: 0, count: 0 };
+      cur.soma += Number(liq) || 0;
+      cur.count += 1;
+      m.set(ano, cur);
+    }
+    return Array.from(m.entries()).sort(([a],[b]) => b - a);
+  }, [list]);
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h5 className="font-semibold text-sm">📥 Repasses de aluguel</h5>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Registrar repasse
+          </Button>
+        </div>
+
+        {totaisPorAno.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {totaisPorAno.map(([ano, t]) => (
+              <div key={ano} className="rounded-md border bg-muted/30 p-2 text-xs">
+                <div className="text-muted-foreground">Total {ano}</div>
+                <div className="font-semibold">{formatBRL(t.soma)}</div>
+                <div className="text-[11px] text-muted-foreground">Média: {formatBRL(t.soma / t.count)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-xs text-muted-foreground">Carregando…</div>
+        ) : list.length === 0 ? (
+          <div className="text-xs text-muted-foreground py-2">Nenhum repasse registrado.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground border-b">
+                <tr>
+                  <th className="text-left py-2 pr-3">Competência</th>
+                  <th className="text-right py-2 px-3">Bruto</th>
+                  <th className="text-right py-2 px-3">Taxa</th>
+                  <th className="text-right py-2 px-3">Líquido</th>
+                  <th className="text-left py-2 pl-3">Repassado em</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((r) => (
+                  <tr key={r.id} className="border-b last:border-0">
+                    <td className="py-2 pr-3">{r.competencia ? new Date(r.competencia).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "—"}</td>
+                    <td className="py-2 px-3 text-right">{formatBRL(Number(r.valor_bruto))}</td>
+                    <td className="py-2 px-3 text-right text-muted-foreground">{r.taxa_adm != null ? `-${formatBRL(Number(r.taxa_adm))}` : "—"}</td>
+                    <td className="py-2 px-3 text-right font-medium">{r.valor_liquido != null ? formatBRL(Number(r.valor_liquido)) : "—"}</td>
+                    <td className="py-2 pl-3">{r.data_repasse ? new Date(r.data_repasse).toLocaleDateString("pt-BR") : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Registrar repasse</DialogTitle></DialogHeader>
+          <div className="grid md:grid-cols-2 gap-3">
+            <Field label="Competência (mês)" type="month" value={form.competencia} onChange={(v) => setForm({ ...form, competencia: v ? `${v}-01` : "" })} />
+            <Field label="Data do repasse" type="date" value={form.data_repasse} onChange={(v) => setForm({ ...form, data_repasse: v })} />
+            <Field label="Valor bruto (R$)" type="number" value={form.valor_bruto} onChange={(v) => setForm({ ...form, valor_bruto: v })} />
+            <Field label="Taxa adm (R$)" type="number" value={form.taxa_adm} onChange={(v) => setForm({ ...form, taxa_adm: v })} />
+            <Field label="Valor líquido (R$)" type="number" value={form.valor_liquido} onChange={(v) => setForm({ ...form, valor_liquido: v })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Observações</Label>
+            <Textarea rows={2} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={salvarRepasse} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+/* ============== Certidões ============== */
+const CERTIDOES = [
+  { key: "cnd_condominio", label: "CND Condomínio", emi: "certidao_cnd_condominio_data", val: "certidao_cnd_condominio_validade" },
+  { key: "cnd_iptu",       label: "CND IPTU",       emi: "certidao_cnd_iptu_data",       val: "certidao_cnd_iptu_validade" },
+  { key: "cnd_energia",    label: "CND Energia Elétrica", emi: "certidao_cnd_energia_data", val: "certidao_cnd_energia_validade" },
+  { key: "onus",           label: "Certidão de Ônus", emi: "certidao_onus_data",         val: "certidao_onus_validade" },
+  { key: "matricula",      label: "Matrícula atualizada", emi: "certidao_matricula_data", val: "certidao_matricula_validade" },
+];
+
+function badgeCertidao(validade?: string | null) {
+  if (!validade) return { cls: "bg-muted text-muted-foreground", txt: "⬜ Pendente" };
+  const dias = diasAte(validade) ?? 0;
+  if (dias < 0) return { cls: "bg-destructive/10 text-destructive border-destructive/30", txt: "🔴 Vencida" };
+  if (dias < 30) return { cls: "bg-amber-500/15 text-amber-700 border-amber-500/30", txt: `🟡 Vence em ${dias}d` };
+  return { cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30", txt: "🟢 Válida" };
+}
+
+function CertidoesBlock({
+  form, set,
+}: { form: DbImovel; set: (k: string, v: any) => void }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <h5 className="font-semibold text-sm flex items-center gap-2"><FileCheck className="h-4 w-4" /> Certidões</h5>
+        <div className="space-y-2">
+          {CERTIDOES.map((c) => {
+            const b = badgeCertidao(form[c.val]);
+            return (
+              <div
+                key={c.key}
+                className="flex items-center justify-between gap-3 p-2.5 border rounded-md text-sm cursor-pointer hover:bg-muted/40"
+                onClick={() => setEditing(editing === c.key ? null : c.key)}
+              >
+                <div className="flex-1">
+                  <div className="font-medium">{c.label}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Emissão: {form[c.emi] ? new Date(form[c.emi]).toLocaleDateString("pt-BR") : "—"} · Validade: {form[c.val] ? new Date(form[c.val]).toLocaleDateString("pt-BR") : "—"}
+                  </div>
+                </div>
+                <Badge variant="outline" className={b.cls}>{b.txt}</Badge>
+              </div>
+            );
+          })}
+        </div>
+
+        {editing && (() => {
+          const c = CERTIDOES.find((x) => x.key === editing)!;
+          return (
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="text-sm font-medium">{c.label}</div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <Field label="Data de emissão" type="date" value={form[c.emi]} onChange={(v) => set(c.emi, v || null)} />
+                <Field label="Validade" type="date" value={form[c.val]} onChange={(v) => set(c.val, v || null)} />
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                Anexe o documento na aba <strong>Documentos</strong> ou via Checklist com a categoria correspondente. As datas são salvas ao clicar em <strong>Salvar gestão</strong>.
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Fechar</Button>
+              </div>
+            </div>
+          );
+        })()}
+      </CardContent>
+    </Card>
+  );
+}
+
 function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
   return (
-    <div className="flex justify-between gap-3">
+    <div className="flex justify-between gap-3 py-1.5">
       <span className="text-muted-foreground">{k}</span>
       <span className={cn(bold && "font-semibold")}>{v}</span>
     </div>

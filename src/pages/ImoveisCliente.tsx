@@ -25,12 +25,6 @@ interface ImovelRow {
   checklist: Array<{ status: string; opcional: boolean }>;
 }
 
-const TIPO_OPERACAO_LABEL: Record<string, string> = {
-  renda: "Para renda",
-  venda: "Para venda",
-  valorizacao: "Valorização",
-  uso_familiar: "Uso familiar",
-};
 
 function pctColorClass(pct: number) {
   if (pct === 100) return "bg-emerald-500";
@@ -45,7 +39,6 @@ export default function ImoveisCliente() {
   const [loading, setLoading] = useState(true);
   const [familia, setFamilia] = useState("todas");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [tipoFilter, setTipoFilter] = useState("todos");
   const [pjFilter, setPjFilter] = useState("todos");
   const [q, setQ] = useState("");
 
@@ -88,13 +81,13 @@ export default function ImoveisCliente() {
       if (statusFilter === "completos" && prog.pct !== 100) return false;
       if (statusFilter === "andamento" && (prog.pct === 100 || prog.recebidos === 0)) return false;
       if (statusFilter === "nao_iniciado" && prog.recebidos !== 0) return false;
-      if (tipoFilter !== "todos" && (r.tipo_operacao ?? "") !== tipoFilter) return false;
+      
       if (pjFilter === "PF" && (r.titularidade ?? "").toUpperCase() !== "PF") return false;
       if (pjFilter === "PJ" && (r.titularidade ?? "").toUpperCase() !== "PJ") return false;
       if (q && !`${r.nome} ${r.endereco ?? ""} ${r.familia_nome ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [rows, familia, statusFilter, tipoFilter, pjFilter, q]);
+  }, [rows, familia, statusFilter, pjFilter, q]);
 
   const kpis = useMemo(() => {
     const totalImoveis = rows.length;
@@ -155,16 +148,6 @@ export default function ImoveisCliente() {
               <SelectItem value="nao_iniciado">Não iniciado</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={tipoFilter} onValueChange={setTipoFilter}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os tipos</SelectItem>
-              <SelectItem value="renda">Para renda</SelectItem>
-              <SelectItem value="venda">Para venda</SelectItem>
-              <SelectItem value="valorizacao">Valorização</SelectItem>
-              <SelectItem value="uso_familiar">Uso familiar</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={pjFilter} onValueChange={setPjFilter}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -207,11 +190,6 @@ export default function ImoveisCliente() {
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-blue-500/15 text-blue-700 border-blue-500/30">PF</Badge>
-                          )}
-                          {r.tipo_operacao && (
-                            <Badge variant="outline" className="bg-muted text-muted-foreground">
-                              {TIPO_OPERACAO_LABEL[r.tipo_operacao] ?? r.tipo_operacao}
-                            </Badge>
                           )}
                           {Array.isArray(r.alertas) && r.alertas.length > 0 && (
                             <Badge variant="outline" className="border-amber-400 text-amber-700">

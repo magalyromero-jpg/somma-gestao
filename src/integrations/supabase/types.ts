@@ -598,6 +598,7 @@ export type Database = {
           plataforma_shortstay: string | null
           receita_media_mensal: number | null
           ref_id: string | null
+          taxa_administracao_pct: number | null
           taxa_condominio: number | null
           tipo_locacao: string | null
           tipo_operacao: string | null
@@ -606,6 +607,7 @@ export type Database = {
           updated_at: string
           valor_aquisicao: number | null
           valor_declarado: number | null
+          valor_iptu_anual: number | null
           valor_locacao_atual: number | null
           valor_locacao_inicial: number | null
           vencimento_condominio: number | null
@@ -655,6 +657,7 @@ export type Database = {
           plataforma_shortstay?: string | null
           receita_media_mensal?: number | null
           ref_id?: string | null
+          taxa_administracao_pct?: number | null
           taxa_condominio?: number | null
           tipo_locacao?: string | null
           tipo_operacao?: string | null
@@ -663,6 +666,7 @@ export type Database = {
           updated_at?: string
           valor_aquisicao?: number | null
           valor_declarado?: number | null
+          valor_iptu_anual?: number | null
           valor_locacao_atual?: number | null
           valor_locacao_inicial?: number | null
           vencimento_condominio?: number | null
@@ -712,6 +716,7 @@ export type Database = {
           plataforma_shortstay?: string | null
           receita_media_mensal?: number | null
           ref_id?: string | null
+          taxa_administracao_pct?: number | null
           taxa_condominio?: number | null
           tipo_locacao?: string | null
           tipo_operacao?: string | null
@@ -720,6 +725,7 @@ export type Database = {
           updated_at?: string
           valor_aquisicao?: number | null
           valor_declarado?: number | null
+          valor_iptu_anual?: number | null
           valor_locacao_atual?: number | null
           valor_locacao_inicial?: number | null
           vencimento_condominio?: number | null
@@ -1077,6 +1083,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      repasses_aluguel: {
+        Row: {
+          competencia: string
+          created_at: string
+          created_by: string | null
+          data_repasse: string | null
+          familia_id: string
+          id: string
+          imovel_id: string
+          observacoes: string | null
+          taxa_adm: number | null
+          valor_bruto: number
+          valor_liquido: number | null
+        }
+        Insert: {
+          competencia: string
+          created_at?: string
+          created_by?: string | null
+          data_repasse?: string | null
+          familia_id: string
+          id?: string
+          imovel_id: string
+          observacoes?: string | null
+          taxa_adm?: number | null
+          valor_bruto: number
+          valor_liquido?: number | null
+        }
+        Update: {
+          competencia?: string
+          created_at?: string
+          created_by?: string | null
+          data_repasse?: string | null
+          familia_id?: string
+          id?: string
+          imovel_id?: string
+          observacoes?: string | null
+          taxa_adm?: number | null
+          valor_bruto?: number
+          valor_liquido?: number | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
