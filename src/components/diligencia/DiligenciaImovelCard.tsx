@@ -214,7 +214,6 @@ export function DiligenciaImovelCard({
               <TabsList>
                 <TabsTrigger value="checklist">Checklist</TabsTrigger>
                 <TabsTrigger value="documentos">Documentos ({docsImovel.length})</TabsTrigger>
-                <TabsTrigger value="gestao">Gestão</TabsTrigger>
                 <TabsTrigger value="comentarios">Comentários ({comentarios.length})</TabsTrigger>
               </TabsList>
 
