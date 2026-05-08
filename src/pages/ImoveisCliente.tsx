@@ -154,16 +154,6 @@ export default function ImoveisCliente() {
               <SelectItem value="nao_iniciado">Não iniciado</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={tipoFilter} onValueChange={setTipoFilter}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os tipos</SelectItem>
-              <SelectItem value="renda">Para renda</SelectItem>
-              <SelectItem value="venda">Para venda</SelectItem>
-              <SelectItem value="valorizacao">Valorização</SelectItem>
-              <SelectItem value="uso_familiar">Uso familiar</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={pjFilter} onValueChange={setPjFilter}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
