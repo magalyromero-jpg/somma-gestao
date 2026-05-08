@@ -207,7 +207,15 @@ export default function ImovelClienteDetalhe() {
                     )}
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => reabrir(it)}>Reabrir</Button>
+                <div className="flex gap-1">
+                  {it.documento_id && (() => {
+                    const d = docs.find((x) => x.id === it.documento_id);
+                    return d ? (
+                      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => verDoc(d.storage_path)}>Ver</Button>
+                    ) : null;
+                  })()}
+                  <Button size="sm" variant="ghost" onClick={() => reabrir(it)}>Reabrir</Button>
+                </div>
               </ItemRow>
             ))}
           </ChecklistCol>
