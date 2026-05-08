@@ -59,15 +59,29 @@ export default function ImovelClienteDetalhe() {
     if (!im) { setLoading(false); return; }
     setImovel(im as any);
 
-    const [{ data: cl }, { data: fam }, { data: docsAll }] = await Promise.all([
+    const [{ data: cl }, { data: fam }] = await Promise.all([
       supabase.from("checklist_imovel").select("*").eq("imovel_id", id).order("opcional"),
       supabase.from("familias_onboarding").select("nome, patrimonio_data").eq("id", im.familia_id).maybeSingle(),
-      supabase.from("familia_documentos").select("id, nome_arquivo, recebido_em, storage_path").eq("familia_id", im.familia_id).order("recebido_em", { ascending: false }),
     ]);
-    setChecklist((cl ?? []) as any);
+    const checklistRows = (cl ?? []) as any[];
+    setChecklist(checklistRows as any);
     setFamiliaNome(fam?.nome ?? null);
     setPatrimonioData(fam?.patrimonio_data ?? null);
-    setDocs((docsAll ?? []) as any);
+
+    // Documentos do imóvel: por imovel_ref OU por documento_id vinculado no checklist
+    const docIds = checklistRows.map((c) => c.documento_id).filter(Boolean) as string[];
+    const orParts = [`imovel_ref.eq.${id}`];
+    if (docIds.length) orParts.push(`id.in.(${docIds.join(",")})`);
+    const { data: docsImovel } = await supabase
+      .from("familia_documentos")
+      .select("id, nome_arquivo, recebido_em, storage_path")
+      .eq("familia_id", im.familia_id)
+      .or(orParts.join(","))
+      .order("recebido_em", { ascending: false });
+    // dedupe por id
+    const map = new Map<string, DocRow>();
+    (docsImovel ?? []).forEach((d: any) => map.set(d.id, d));
+    setDocs(Array.from(map.values()));
     setLoading(false);
   }
 
