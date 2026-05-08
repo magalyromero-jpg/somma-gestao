@@ -134,8 +134,8 @@ export default function ImoveisCliente() {
       </div>
 
       <Card className="p-4 shadow-card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome, endereço ou família" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
           </div>
@@ -150,8 +150,27 @@ export default function ImoveisCliente() {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="completos">Checklist completo</SelectItem>
-              <SelectItem value="pendentes">Com pendências</SelectItem>
+              <SelectItem value="completos">Completo</SelectItem>
+              <SelectItem value="andamento">Em andamento</SelectItem>
+              <SelectItem value="nao_iniciado">Não iniciado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tipoFilter} onValueChange={setTipoFilter}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os tipos</SelectItem>
+              <SelectItem value="renda">Para renda</SelectItem>
+              <SelectItem value="venda">Para venda</SelectItem>
+              <SelectItem value="valorizacao">Valorização</SelectItem>
+              <SelectItem value="uso_familiar">Uso familiar</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={pjFilter} onValueChange={setPjFilter}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">PF e PJ</SelectItem>
+              <SelectItem value="PF">Pessoa Física</SelectItem>
+              <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
             </SelectContent>
           </Select>
         </div>
