@@ -10,14 +10,11 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
-import FamiliaDetalhe from "./pages/FamiliaDetalhe";
 import Imoveis from "./pages/Imoveis";
-import ImovelDetalhe from "./pages/ImovelDetalhe";
 import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
 import Mercado from "./pages/Mercado";
 import PesquisaMercado from "./pages/PesquisaMercado";
 import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
-import Analytics from "./pages/Analytics";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Usuarios from "./pages/configuracoes/Usuarios";
@@ -49,14 +46,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
-              <Route path="/familias/:id" element={<FamiliaDetalhe />} />
               <Route path="/imoveis" element={<Imoveis />} />
               <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
-              <Route path="/imoveis/:codImovel" element={<ImovelDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
               <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
               <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
-              <Route path="/analytics" element={<Analytics />} />
               <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
               <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
               <Route path="/onboarding" element={<OnboardingFamilia />} />

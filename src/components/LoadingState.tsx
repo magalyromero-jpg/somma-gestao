@@ -17,7 +17,7 @@ export const ErrorState = ({ error, hint }: { error: unknown; hint?: string }) =
       <div className="flex items-start gap-3">
         <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
         <div className="text-sm">
-          <div className="font-medium text-destructive mb-1">Não foi possível carregar dados da Lidderar</div>
+          <div className="font-medium text-destructive mb-1">Não foi possível carregar os dados</div>
           <div className="text-muted-foreground">{msg}</div>
           {hint && <div className="text-xs text-muted-foreground mt-2">{hint}</div>}
         </div>

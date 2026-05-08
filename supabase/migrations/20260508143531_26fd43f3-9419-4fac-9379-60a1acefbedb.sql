@@ -1,0 +1,1 @@
+DELETE FROM public.configuracoes WHERE chave IN ('lidderar_bearer_token', 'lidderar_usuario', 'lidderar_senha');
