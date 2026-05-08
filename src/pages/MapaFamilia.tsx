@@ -272,18 +272,19 @@ export default function MapaFamilia() {
       <Tabs defaultValue="familia">
         <TabsList>
           <TabsTrigger value="familia">Família</TabsTrigger>
-          <TabsTrigger value="holdings">Holdings & Imóveis</TabsTrigger>
+          <TabsTrigger value="holdings">Holdings</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="diligencia">Diligência</TabsTrigger>
+          <TabsTrigger value="diligencia">Imóveis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="familia" className="space-y-6 mt-4">
           <FamiliaContexto familia={familia} checklist={checklist} onSaved={(patch) => setFamilia((f: any) => ({ ...f, ...patch }))} />
           <FamiliaTab membros={data?.membros ?? []} />
+          <OutrosBensSection familiaId={familia.id} data={data} userId={user?.id ?? ""} />
         </TabsContent>
 
         <TabsContent value="holdings" className="mt-4">
-          <HoldingsTab data={data} imoveisDb={imoveisDb} />
+          <HoldingsTab data={data} familiaId={familia.id} userId={user?.id ?? ""} />
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-4 space-y-6">
