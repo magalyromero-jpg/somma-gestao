@@ -781,44 +781,6 @@ function badgeCertidao(validade?: string | null) {
   return { cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30", txt: "🟢 Válida" };
 }
 
-/* ============== UTILIDADES (com badge de extração) ============== */
-function UtilidadesBlock({
-  form, set,
-}: { form: DbImovel; set: (k: string, v: any) => void }) {
-  const meta = form.extracao_meta ?? {};
-  const fields: Array<{ k: string; label: string }> = [
-    { k: "unidade_consumidora", label: "Unidade consumidora (energia)" },
-    { k: "distribuidora", label: "Distribuidora" },
-    { k: "mes_referencia_energia", label: "Mês referência energia (MM/YYYY)" },
-    { k: "hidrometro", label: "Hidrômetro" },
-    { k: "matricula_agua", label: "Matrícula de água" },
-    { k: "inscricao_municipal", label: "Inscrição municipal (IPTU)" },
-  ];
-  return (
-    <Card>
-      <CardContent className="p-4 space-y-3">
-        <h5 className="font-semibold text-sm">⚡ Utilidades</h5>
-        <div className="grid md:grid-cols-2 gap-3">
-          {fields.map((f) => {
-            const m = meta?.[f.k];
-            return (
-              <div key={f.k} className="space-y-1">
-                <Label className="text-xs">{f.label}</Label>
-                <Input value={form[f.k] ?? ""} onChange={(e) => set(f.k, e.target.value)} />
-                {m?.fonte && (
-                  <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] font-normal">
-                    Extraído de {m.fonte}{m.ref ? ` · ref. ${m.ref}` : ""}
-                  </Badge>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 /* ============== CERTIDÕES (document-driven via checklist) ============== */
 function CertidoesBlock({
   dbImovel, form, set, familiaId, onSaved,
