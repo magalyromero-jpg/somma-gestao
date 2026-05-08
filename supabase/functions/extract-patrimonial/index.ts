@@ -72,9 +72,9 @@ NÍVEL DOS ALERTAS:
 - "informativo" → contexto relevante (ex: holding nova, bem no exterior)`;
 
 const PATRIMONIAL_TOOL = {
-  type: "function",
-  function: {
-    name: "registrar_patrimonio",
+  name: "registrar_patrimonio",
+  description: "Registra o mapa patrimonial completo extraído dos documentos.",
+  input_schema: {
     description: "Registra o mapa patrimonial completo extraído dos documentos.",
     parameters: {
       type: "object",
