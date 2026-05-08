@@ -45,7 +45,6 @@ export default function ImoveisCliente() {
   const [loading, setLoading] = useState(true);
   const [familia, setFamilia] = useState("todas");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [tipoFilter, setTipoFilter] = useState("todos");
   const [pjFilter, setPjFilter] = useState("todos");
   const [q, setQ] = useState("");
 
