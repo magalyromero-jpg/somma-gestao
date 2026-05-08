@@ -17,12 +17,19 @@ export const CHECKLIST_ITEMS_BASE: ChecklistImovelItem[] = [
   { item_id: "seguro",      label: "Apólice de seguro",                          opcional: true  },
   { item_id: "balanco_pj",  label: "Balanço da empresa ou valor contábil (PJ)",  opcional: true,
     condicional: "titularidade === 'PJ'" },
+  // CNDs / certidões — universais
+  { item_id: "cnd_condominio", label: "CND Condomínio",            opcional: true },
+  { item_id: "cnd_iptu",       label: "CND IPTU",                  opcional: true },
+  { item_id: "cnd_energia",    label: "CND Energia Elétrica",      opcional: true },
+  { item_id: "certidao_onus",  label: "Certidão de Ônus",          opcional: true },
+  { item_id: "matricula_atual", label: "Matrícula atualizada",     opcional: true },
 ];
 
 export const CHECKLIST_ITEMS_LOCACAO: ChecklistImovelItem[] = [
-  { item_id: "contrato_locacao",   label: "Contrato de locação",                        opcional: false },
-  { item_id: "demonstrativo_imob", label: "Último demonstrativo mensal da imobiliária", opcional: false },
-  { item_id: "contato_imob",       label: "Contato da imobiliária",                     opcional: false },
+  { item_id: "contrato_admin_imob", label: "Contrato de administração da imobiliária", opcional: false },
+  { item_id: "contrato_locacao",    label: "Contrato de locação vigente",              opcional: false },
+  { item_id: "demonstrativo_imob",  label: "Último demonstrativo mensal da imobiliária", opcional: false },
+  { item_id: "contato_imob",        label: "Contato da imobiliária",                   opcional: false },
 ];
 
 export function itensParaImovel(imovel: Pick<Imovel, "titularidade" | "locacao">): ChecklistImovelItem[] {
