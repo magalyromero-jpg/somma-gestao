@@ -263,6 +263,7 @@ export function DiligenciaImovelCard({
                 <GestaoImovelSection
                   dbImovel={dbImovel}
                   tipoOperacao={tipoOperacao}
+                  imovelIR={imovel}
                   onSaved={onDbImovelChange}
                 />
               </TabsContent>
