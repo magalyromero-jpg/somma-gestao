@@ -72,13 +72,12 @@ NÍVEL DOS ALERTAS:
 - "informativo" → contexto relevante (ex: holding nova, bem no exterior)`;
 
 const PATRIMONIAL_TOOL = {
-  type: "function",
-  function: {
-    name: "registrar_patrimonio",
+  name: "registrar_patrimonio",
+  description: "Registra o mapa patrimonial completo extraído dos documentos.",
+  input_schema: {
     description: "Registra o mapa patrimonial completo extraído dos documentos.",
-    parameters: {
-      type: "object",
-      properties: {
+    type: "object",
+    properties: {
         familia: {
           type: "object",
           properties: {
@@ -298,9 +297,8 @@ const PATRIMONIAL_TOOL = {
           },
           required: ["documentos_analisados", "data_extracao", "confianca"],
         },
-      },
-      required: ["familia", "membros", "holdings", "imoveis", "meta"],
     },
+    required: ["familia", "membros", "holdings", "imoveis", "meta"],
   },
 };
 
@@ -319,9 +317,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }), {
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -332,11 +330,18 @@ serve(async (req) => {
     if (Array.isArray(files)) {
       for (const f of files) {
         if (!f?.base64) continue;
-        const dataUrl = `data:${f.mimeType || "application/pdf"};base64,${f.base64}`;
-        userContent.push({
-          type: "image_url",
-          image_url: { url: dataUrl },
-        });
+        const mediaType = f.mimeType || "application/pdf";
+        if (mediaType === "application/pdf") {
+          userContent.push({
+            type: "document",
+            source: { type: "base64", media_type: mediaType, data: f.base64 },
+          });
+        } else {
+          userContent.push({
+            type: "image",
+            source: { type: "base64", media_type: mediaType, data: f.base64 },
+          });
+        }
       }
     }
 
@@ -349,57 +354,52 @@ serve(async (req) => {
       text: `${enrichmentPrefix}Nome da família: ${familyName}\n\nAnalise os documentos anexados e retorne o JSON completo conforme o schema. Extraia todos os dados disponíveis. Não omita imóveis, participações societárias ou membros identificados, mesmo que a informação seja parcial. Use a data de hoje para meta.data_extracao.`,
     });
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 16000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userContent }],
         tools: [PATRIMONIAL_TOOL],
-        tool_choice: { type: "function", function: { name: "registrar_patrimonio" } },
+        tool_choice: { type: "tool", name: "registrar_patrimonio" },
       }),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
+      console.error("Anthropic API error:", response.status, text);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em instantes." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace para continuar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      return new Response(JSON.stringify({ error: "Erro no AI Gateway", details: text }), {
+      return new Response(JSON.stringify({ error: "Erro na API Anthropic", details: text }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    const toolUse = Array.isArray(data?.content)
+      ? data.content.find((b: any) => b?.type === "tool_use")
+      : null;
 
-    if (!toolCall?.function?.arguments) {
-      console.error("Sem tool_call no retorno:", JSON.stringify(data));
+    if (!toolUse?.input) {
+      console.error("Sem tool_use no retorno:", JSON.stringify(data));
       return new Response(
         JSON.stringify({ error: "Modelo não retornou estrutura esperada", raw: data }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const parsed = JSON.parse(toolCall.function.arguments);
-    return new Response(JSON.stringify({ data: parsed }), {
+    return new Response(JSON.stringify({ data: toolUse.input }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
