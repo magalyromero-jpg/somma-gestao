@@ -270,15 +270,9 @@ export function GestaoImovelSection({
               <Field label="Telefone do administrador" value={form.condominio_admin_telefone} onChange={(v) => set("condominio_admin_telefone", v)} />
               <Field label="Taxa condominial (R$)" type="number" value={form.taxa_condominio} onChange={(v) => set("taxa_condominio", v ? Number(v) : null)} />
               <Field label="Dia de vencimento" type="number" value={form.vencimento_condominio} onChange={(v) => set("vencimento_condominio", v ? Number(v) : null)} />
-              <Field label="IPTU anual (R$)" type="number" value={form.valor_iptu_anual} onChange={(v) => set("valor_iptu_anual", v ? Number(v) : null)} />
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Utilidades */}
-      {showUtilidades && (
-        <UtilidadesBlock form={form} set={set} />
       )}
 
       {/* Certidões — vinculadas ao checklist do imóvel */}
