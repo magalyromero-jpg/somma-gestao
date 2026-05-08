@@ -42,8 +42,6 @@ function enderecoCompleto(im: Imovel): string {
 
 export async function criarChecklistsImoveis(familiaId: string, imoveis: Imovel[]) {
   for (const imovel of imoveis) {
-    if (imovel.alienado) continue;
-
     const { data: im, error } = await supabase
       .from("imoveis_cliente")
       .upsert(
