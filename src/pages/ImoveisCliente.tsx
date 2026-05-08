@@ -93,7 +93,7 @@ export default function ImoveisCliente() {
       if (q && !`${r.nome} ${r.endereco ?? ""} ${r.familia_nome ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [rows, familia, statusFilter, tipoFilter, pjFilter, q]);
+  }, [rows, familia, statusFilter, pjFilter, q]);
 
   const kpis = useMemo(() => {
     const totalImoveis = rows.length;
