@@ -852,42 +852,22 @@ function DocumentosTab({
             </div>
           )}
 
-          <div
-            {...getRootProps()}
-            className={cn(
-              "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-              isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-              enriching && "opacity-80 pointer-events-none bg-primary/5 border-primary/40",
-            )}
-          >
-            <input {...getInputProps()} />
-            {enriching ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
-                  <span className="text-sm font-medium">{PROCESSING_STEPS[stepIdx]}</span>
-                </div>
-                {currentFile && (
-                  <p className="text-xs text-muted-foreground truncate">{currentFile}</p>
-                )}
-                <div className="flex justify-center gap-1">
-                  {PROCESSING_STEPS.map((_, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        "h-1 w-8 rounded-full transition-colors",
-                        i <= stepIdx ? "bg-primary" : "bg-border",
-                      )}
-                    />
-                  ))}
-                </div>
+          {enriching && (
+            <div className="border-2 border-dashed rounded-lg p-6 text-center bg-primary/5 border-primary/40">
+              <div className="flex items-center justify-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span className="text-sm font-medium">{PROCESSING_STEPS[stepIdx]}</span>
               </div>
-            ) : (
-              <>
-                <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm">Adicionar mais documentos (enriquecimento)</p>
-              </>
-            )}
+              {currentFile && (
+                <p className="text-xs text-muted-foreground mt-2 truncate">{currentFile}</p>
+              )}
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground border-t pt-3">
+            Para anexar documentos vinculados, use o botão <strong>Anexar</strong> em cada item do checklist —
+            nas abas <strong>Imóveis</strong>, <strong>Holdings</strong> ou em <strong>Outros Bens</strong>.
+            Esta área lista somente documentos gerais da família (IR, RG, CPF, CNH e contratos sociais sem holding).
           </div>
         </CardContent>
       </Card>
