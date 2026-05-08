@@ -113,129 +113,142 @@ export default function Configuracoes() {
 
   return (
     <>
-      <PageHeader title="Configurações" subtitle="Token Lidderar e parâmetros do sistema" />
+      <PageHeader title="Configurações" subtitle="Token Lidderar, integrações e histórico" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-light text-base">API Lidderar — Bearer Token</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="font-light text-xs uppercase tracking-wider">Token</Label>
-              <div className="relative">
-                <Input
-                  type={showToken ? "text" : "password"}
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder={loading ? "Carregando…" : "Cole o Bearer Token aqui"}
-                  className="pr-10 font-mono text-xs"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken((s) => !s)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] font-light text-muted-foreground">
-                Para renovar: login em sistema.lidderar.com.br → DevTools → Network → copie o
-                valor de <strong>Authorization</strong> (sem &quot;Bearer &quot;).
-              </p>
-            </div>
+      <Tabs defaultValue="integracoes">
+        <TabsList>
+          <TabsTrigger value="integracoes">Integrações</TabsTrigger>
+          <TabsTrigger value="historico">Histórico de Atividades</TabsTrigger>
+        </TabsList>
 
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving || loading} className="bg-gold hover:bg-gold/90 text-gold-foreground">
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Salvar Token
-              </Button>
-              <Button variant="outline" onClick={handleTest} disabled={testing || !token}>
-                {testing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Testar Conexão
-              </Button>
-            </div>
+        <TabsContent value="integracoes" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-light text-base">API Lidderar — Bearer Token</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="font-light text-xs uppercase tracking-wider">Token</Label>
+                  <div className="relative">
+                    <Input
+                      type={showToken ? "text" : "password"}
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      placeholder={loading ? "Carregando…" : "Cole o Bearer Token aqui"}
+                      className="pr-10 font-mono text-xs"
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] font-light text-muted-foreground">
+                    Para renovar: login em sistema.lidderar.com.br → DevTools → Network → copie o
+                    valor de <strong>Authorization</strong> (sem &quot;Bearer &quot;).
+                  </p>
+                </div>
 
-            {testResult === "success" && (
-              <div className="flex items-center gap-2 text-sm text-success">
-                <CheckCircle2 className="h-4 w-4" /> Conexão estabelecida
-              </div>
-            )}
-            {testResult === "error" && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <XCircle className="h-4 w-4" /> Falha na conexão — verifique o token
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                <div className="flex gap-2">
+                  <Button onClick={handleSave} disabled={saving || loading} className="bg-gold hover:bg-gold/90 text-gold-foreground">
+                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Salvar Token
+                  </Button>
+                  <Button variant="outline" onClick={handleTest} disabled={testing || !token}>
+                    {testing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Testar Conexão
+                  </Button>
+                </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-light text-base">Renovação Automática — Login Lidderar</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="font-light text-xs uppercase tracking-wider">Usuário / E-mail</Label>
-              <Input
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
-                placeholder={loading ? "Carregando…" : "seu.usuario@empresa.com"}
-                disabled={loading}
-                autoComplete="username"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="font-light text-xs uppercase tracking-wider">Senha</Label>
-              <div className="relative">
-                <Input
-                  type={showSenha ? "text" : "password"}
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder={loading ? "Carregando…" : "••••••••"}
-                  className="pr-10"
-                  disabled={loading}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSenha((s) => !s)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] font-light text-muted-foreground">
-                Com as credenciais salvas, o sistema renova o token automaticamente quando a
-                Lidderar retornar 401/403.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSaveCredentials}
-                disabled={savingCreds || loading}
-                className="bg-gold hover:bg-gold/90 text-gold-foreground"
-              >
-                {savingCreds && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Salvar Credenciais
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleRenewNow}
-                disabled={renewing || !usuario || !senha}
-              >
-                {renewing ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                {testResult === "success" && (
+                  <div className="flex items-center gap-2 text-sm text-success">
+                    <CheckCircle2 className="h-4 w-4" /> Conexão estabelecida
+                  </div>
                 )}
-                Renovar Token Agora
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {testResult === "error" && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <XCircle className="h-4 w-4" /> Falha na conexão — verifique o token
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-light text-base">Renovação Automática — Login Lidderar</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="font-light text-xs uppercase tracking-wider">Usuário / E-mail</Label>
+                  <Input
+                    value={usuario}
+                    onChange={(e) => setUsuario(e.target.value)}
+                    placeholder={loading ? "Carregando…" : "seu.usuario@empresa.com"}
+                    disabled={loading}
+                    autoComplete="username"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-light text-xs uppercase tracking-wider">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      type={showSenha ? "text" : "password"}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      placeholder={loading ? "Carregando…" : "••••••••"}
+                      className="pr-10"
+                      disabled={loading}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSenha((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] font-light text-muted-foreground">
+                    Com as credenciais salvas, o sistema renova o token automaticamente quando a
+                    Lidderar retornar 401/403.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveCredentials}
+                    disabled={savingCreds || loading}
+                    className="bg-gold hover:bg-gold/90 text-gold-foreground"
+                  >
+                    {savingCreds && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Salvar Credenciais
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleRenewNow}
+                    disabled={renewing || !usuario || !senha}
+                  >
+                    {renewing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Renovar Token Agora
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="historico" className="mt-4">
+          <HistoricoAtividades />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }
