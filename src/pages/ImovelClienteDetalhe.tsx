@@ -102,6 +102,7 @@ export default function ImovelClienteDetalhe() {
           storage_path: path,
           tipo: item.item_id,
           categoria: "imovel",
+          imovel_ref: imovel.id,
           created_by: (await supabase.auth.getUser()).data.user?.id,
         } as any)
         .select()
