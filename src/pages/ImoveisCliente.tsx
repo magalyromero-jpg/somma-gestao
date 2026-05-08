@@ -87,7 +87,7 @@ export default function ImoveisCliente() {
       if (statusFilter === "completos" && prog.pct !== 100) return false;
       if (statusFilter === "andamento" && (prog.pct === 100 || prog.recebidos === 0)) return false;
       if (statusFilter === "nao_iniciado" && prog.recebidos !== 0) return false;
-      if (tipoFilter !== "todos" && (r.tipo_operacao ?? "") !== tipoFilter) return false;
+      
       if (pjFilter === "PF" && (r.titularidade ?? "").toUpperCase() !== "PF") return false;
       if (pjFilter === "PJ" && (r.titularidade ?? "").toUpperCase() !== "PJ") return false;
       if (q && !`${r.nome} ${r.endereco ?? ""} ${r.familia_nome ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
