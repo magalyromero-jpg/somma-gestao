@@ -173,6 +173,24 @@ export function HoldingsChecklist({
   return (
     <Accordion type="multiple" className="space-y-2">
       {holdings.map((h) => {
+        const isEncerrada = String((h as any).tipo) === "encerrada";
+
+        if (isEncerrada) {
+          return (
+            <div
+              key={h.id}
+              className="border rounded-md px-4 py-3 flex items-center gap-3 flex-wrap"
+            >
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{h.razao_social}</span>
+              {h.cnpj && (
+                <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>
+              )}
+              <Badge variant="secondary" className="ml-auto">Encerrada</Badge>
+            </div>
+          );
+        }
+
         const items = rows.filter((r) => r.holding_id === h.id);
         const recebidos = items.filter((r) => r.status === "recebido").length;
         const total = items.length || CHECKLIST_HOLDING.length;
@@ -193,9 +211,22 @@ export function HoldingsChecklist({
             <AccordionContent className="space-y-3 pb-4">
               <Progress value={pct} className="h-1.5" />
               <div className="space-y-2">
-                {items.length === 0 && !loading && (
-                  <div className="text-xs text-muted-foreground">Inicializando checklist…</div>
+                {loading && items.length === 0 && (
+                  <div className="text-xs text-muted-foreground">Carregando checklist…</div>
                 )}
+                {!loading && items.length === 0 &&
+                  CHECKLIST_HOLDING.map((item) => (
+                    <ChecklistItemRow
+                      key={item.item_id}
+                      label={item.label}
+                      opcional={item.opcional}
+                      status="pendente"
+                      onToggle={() => {}}
+                      onFile={() => {
+                        toast.error("Checklist ainda inicializando, tente novamente em instantes.");
+                      }}
+                    />
+                  ))}
                 {items.map((row) => (
                   <ChecklistItemRow
                     key={row.id}
