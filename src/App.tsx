@@ -46,14 +46,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
-              <Route path="/familias/:id" element={<FamiliaDetalhe />} />
               <Route path="/imoveis" element={<Imoveis />} />
               <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
-              <Route path="/imoveis/:codImovel" element={<ImovelDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
               <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
               <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
-              <Route path="/analytics" element={<Analytics />} />
               <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
               <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
               <Route path="/onboarding" element={<OnboardingFamilia />} />
