@@ -60,10 +60,9 @@ export function HoldingsChecklist({
       if (cancel) return;
       const existing = (data ?? []) as ChecklistHoldingRow[];
 
-      // Seed missing items for each non-encerrada holding
+      // Seed missing items for every holding
       const toInsert: any[] = [];
       for (const h of holdings) {
-        if (String((h as any).tipo) === "encerrada") continue;
         for (const item of CHECKLIST_HOLDING) {
           const has = existing.some(
             (r) => r.holding_id === h.id && r.item_id === item.item_id,
@@ -173,28 +172,11 @@ export function HoldingsChecklist({
   return (
     <Accordion type="multiple" className="space-y-2">
       {holdings.map((h) => {
-        const isEncerrada = String((h as any).tipo) === "encerrada";
-
-        if (isEncerrada) {
-          return (
-            <div
-              key={h.id}
-              className="border rounded-md px-4 py-3 flex items-center gap-3 flex-wrap"
-            >
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{h.razao_social}</span>
-              {h.cnpj && (
-                <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>
-              )}
-              <Badge variant="secondary" className="ml-auto">Encerrada</Badge>
-            </div>
-          );
-        }
-
         const items = rows.filter((r) => r.holding_id === h.id);
         const recebidos = items.filter((r) => r.status === "recebido").length;
         const total = items.length || CHECKLIST_HOLDING.length;
         const pct = total ? Math.round((recebidos / total) * 100) : 0;
+        const completo = total > 0 && recebidos === total;
         return (
           <AccordionItem key={h.id} value={h.id} className="border rounded-md px-4">
             <AccordionTrigger>
@@ -203,9 +185,15 @@ export function HoldingsChecklist({
                 <span className="font-medium">{h.razao_social}</span>
                 {h.cnpj && <span className="text-xs text-muted-foreground">CNPJ {h.cnpj}</span>}
                 <Badge variant="outline">{h.tipo}</Badge>
-                <span className="ml-auto mr-3 text-xs text-muted-foreground">
-                  {recebidos}/{total} documentos
-                </span>
+                {completo ? (
+                  <Badge className="ml-auto mr-3 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+                    100% ✓
+                  </Badge>
+                ) : (
+                  <span className="ml-auto mr-3 text-xs text-muted-foreground">
+                    {recebidos}/{total} documentos
+                  </span>
+                )}
               </div>
             </AccordionTrigger>
             <AccordionContent className="space-y-3 pb-4">
