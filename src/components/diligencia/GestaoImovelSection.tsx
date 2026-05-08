@@ -138,7 +138,6 @@ export function GestaoImovelSection({
   const showValorizacao = tipoOperacao === "valorizacao";
   const showUso = tipoOperacao === "uso_familiar";
   const showCondominio = true;
-  const showUtilidades = !showValorizacao;
   const showLongStay = showRenda && form.tipo_locacao === "long_stay";
   const showShortStay = showRenda && form.tipo_locacao === "short_stay";
 
