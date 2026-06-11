@@ -42,7 +42,7 @@ serve(async (req) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 },
+            filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
             select: ["ID", "TITLE", "RESPONSIBLE_ID", "DEADLINE"],
             order: { "TITLE": "ASC" },
             params: { START: start },
@@ -78,7 +78,7 @@ serve(async (req) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 },
+            filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
             select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "ACTIVITY_DATE"],
             order: { "TITLE": "ASC" },
             params: { START: start },
@@ -91,18 +91,46 @@ serve(async (req) => {
         start = data.next;
       }
 
-      const familias = todasFamilias
-        .filter((t: any) => !t.title.includes(' - '))
-        .map((t: any) => ({
-          id: t.id,
-          titulo: t.title,
-          responsavel_id: t.responsibleId,
-          status: mapStatus(t.status),
-          activity_date: t.activityDate ?? null,
-        }));
+      const familiasFiltradas = todasFamilias.filter((t: any) => !t.title.includes(' - '));
+
+      const ids = [...new Set(familiasFiltradas.map((t: any) => t.responsibleId).filter(Boolean))];
+      const respMap: Record<string, string> = {};
+      if (ids.length > 0) {
+        const res = await fetch(`${BITRIX_URL}/user.get.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filter: { ID: ids } }),
+        });
+        if (res.ok) {
+          const ud = await res.json();
+          for (const u of ud?.result ?? []) {
+            respMap[u.ID] = `${u.NAME} ${u.LAST_NAME}`.trim();
+          }
+        }
+      }
+
+      const familias = familiasFiltradas.map((t: any) => ({
+        id: t.id,
+        titulo: t.title,
+        responsavel_nome: respMap[t.responsibleId] ?? null,
+        ultima_atividade: t.activityDate ?? null,
+        total_abertas: 0,
+        atrasadas: 0,
+        alta_prioridade: 0,
+        hoje: 0,
+      }));
 
       return new Response(
-        JSON.stringify({ familias, total: familias.length }),
+        JSON.stringify({
+          familias,
+          totais: {
+            total_familias: familias.length,
+            total_abertas: 0,
+            total_atrasadas: 0,
+            total_alta_prioridade: 0,
+            total_hoje: 0,
+          },
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
