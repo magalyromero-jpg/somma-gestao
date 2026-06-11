@@ -109,7 +109,7 @@ export default function IntegracaoBitrix() {
           <CardTitle className="text-base">Webhook de entrada</CardTitle>
           <CardDescription>
             URL gerada em{" "}
-            
+            <a
               href="https://sommainvestimentos.bitrix24.com.br/devops/rest/"
               target="_blank" rel="noopener noreferrer"
               className="underline inline-flex items-center gap-1"
