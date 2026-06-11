@@ -42,8 +42,8 @@ serve(async (req) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
-            select: ["ID", "TITLE", "RESPONSIBLE_ID"],
+            filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 },
+            select: ["ID", "TITLE", "RESPONSIBLE_ID", "DEADLINE"],
             order: { "TITLE": "ASC" },
             params: { START: start },
           }),
@@ -51,7 +51,7 @@ serve(async (req) => {
         const data = await res.json();
         const tasks = data?.result?.tasks ?? [];
         allTasks.push(...tasks);
-        if (tasks.length < 50 || !data?.next) break;
+        if (!data?.next) break;
         start = data.next;
       }
 
@@ -65,6 +65,44 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ familias_bitrix: tarefas }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── 1b. DASHBOARD BITRIX ───────────────────────────────────────────────
+    if (action === "dashboard_bitrix") {
+      const todasFamilias: any[] = [];
+      let start = 0;
+      while (true) {
+        const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 },
+            select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "ACTIVITY_DATE"],
+            order: { "TITLE": "ASC" },
+            params: { START: start },
+          }),
+        });
+        const data = await res.json();
+        const tasks = data?.result?.tasks ?? [];
+        todasFamilias.push(...tasks);
+        if (!data?.next) break;
+        start = data.next;
+      }
+
+      const familias = todasFamilias
+        .filter((t: any) => !t.title.includes(' - '))
+        .map((t: any) => ({
+          id: t.id,
+          titulo: t.title,
+          responsavel_id: t.responsibleId,
+          status: mapStatus(t.status),
+          activity_date: t.activityDate ?? null,
+        }));
+
+      return new Response(
+        JSON.stringify({ familias, total: familias.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
