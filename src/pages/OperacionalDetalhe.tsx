@@ -364,48 +364,139 @@ export default function OperacionalDetalhe() {
         )}
       </div>
 
-      <div className="mb-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mb-6 border-b border-border">
+        <div className="flex items-center gap-1">
           {(
             [
-              { key: "todas" as const, label: `Todas (${counts.total})` },
-              { key: "pending" as const, label: `Pendentes (${counts.pendentes})` },
-              { key: "in_progress" as const, label: `Em andamento (${counts.andamento})` },
-              { key: "high" as const, label: `Alta prioridade (${counts.alta})` },
+              { key: "aberto" as const, label: "Em aberto" },
+              { key: "concluidas" as const, label: "Concluídas" },
+              { key: "visao" as const, label: "Visão geral" },
             ] as const
-          ).map((f) => (
+          ).map((t) => (
             <button
-              key={f.key}
-              onClick={() => setFiltro(f.key)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                filtro === f.key
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-muted-foreground hover:border-foreground/50"
+              key={t.key}
+              onClick={() => setAba(t.key)}
+              className={`text-sm px-4 py-2 -mb-px border-b-2 transition-colors ${
+                aba === t.key
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {f.label}
+              {t.label}
             </button>
           ))}
         </div>
       </div>
 
-      {erro && (
-        <Card className="border-destructive/40 mb-4">
-          <CardContent className="p-4 flex items-start gap-3">
-            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
-            <p className="text-sm text-destructive">{erro}</p>
+      {aba === "aberto" && (
+        <>
+          {erro && (
+            <Card className="border-destructive/40 mb-4">
+              <CardContent className="p-4 flex items-start gap-3">
+                <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+                <p className="text-sm text-destructive">{erro}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { key: "todas" as const, label: `Todas (${counts.total})` },
+                  { key: "pending" as const, label: `Pendentes (${counts.pendentes})` },
+                  { key: "in_progress" as const, label: `Em andamento (${counts.andamento})` },
+                  { key: "high" as const, label: `Alta prioridade (${counts.alta})` },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFiltro(f.key)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    filtro === f.key
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:border-foreground/50"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {loading && [1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+            {!loading && !erro && tarefasFiltradas.length === 0 && (
+              <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma tarefa encontrada.</p>
+            )}
+            {!loading && tarefasFiltradas.map((t) => <TarefaRow key={t.id ?? t.bitrix_task_id} tarefa={t} />)}
+          </div>
+        </>
+      )}
+
+      {aba === "concluidas" && (
+        <div className="space-y-6">
+          {loadingConcluidas && [1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+          {!loadingConcluidas && erroConcluidas && (
+            <p className="text-sm text-destructive">{erroConcluidas}</p>
+          )}
+          {!loadingConcluidas && !erroConcluidas && concluidas.length === 0 && (
+            <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma tarefa concluída.</p>
+          )}
+          {!loadingConcluidas &&
+            Object.entries(concluidasPorMes).map(([mes, lista]) => (
+              <div key={mes}>
+                <h3 className="text-sm font-semibold text-foreground capitalize mb-2">
+                  {mes} <span className="text-muted-foreground font-normal">({lista.length})</span>
+                </h3>
+                <div className="space-y-3">
+                  {lista.map((t) => (
+                    <TarefaRow key={t.bitrix_task_id} tarefa={t as unknown as Tarefa} />
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {aba === "visao" && (
+        <Card>
+          <CardContent className="p-0">
+            {loadingConcluidas && (
+              <div className="p-6 space-y-3">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 rounded" />)}
+              </div>
+            )}
+            {!loadingConcluidas && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">Mês</th>
+                    <th className="px-4 py-3 font-medium text-right">Em aberto</th>
+                    <th className="px-4 py-3 font-medium text-right">Concluídas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesesVisao.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-12 text-center text-muted-foreground">
+                        Nenhum dado disponível.
+                      </td>
+                    </tr>
+                  )}
+                  {mesesVisao.map((mes) => (
+                    <tr key={mes} className="border-b border-border/60 last:border-0">
+                      <td className="px-4 py-3 capitalize">{mes}</td>
+                      <td className="px-4 py-3 text-right">{abertasPorMes[mes] ?? 0}</td>
+                      <td className="px-4 py-3 text-right">{concluidasContagemPorMes[mes] ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </CardContent>
         </Card>
       )}
-
-      <div className="space-y-3">
-        {loading && [1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
-        {!loading && erro && <p className="text-sm text-destructive">{erro}</p>}
-        {!loading && !erro && tarefasFiltradas.length === 0 && (
-          <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma tarefa encontrada.</p>
-        )}
-        {!loading && tarefasFiltradas.map((t) => <TarefaRow key={t.id} tarefa={t} />)}
-      </div>
     </>
   );
 }
