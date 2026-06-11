@@ -71,28 +71,46 @@ serve(async (req) => {
 
     // ── 1b. DASHBOARD BITRIX ───────────────────────────────────────────────
     if (action === "dashboard_bitrix") {
-      const todasFamilias: any[] = [];
-      let start = 0;
-      while (true) {
+      // Primeira chamada para saber o total
+      const primeiraRes = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
+          select: ["ID", "TITLE", "RESPONSIBLE_ID", "ACTIVITY_DATE"],
+          order: { "TITLE": "ASC" },
+          params: { START: 0 },
+        }),
+      });
+      const primeirosDados = await primeiraRes.json();
+      const total = primeirosDados?.result?.total ?? 0;
+      const todasTarefas = [...(primeirosDados?.result?.tasks ?? [])];
+
+      // Calcula páginas restantes e busca em paralelo
+      const starts: number[] = [];
+      for (let s = 50; s < total; s += 50) starts.push(s);
+
+      const paginas = await Promise.all(starts.map(async (start) => {
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
-            select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "ACTIVITY_DATE"],
+            select: ["ID", "TITLE", "RESPONSIBLE_ID", "ACTIVITY_DATE"],
             order: { "TITLE": "ASC" },
             params: { START: start },
           }),
         });
         const data = await res.json();
-        const tasks = data?.result?.tasks ?? [];
-        todasFamilias.push(...tasks);
-        if (!data?.next) break;
-        start = data.next;
-      }
+        return data?.result?.tasks ?? [];
+      }));
 
-      const familiasFiltradas = todasFamilias.filter((t: any) => !t.title.includes(' - '));
+      paginas.forEach((p) => todasTarefas.push(...p));
 
+      // Filtra só clientes (sem hífen no título)
+      const familiasFiltradas = todasTarefas.filter((t: any) => !t.title.includes(' - '));
+
+      // Resolve nomes dos responsáveis
       const ids = [...new Set(familiasFiltradas.map((t: any) => t.responsibleId).filter(Boolean))];
       const respMap: Record<string, string> = {};
       if (ids.length > 0) {
