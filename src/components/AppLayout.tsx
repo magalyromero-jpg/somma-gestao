@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
 import { Button } from "@/components/ui/button";
+import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog, ListTodo } from "lucide-react";
+
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> = [
   { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"] },
@@ -18,6 +20,7 @@ const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> 
   
   { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"] },
 ];
+{ to: "/operacional", label: "Operacional", icon: ListTodo, allowed: ["admin", "gestor", "analista"] },
 
 export default function AppLayout() {
   const { role, profile, signOut } = useAuth();
