@@ -1,10 +1,9 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoAtividades } from "./configuracoes/HistoricoAtividades";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Users, AlertTriangle, Clock } from "lucide-react";
+import { Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import IntegracaoBitrix from "./configuracoes/IntegracaoBitrix";
 
