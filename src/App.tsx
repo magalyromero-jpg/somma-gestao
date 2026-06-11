@@ -18,7 +18,7 @@ import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Usuarios from "./pages/configuracoes/Usuarios";
-import IntegracaoBitrix from "./pages/configuracoes/IntegracaoBitrix";
+
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
@@ -60,7 +60,7 @@ const App = () => (
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes/usuarios" element={<ProtectedRoute requireRole="admin"><Usuarios /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Configuracoes /></ProtectedRoute>} />
-              <Route path="/configuracoes/bitrix" element={<ProtectedRoute requireRole={["admin", "gestor"]}><IntegracaoBitrix /></ProtectedRoute>} />
+              
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
