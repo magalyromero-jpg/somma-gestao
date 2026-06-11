@@ -49,7 +49,7 @@ export default function Configuracoes() {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="integracoes" className="mt-4">
+          <TabsContent value="integracoes" className="mt-4 space-y-6">
             <IntegracaoBitrix />
           </TabsContent>
         )}
