@@ -274,6 +274,31 @@ export default function OperacionalDetalhe() {
     ).length,
   };
 
+  const concluidasPorMes = concluidas.reduce((acc: Record<string, TarefaConcluida[]>, t) => {
+    const mes = t.data_conclusao
+      ? format(new Date(t.data_conclusao), "MMMM yyyy", { locale: ptBR })
+      : "Sem data";
+    if (!acc[mes]) acc[mes] = [];
+    acc[mes].push(t);
+    return acc;
+  }, {});
+
+  const abertasPorMes = tarefas
+    .filter((t) => t.status !== "completed")
+    .reduce((acc: Record<string, number>, t) => {
+      const mes = t.prazo
+        ? format(new Date(t.prazo), "MMMM yyyy", { locale: ptBR })
+        : "Sem data";
+      acc[mes] = (acc[mes] ?? 0) + 1;
+      return acc;
+    }, {});
+
+  const concluidasContagemPorMes = Object.fromEntries(
+    Object.entries(concluidasPorMes).map(([mes, lista]) => [mes, lista.length])
+  );
+
+  const mesesVisao = [...new Set([...Object.keys(abertasPorMes), ...Object.keys(concluidasContagemPorMes)])];
+
   return (
     <>
       <PageHeader
