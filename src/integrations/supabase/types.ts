@@ -399,6 +399,7 @@ export type Database = {
       }
       familias_onboarding: {
         Row: {
+          bitrix_marcador: string | null
           confianca: string | null
           created_at: string
           created_by: string
@@ -414,6 +415,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bitrix_marcador?: string | null
           confianca?: string | null
           created_at?: string
           created_by: string
@@ -429,6 +431,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bitrix_marcador?: string | null
           confianca?: string | null
           created_at?: string
           created_by?: string

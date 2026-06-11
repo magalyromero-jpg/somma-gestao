@@ -68,7 +68,7 @@ export default function IntegracaoBitrix() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <PageHeader title="Integração Bitrix" description="Configure a sincronização com o Bitrix24." />
+      <PageHeader title="Integração Bitrix" subtitle="Configure a sincronização com o Bitrix24." />
 
       <Card>
         <CardHeader>
