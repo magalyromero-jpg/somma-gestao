@@ -205,14 +205,14 @@ export default function IntegracaoBitrix() {
                   <div key={f.id} className="flex items-center gap-4">
                     <span className="text-sm font-medium w-52 flex-shrink-0 truncate">{f.nome}</span>
                     <Select
-                      value={marcadores[f.id] ?? ""}
-                      onValueChange={val => setMarcadores(m => ({ ...m, [f.id]: val }))}
+                      value={marcadores[f.id] || "__none__"}
+                      onValueChange={val => setMarcadores(m => ({ ...m, [f.id]: val === "__none__" ? "" : val }))}
                     >
                       <SelectTrigger className="max-w-xs">
                         <SelectValue placeholder="Selecione o marcador..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sem vínculo —</SelectItem>
+                        <SelectItem value="__none__">— Sem vínculo —</SelectItem>
                         {marcadoresBitrix.map(tag => (
                           <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                         ))}
