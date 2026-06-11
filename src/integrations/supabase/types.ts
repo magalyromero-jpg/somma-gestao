@@ -53,6 +53,54 @@ export type Database = {
         }
         Relationships: []
       }
+      bitrix_tarefas_cache: {
+        Row: {
+          bitrix_task_id: number
+          descricao: string | null
+          familia_id: string
+          id: string
+          link_bitrix: string | null
+          marcadores: string[]
+          prazo: string | null
+          prioridade: string
+          responsavel_foto: string | null
+          responsavel_nome: string | null
+          status: string
+          synced_at: string
+          titulo: string
+        }
+        Insert: {
+          bitrix_task_id: number
+          descricao?: string | null
+          familia_id: string
+          id?: string
+          link_bitrix?: string | null
+          marcadores?: string[]
+          prazo?: string | null
+          prioridade?: string
+          responsavel_foto?: string | null
+          responsavel_nome?: string | null
+          status?: string
+          synced_at?: string
+          titulo: string
+        }
+        Update: {
+          bitrix_task_id?: number
+          descricao?: string | null
+          familia_id?: string
+          id?: string
+          link_bitrix?: string | null
+          marcadores?: string[]
+          prazo?: string | null
+          prioridade?: string
+          responsavel_foto?: string | null
+          responsavel_nome?: string | null
+          status?: string
+          synced_at?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       checklist_holding: {
         Row: {
           data_recebimento: string | null
