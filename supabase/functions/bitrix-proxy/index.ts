@@ -71,47 +71,27 @@ serve(async (req) => {
 
     // ── 1b. DASHBOARD BITRIX ───────────────────────────────────────────────
     if (action === "dashboard_bitrix") {
-      // Primeira chamada para saber o total
-      const primeiraRes = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
-          select: ["ID", "TITLE", "RESPONSIBLE_ID", "ACTIVITY_DATE"],
-          order: { "TITLE": "ASC" },
-          params: { START: 0 },
-        }),
-      });
-      const primeirosDados = await primeiraRes.json();
-      const total = primeirosDados?.result?.total ?? 0;
-      const todasTarefas = [...(primeirosDados?.result?.tasks ?? [])];
-
-      // Calcula páginas restantes e busca em paralelo
-      const starts: number[] = [];
-      for (let s = 50; s < total; s += 50) starts.push(s);
-
-      const paginas = await Promise.all(starts.map(async (start) => {
+      const todasFamilias: any[] = [];
+      let next: number | null = 0;
+      while (next !== null) {
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
             select: ["ID", "TITLE", "RESPONSIBLE_ID", "ACTIVITY_DATE"],
-            order: { "TITLE": "ASC" },
-            params: { START: start },
+            order: { "ID": "ASC" },
+            params: { START: next },
           }),
         });
         const data = await res.json();
-        return data?.result?.tasks ?? [];
-      }));
-
-      paginas.forEach((p) => todasTarefas.push(...p));
-
-      // Filtra só clientes (sem hífen no título)
-      const familiasFiltradas = todasTarefas.filter((t: any) => !t.title.includes(' - '));
+        const tasks = data?.result?.tasks ?? [];
+        todasFamilias.push(...tasks.filter((t: any) => !t.title.includes(' - ')));
+        next = data?.next ?? null;
+      }
 
       // Resolve nomes dos responsáveis
-      const ids = [...new Set(familiasFiltradas.map((t: any) => t.responsibleId).filter(Boolean))];
+      const ids = [...new Set(todasFamilias.map((t: any) => t.responsibleId).filter(Boolean))];
       const respMap: Record<string, string> = {};
       if (ids.length > 0) {
         const res = await fetch(`${BITRIX_URL}/user.get.json`, {
@@ -127,7 +107,7 @@ serve(async (req) => {
         }
       }
 
-      const familias = familiasFiltradas.map((t: any) => ({
+      const familias = todasFamilias.map((t: any) => ({
         id: t.id,
         titulo: t.title,
         responsavel_nome: respMap[t.responsibleId] ?? null,
