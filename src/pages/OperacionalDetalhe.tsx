@@ -222,6 +222,24 @@ export default function OperacionalDetalhe() {
     [taskId]
   );
 
+  const carregarConcluidas = useCallback(async () => {
+    if (!taskId) return;
+    setLoadingConcluidas(true);
+    setErroConcluidas(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("bitrix-proxy", {
+        body: { action: "tarefas_concluidas", bitrix_task_id: parseInt(taskId) },
+      });
+      if (error) throw error;
+      setConcluidas(data?.tarefas ?? []);
+      setConcluidasCarregadas(true);
+    } catch (err: any) {
+      setErroConcluidas(err.message ?? "Erro ao buscar tarefas concluídas");
+    } finally {
+      setLoadingConcluidas(false);
+    }
+  }, [taskId]);
+
   useEffect(() => {
     if (taskId) {
       fetch(
@@ -232,6 +250,13 @@ export default function OperacionalDetalhe() {
     }
     carregar();
   }, [taskId, carregar]);
+
+  useEffect(() => {
+    if ((aba === "concluidas" || aba === "visao") && !concluidasCarregadas && !loadingConcluidas) {
+      carregarConcluidas();
+    }
+  }, [aba, concluidasCarregadas, loadingConcluidas, carregarConcluidas]);
+
 
   const tarefasFiltradas = tarefas.filter((t) => {
     if (filtro === "high") return t.prioridade === "high" && t.status !== "completed";
