@@ -168,6 +168,17 @@ function TarefaRow({ tarefa }: { tarefa: Tarefa }) {
   );
 }
 
+interface TarefaConcluida {
+  bitrix_task_id: number;
+  titulo: string;
+  status: string;
+  prioridade: string;
+  responsavel_nome: string | null;
+  prazo: string | null;
+  data_conclusao: string | null;
+  link_bitrix: string | null;
+}
+
 export default function OperacionalDetalhe() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
@@ -177,6 +188,13 @@ export default function OperacionalDetalhe() {
   const [erro, setErro] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [filtro, setFiltro] = useState<"todas" | "pending" | "in_progress" | "high">("todas");
+  const [aba, setAba] = useState<"aberto" | "concluidas" | "visao">("aberto");
+
+  const [concluidas, setConcluidas] = useState<TarefaConcluida[]>([]);
+  const [loadingConcluidas, setLoadingConcluidas] = useState(false);
+  const [erroConcluidas, setErroConcluidas] = useState<string | null>(null);
+  const [concluidasCarregadas, setConcluidasCarregadas] = useState(false);
+
 
   const carregar = useCallback(
     async (force = false) => {
