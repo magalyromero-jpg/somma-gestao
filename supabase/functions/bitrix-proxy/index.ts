@@ -101,7 +101,7 @@ serve(async (req) => {
         responsavel_nome: responsaveisMap[t.responsibleId]?.nome ?? null,
         responsavel_foto: responsaveisMap[t.responsibleId]?.foto ?? null,
         prazo: t.deadline ?? null,
-        marcadores: t.tag ?? [],
+        marcadores: t.tags ? Object.values(t.tags).map((tag: any) => tag.title) : [],
         link_bitrix: `https://sommainvestimentos.bitrix24.com.br/company/personal/user/1884/tasks/task/view/${t.id}/`,
         synced_at: new Date().toISOString(),
       }));
