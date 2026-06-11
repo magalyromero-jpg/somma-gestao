@@ -62,7 +62,7 @@ serve(async (req) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             filter: { TAG: marcador, "!STATUS": "5" },
-            select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "TAG"],
+            select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "TAGS"],
             order: { DEADLINE: "ASC" },
             params: { START: start },
           }),
