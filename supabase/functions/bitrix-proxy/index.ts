@@ -42,7 +42,7 @@ serve(async (req) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 },
+            filter: { "GROUP_ID": 25, "PARENT_ID": 0 },
             select: ["ID", "TITLE", "RESPONSIBLE_ID", "DEADLINE"],
             order: { "TITLE": "ASC" },
             params: { START: start },
