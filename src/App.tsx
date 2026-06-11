@@ -18,6 +18,7 @@ import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Usuarios from "./pages/configuracoes/Usuarios";
+import IntegracaoBitrix from "./pages/configuracoes/IntegracaoBitrix";
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
