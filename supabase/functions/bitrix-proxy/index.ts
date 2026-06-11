@@ -151,10 +151,9 @@ serve(async (req) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          select: ["ID", "TAG"],
+          select: ["ID", "TAGS"],
           order: { ID: "DESC" },
           params: { START: 0 },
-          filter: { "!TAG": "" },
         }),
       });
       if (!res.ok) throw new Error("Erro ao buscar tarefas do Bitrix");
@@ -162,8 +161,9 @@ serve(async (req) => {
       const tasks = data?.result?.tasks ?? [];
       const marcadoresSet = new Set<string>();
       for (const t of tasks) {
-        for (const tag of t.tag ?? []) {
-          if (tag && tag.trim()) marcadoresSet.add(tag.trim());
+        for (const tag of Object.values(t.tags ?? {})) {
+          const title = (tag as any)?.title?.trim();
+          if (title) marcadoresSet.add(title);
         }
       }
       return new Response(
