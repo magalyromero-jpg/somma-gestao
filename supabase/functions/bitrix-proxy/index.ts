@@ -146,6 +146,32 @@ serve(async (req) => {
       return new Response(JSON.stringify({ resumo, tarefas }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "listar_marcadores") {
+      const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          select: ["ID", "TAG"],
+          order: { ID: "DESC" },
+          params: { START: 0 },
+          filter: { "!TAG": "" },
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao buscar tarefas do Bitrix");
+      const data = await res.json();
+      const tasks = data?.result?.tasks ?? [];
+      const marcadoresSet = new Set<string>();
+      for (const t of tasks) {
+        for (const tag of t.tag ?? []) {
+          if (tag && tag.trim()) marcadoresSet.add(tag.trim());
+        }
+      }
+      return new Response(
+        JSON.stringify({ marcadores: Array.from(marcadoresSet).sort() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(JSON.stringify({ error: `Ação desconhecida: ${action}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {
