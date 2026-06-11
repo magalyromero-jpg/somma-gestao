@@ -30,7 +30,7 @@ serve(async (req) => {
       while (true) {
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filter: { "GROUP_ID": 25, "PARENT_ID": 0 }, select: ["ID", "TITLE", "RESPONSIBLE_ID"], order: { "TITLE": "ASC" }, params: { START: start } }),
+          body: JSON.stringify({ filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 }, select: ["ID", "TITLE", "RESPONSIBLE_ID"], order: { "TITLE": "ASC" }, params: { START: start } }),
         });
         const data = await res.json();
         const tasks = data?.result?.tasks ?? [];
@@ -88,7 +88,7 @@ serve(async (req) => {
       while (true) {
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filter: { "GROUP_ID": 25, "PARENT_ID": 0 }, select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "ACTIVITY_DATE"], order: { "TITLE": "ASC" }, params: { START: start } }),
+          body: JSON.stringify({ filter: { "GROUP_ID": 25, "PARENT_ID": 0, "STAGE_ID": 153 }, select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "ACTIVITY_DATE"], order: { "TITLE": "ASC" }, params: { START: start } }),
         });
         const data = await res.json();
         const tasks = data?.result?.tasks ?? [];
