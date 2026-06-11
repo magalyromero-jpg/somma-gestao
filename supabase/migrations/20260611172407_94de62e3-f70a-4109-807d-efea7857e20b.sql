@@ -1,0 +1,1 @@
+UPDATE public.configuracoes SET valor='https://sommainvestimentos.bitrix24.com.br/rest/1884/39jl8dqtycci1ff0/' WHERE chave='bitrix_webhook_url';
