@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
+import OperacionalDetalhe from "./pages/OperacionalDetalhe";
 import Imoveis from "./pages/Imoveis";
 import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
 import Mercado from "./pages/Mercado";
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
               <Route path="/operacional" element={<OperacionalBitrix />} />
+              <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/imoveis" element={<Imoveis />} />
               <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
