@@ -61,6 +61,7 @@ const App = () => (
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes/usuarios" element={<ProtectedRoute requireRole="admin"><Usuarios /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Configuracoes /></ProtectedRoute>} />
+              <Route path="/operacional" element={<OperacionalBitrix />} />
               
             </Route>
             <Route path="*" element={<NotFound />} />
