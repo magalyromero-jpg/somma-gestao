@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog, ListTodo } from "lucide-react";
+import { LayoutDashboard, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> = [
   { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"] },
-  { to: "/operacional",          label: "Operacional",         icon: ListTodo,        allowed: ["admin", "gestor", "analista"] },
   { to: "/familias",             label: "Famílias",            icon: Users },
   { to: "/imoveis",              label: "Imóveis",             icon: Building2 },
   { to: "/mercado",              label: "Mercado",             icon: LineChart },
@@ -16,6 +15,7 @@ const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> 
   { to: "/onboarding",           label: "Onboarding",          icon: UserPlus },
   { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"] },
   { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"] },
+  
   { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"] },
 ];
 
