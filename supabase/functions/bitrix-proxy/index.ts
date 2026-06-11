@@ -227,8 +227,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "bitrix_task_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const allTasks: any[] = [];
-      let start = 0;
-      while (true) {
+      let next: number | null = 0;
+      while (next !== null) {
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -236,15 +236,14 @@ serve(async (req) => {
             filter: { "PARENT_ID": bitrix_task_id, "STATUS": "5" },
             select: ["ID", "TITLE", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CLOSED_DATE", "CHANGED_DATE"],
             order: { "CLOSED_DATE": "DESC" },
-            params: { START: start },
+            params: { START: next },
           }),
         });
         if (!res.ok) break;
         const data = await res.json();
         const tasks = data?.result?.tasks ?? [];
         allTasks.push(...tasks);
-        if (tasks.length < 50) break;
-        start += 50;
+        next = data?.next ?? null;
       }
       const ids = [...new Set(allTasks.map((t: any) => t.responsibleId).filter(Boolean))];
       const respMap: Record<string, string> = {};
