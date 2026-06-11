@@ -45,6 +45,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DiligenciaImovelCard } from "@/components/diligencia/DiligenciaImovelCard";
 import { HoldingsChecklist } from "@/components/HoldingsChecklist";
 import { OutrosBensSection } from "@/components/OutrosBensSection";
+import { BitrixTarefas } from "@/components/bitrix/BitrixTarefas";
 
 const PAPEL_LABEL: Record<Papel, string> = {
   titular: "Titular",
@@ -275,6 +276,7 @@ export default function MapaFamilia() {
           <TabsTrigger value="holdings">Holdings</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="diligencia">Imóveis</TabsTrigger>
+          <TabsTrigger value="tarefas">Tarefas Bitrix</TabsTrigger>
         </TabsList>
 
         <TabsContent value="familia" className="space-y-6 mt-4">
@@ -323,6 +325,14 @@ export default function MapaFamilia() {
                 .order("valor_declarado", { ascending: false, nullsFirst: false });
               setImoveisDb(imv ?? []);
             }}
+          />
+        </TabsContent>
+
+        <TabsContent value="tarefas" className="mt-4">
+          <BitrixTarefas
+            familiaId={familia.id}
+            marcador={(familia as any).bitrix_marcador}
+            familiaName={familia.nome}
           />
         </TabsContent>
       </Tabs>
