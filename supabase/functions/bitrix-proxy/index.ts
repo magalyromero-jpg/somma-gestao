@@ -222,6 +222,55 @@ serve(async (req) => {
       );
     }
 
+    if (action === "tarefas_concluidas") {
+      if (!bitrix_task_id) {
+        return new Response(JSON.stringify({ error: "bitrix_task_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const allTasks: any[] = [];
+      let start = 0;
+      while (true) {
+        const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filter: { "PARENT_ID": bitrix_task_id, "STATUS": "5" },
+            select: ["ID", "TITLE", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CLOSED_DATE", "CHANGED_DATE"],
+            order: { "CLOSED_DATE": "DESC" },
+            params: { START: start },
+          }),
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        const tasks = data?.result?.tasks ?? [];
+        allTasks.push(...tasks);
+        if (tasks.length < 50) break;
+        start += 50;
+      }
+      const ids = [...new Set(allTasks.map((t: any) => t.responsibleId).filter(Boolean))];
+      const respMap: Record<string, string> = {};
+      if (ids.length > 0) {
+        const res = await fetch(`${BITRIX_URL}/user.get.json`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filter: { ID: ids } }),
+        });
+        if (res.ok) {
+          const ud = await res.json();
+          for (const u of ud?.result ?? []) respMap[u.ID] = `${u.NAME} ${u.LAST_NAME}`.trim();
+        }
+      }
+      const tarefas = allTasks.map((t: any) => ({
+        bitrix_task_id: parseInt(t.id),
+        titulo: t.title,
+        status: "completed",
+        prioridade: mapPrioridade(t.priority),
+        responsavel_nome: respMap[t.responsibleId] ?? null,
+        prazo: t.deadline ?? null,
+        data_conclusao: t.closedDate ?? t.changedDate ?? null,
+        link_bitrix: `https://sommainvestimentos.bitrix24.com.br/company/personal/user/1884/tasks/task/view/${t.id}/`,
+      }));
+      return new Response(JSON.stringify({ tarefas, total: tarefas.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── 3. COMENTÁRIOS ────────────────────────────────────────────────────
     if (action === "comentarios_tarefa") {
       const { task_id } = body;
