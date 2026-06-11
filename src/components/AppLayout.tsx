@@ -15,7 +15,8 @@ const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> 
   { to: "/onboarding",           label: "Onboarding",          icon: UserPlus },
   { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"] },
   { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"] },
-  { to: "/configuracoes",        label: "Configurações",       icon: Settings,        allowed: ["admin", "gestor"] },
+  { to: "/configuracoes/bitrix",  label: "Integração Bitrix", icon: Settings,        allowed: ["admin", "gestor"] },
+  { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"] },
 ];
 
 export default function AppLayout() {
