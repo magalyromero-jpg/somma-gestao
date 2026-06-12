@@ -75,7 +75,21 @@ export default function IntegracaoBitrix() {
     finally { setTestando(false); }
   }
 
-  async function buscarMarcadoresBitrix() {
+  async function sincronizarTudo() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("bitrix-sync", { body: {} });
+      if (error) throw error;
+      setSyncResult({ familias: data?.familias ?? 0, tarefas_sincronizadas: data?.tarefas_sincronizadas ?? 0 });
+      toast({ title: "Sincronização concluída!", description: `${data?.tarefas_sincronizadas ?? 0} tarefas em ${data?.familias ?? 0} famílias.` });
+    } catch (err: any) {
+      toast({ title: "Erro na sincronização", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
     setLoadingMarcadores(true);
     try {
       const { data, error } = await supabase.functions.invoke("bitrix-proxy", {
