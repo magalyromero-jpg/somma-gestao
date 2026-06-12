@@ -49,9 +49,11 @@ serve(async (req) => {
     for (const familia of familias) {
       const todasTarefas: any[] = [];
       let next: number | null = 0;
+      let paginas = 0;
 
       // Busca TODAS as subtarefas (abertas e concluídas)
-      while (next !== null) {
+      while (next !== null && paginas < 20) {
+        paginas++;
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -66,7 +68,7 @@ serve(async (req) => {
         const data = await res.json();
         const tasks = data?.result?.tasks ?? [];
         todasTarefas.push(...tasks);
-        next = data?.next ?? null;
+        next = data?.result?.next ?? null;
       }
 
       console.log(`${familia.title}: ${todasTarefas.length} tarefas encontradas`);
