@@ -1,0 +1,1 @@
+ALTER TABLE public.bitrix_tarefas ADD COLUMN IF NOT EXISTS familia_tag text;
