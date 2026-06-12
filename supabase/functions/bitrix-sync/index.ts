@@ -89,8 +89,16 @@ serve(async (req) => {
         }
       }
 
-      // Formata registros
-      const registros = todasTarefas.map((t: any) => ({
+      // Formata registros (deduplica por bitrix_id para evitar erro 21000)
+      const vistos = new Set<number>();
+      const registros = todasTarefas
+        .filter((t: any) => {
+          const id = parseInt(t.id);
+          if (vistos.has(id)) return false;
+          vistos.add(id);
+          return true;
+        })
+        .map((t: any) => ({
         bitrix_id: parseInt(t.id),
         bitrix_parent_id: parseInt(familia.id),
         familia_bitrix_id: parseInt(familia.id),
