@@ -24,24 +24,56 @@ serve(async (req) => {
     if (!webhookConfig?.valor) throw new Error("Webhook não configurado");
     const BITRIX_URL = webhookConfig.valor.replace(/\/$/, "");
 
-    // Busca IDs das famílias cadastrados no banco
-    const { data: familiasConfig } = await supabase.from("configuracoes").select("valor").eq("chave", "bitrix_familias_ids").single();
-    if (!familiasConfig?.valor) throw new Error("IDs de famílias não configurados");
+    // Tipos operacionais (tags que NÃO são famílias)
+    const TIPOS_OPERACIONAIS = new Set([
+      "Operacional",
+      "Gestão Patrimonial",
+      "Acompanhamento",
+      "Analítico",
+      "Planejamento Patrimonial",
+      "Gestão de Contas",
+      "Due Diligence Prévio",
+      "Negócios",
+      "Gestão de Patrimônio",
+      "Análise/Proposta",
+    ].map((s) => s.toLowerCase()));
 
-    const familiaIds = familiasConfig.valor.split(",").map((id: string) => id.trim()).filter(Boolean);
+    // 1. Busca TODAS as tarefas do grupo 25 (ORDER ID DESC) para coletar tags
+    const tagsSet = new Set<string>();
+    {
+      let next: number | null = 0;
+      let paginas = 0;
+      while (next !== null && paginas < 200) {
+        paginas++;
+        const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filter: { "GROUP_ID": 25 },
+            select: ["ID", "TITLE", "TAGS"],
+            order: { "ID": "DESC" },
+            params: { START: next },
+          }),
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        const tasks = data?.result?.tasks ?? [];
+        for (const t of tasks) {
+          for (const tag of Object.values(t.tags ?? {})) {
+            const name = (tag as any)?.title;
+            if (name) tagsSet.add(name);
+          }
+        }
+        next = data?.result?.next ?? null;
+      }
+    }
 
-    // Busca detalhes de cada família em paralelo
-    const familias = await Promise.all(familiaIds.map(async (id: string) => {
-      const res = await fetch(`${BITRIX_URL}/tasks.task.get.json`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: parseInt(id) }),
-      });
-      const data = await res.json();
-      return { id, title: data?.result?.task?.title ?? id };
-    }));
+    // 2. Filtra tags que são nomes de família (não são tipos operacionais)
+    const familias = Array.from(tagsSet)
+      .filter((tag) => !TIPOS_OPERACIONAIS.has(tag.trim().toLowerCase()))
+      .map((tag) => ({ title: tag }));
 
-    console.log(`Sincronizando ${familias.length} famílias: ${familias.map(f => f.title).join(", ")}`);
+    console.log(`Sincronizando ${familias.length} famílias: ${familias.map((f) => f.title).join(", ")}`);
 
     let totalSincronizadas = 0;
 
@@ -51,14 +83,14 @@ serve(async (req) => {
       let next: number | null = 0;
       let paginas = 0;
 
-      // Busca TODAS as subtarefas (abertas e concluídas)
+      // 3. Busca TODAS as tarefas com a tag da família no grupo 25
       while (next !== null && paginas < 200) {
         paginas++;
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filter: { "PARENT_ID": parseInt(familia.id) },
+            filter: { "GROUP_ID": 25, "TAG": familia.title },
             select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
             order: { "ID": "ASC" },
             params: { START: next },
@@ -72,23 +104,6 @@ serve(async (req) => {
       }
 
       console.log(`${familia.title}: ${todasTarefas.length} tarefas encontradas`);
-
-      // Fallback: busca por tag se não encontrou como subtarefa
-      if (todasTarefas.length === 0) {
-        const resTag = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filter: { "GROUP_ID": 25, "TAG": familia.title },
-            select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
-            order: { "ID": "ASC" },
-            params: { START: 0 },
-          }),
-        });
-        const tagData = await resTag.json();
-        todasTarefas.push(...(tagData?.result?.tasks ?? []));
-        console.log(`${familia.title}: buscou por tag, encontrou ${todasTarefas.length}`);
-      }
 
       if (todasTarefas.length === 0) continue;
 
