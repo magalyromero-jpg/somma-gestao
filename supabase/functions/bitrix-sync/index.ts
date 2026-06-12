@@ -63,6 +63,7 @@ serve(async (req) => {
           if (!res.ok) break;
           const data = await res.json();
           const tasks = data?.result?.tasks ?? [];
+          console.log("next cursor:", data?.next, "result.next:", data?.result?.next, "tasks found:", tasks.length);
           todasTarefas.push(...tasks);
           start = data?.next ?? null;
         }
