@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
+import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
 import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
 import Mercado from "./pages/Mercado";
