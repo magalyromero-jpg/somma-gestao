@@ -360,8 +360,8 @@ export default function DashboardOperacional() {
                     <TableHead>Família</TableHead>
                     <TableHead className="text-right">Em aberto</TableHead>
                     <TableHead className="text-right">Atrasadas</TableHead>
-                    <TableHead className="text-right">Concluídas (semana)</TableHead>
-                    <TableHead className="text-right">Alta prioridade</TableHead>
+                    <TableHead className="text-right">Concluídas</TableHead>
+                    <TableHead className="text-right">Total histórico</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,8 +383,8 @@ export default function DashboardOperacional() {
                         <TableCell className="text-right text-destructive">
                           {f.atrasadas || "—"}
                         </TableCell>
-                        <TableCell className="text-right">{f.concluidasSemana || "—"}</TableCell>
-                        <TableCell className="text-right">{f.alta || "—"}</TableCell>
+                        <TableCell className="text-right">{f.concluidas || "—"}</TableCell>
+                        <TableCell className="text-right">{f.total}</TableCell>
                       </TableRow>
                     ))
                   )}
