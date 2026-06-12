@@ -31,7 +31,7 @@ export default function SyncBitrix() {
     <div className="space-y-6">
       <PageHeader
         title="Sincronização Bitrix"
-        description="Sincronize todas as famílias e tarefas do Bitrix para o banco local"
+        subtitle="Sincronize todas as famílias e tarefas do Bitrix para o banco local"
       />
 
       <Card>
