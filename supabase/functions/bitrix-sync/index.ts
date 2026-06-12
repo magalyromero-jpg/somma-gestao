@@ -133,7 +133,10 @@ serve(async (req) => {
         .map((t: any) => ({
         bitrix_id: parseInt(t.id),
         bitrix_parent_id: parseInt(t.parentId) || null,
-        familia_bitrix_id: null,
+        // NÃO incluímos familia_bitrix_id no payload: ao usar upsert por bitrix_id,
+        // omitir a coluna preserva o valor já definido manualmente no banco
+        // e mantém null (default) para registros novos.
+        familia_tag: familia.title,
         familia_titulo: familia.title,
         titulo: t.title,
         descricao: t.description ?? null,
