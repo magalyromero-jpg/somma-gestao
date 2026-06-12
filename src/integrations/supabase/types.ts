@@ -53,6 +53,72 @@ export type Database = {
         }
         Relationships: []
       }
+      bitrix_tarefas: {
+        Row: {
+          alterado_em: string | null
+          bitrix_id: number
+          bitrix_parent_id: number | null
+          concluido_em: string | null
+          created_at: string
+          criado_em: string | null
+          descricao: string | null
+          familia_bitrix_id: number | null
+          familia_titulo: string | null
+          id: string
+          link_bitrix: string | null
+          marcadores: string[] | null
+          prazo: string | null
+          prioridade: string
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: string
+          synced_at: string
+          titulo: string
+        }
+        Insert: {
+          alterado_em?: string | null
+          bitrix_id: number
+          bitrix_parent_id?: number | null
+          concluido_em?: string | null
+          created_at?: string
+          criado_em?: string | null
+          descricao?: string | null
+          familia_bitrix_id?: number | null
+          familia_titulo?: string | null
+          id?: string
+          link_bitrix?: string | null
+          marcadores?: string[] | null
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: string
+          synced_at?: string
+          titulo: string
+        }
+        Update: {
+          alterado_em?: string | null
+          bitrix_id?: number
+          bitrix_parent_id?: number | null
+          concluido_em?: string | null
+          created_at?: string
+          criado_em?: string | null
+          descricao?: string | null
+          familia_bitrix_id?: number | null
+          familia_titulo?: string | null
+          id?: string
+          link_bitrix?: string | null
+          marcadores?: string[] | null
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: string
+          synced_at?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       bitrix_tarefas_cache: {
         Row: {
           bitrix_task_id: number
