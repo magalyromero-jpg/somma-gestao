@@ -132,8 +132,8 @@ serve(async (req) => {
         })
         .map((t: any) => ({
         bitrix_id: parseInt(t.id),
-        bitrix_parent_id: parseInt(familia.id),
-        familia_bitrix_id: parseInt(familia.id),
+        bitrix_parent_id: parseInt(t.parentId) || null,
+        familia_bitrix_id: null,
         familia_titulo: familia.title,
         titulo: t.title,
         descricao: t.description ?? null,
