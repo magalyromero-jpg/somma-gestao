@@ -174,6 +174,12 @@ export default function IntegracaoBitrix() {
                 <AlertTriangle className="w-3 h-3 mr-1" /> Falha na conexão
               </Badge>
             )}
+            {syncResult && (
+              <Badge className="bg-blue-100 text-blue-800 border-0">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                {syncResult.tarefas_sincronizadas} tarefas em {syncResult.familias} famílias
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
