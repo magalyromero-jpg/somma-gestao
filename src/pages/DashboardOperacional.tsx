@@ -163,8 +163,8 @@ export default function DashboardOperacional() {
         titulo: string;
         emAberto: number;
         atrasadas: number;
-        concluidasSemana: number;
-        alta: number;
+        concluidas: number;
+        total: number;
       }
     >();
     for (const t of tarefasFiltradas) {
@@ -176,15 +176,15 @@ export default function DashboardOperacional() {
           titulo: t.familia_titulo ?? String(id),
           emAberto: 0,
           atrasadas: 0,
-          concluidasSemana: 0,
-          alta: 0,
+          concluidas: 0,
+          total: 0,
         };
         mapa.set(id, f);
       }
+      f.total++;
       if (isAberta(t)) f.emAberto++;
       if (isAtrasada(t)) f.atrasadas++;
-      if (isConcluidaSemana(t)) f.concluidasSemana++;
-      if (isAlta(t)) f.alta++;
+      if (t.status === "completed") f.concluidas++;
     }
     return Array.from(mapa.values()).sort((a, b) => b.emAberto - a.emAberto);
     // eslint-disable-next-line react-hooks/exhaustive-deps
