@@ -52,6 +52,7 @@ const App = () => (
               <Route path="/familias" element={<Familias />} />
               <Route path="/operacional" element={<OperacionalBitrix />} />
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
+              <Route path="/sync-bitrix" element={<SyncBitrix />} />
               <Route path="/imoveis" element={<Imoveis />} />
               <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
               <Route path="/mercado" element={<Mercado />} />
