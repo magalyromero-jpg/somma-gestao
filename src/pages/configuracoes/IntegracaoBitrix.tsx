@@ -153,10 +153,16 @@ export default function IntegracaoBitrix() {
               {savingWebhook ? "Salvando..." : "Salvar"}
             </Button>
             {webhookSalvo && (
-              <Button variant="outline" onClick={testarConexao} disabled={testando}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${testando ? "animate-spin" : ""}`} />
-                Testar conexão
-              </Button>
+              <>
+                <Button variant="outline" onClick={testarConexao} disabled={testando}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${testando ? "animate-spin" : ""}`} />
+                  Testar conexão
+                </Button>
+                <Button variant="outline" onClick={sincronizarTudo} disabled={syncing}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Sincronizando..." : "Sincronizar todas as famílias"}
+                </Button>
+              </>
             )}
             {testeOk === true && (
               <Badge className="bg-green-100 text-green-800 border-0">
