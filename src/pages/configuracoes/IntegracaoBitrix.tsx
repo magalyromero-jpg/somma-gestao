@@ -22,6 +22,8 @@ export default function IntegracaoBitrix() {
   const [savingWebhook, setSavingWebhook] = useState(false);
   const [testando, setTestando] = useState(false);
   const [testeOk, setTesteOk] = useState<boolean | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ familias: number; tarefas_sincronizadas: number } | null>(null);
 
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [marcadores, setMarcadores] = useState<Record<string, string>>({});
