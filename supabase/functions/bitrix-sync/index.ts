@@ -73,6 +73,23 @@ serve(async (req) => {
 
       console.log(`${familia.title}: ${todasTarefas.length} tarefas encontradas`);
 
+      // Fallback: busca por tag se não encontrou como subtarefa
+      if (todasTarefas.length === 0) {
+        const resTag = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filter: { "GROUP_ID": 25, "TAG": familia.title },
+            select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
+            order: { "ID": "ASC" },
+            params: { START: 0 },
+          }),
+        });
+        const tagData = await resTag.json();
+        todasTarefas.push(...(tagData?.result?.tasks ?? []));
+        console.log(`${familia.title}: buscou por tag, encontrou ${todasTarefas.length}`);
+      }
+
       if (todasTarefas.length === 0) continue;
 
       // Busca nomes dos responsáveis
