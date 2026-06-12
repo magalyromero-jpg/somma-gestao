@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, isPast, isToday, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { KpiCard } from "@/components/KpiCard";
 
 interface FamiliaResumo {
-  id: string;
+  id: number;
   titulo: string;
   responsavel_nome: string | null;
   ultima_atividade: string | null;
@@ -41,16 +41,75 @@ export default function OperacionalBitrix() {
   const [erro, setErro] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("todas");
 
+  const now = new Date();
+
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
     try {
-      const { data, error } = await supabase.functions.invoke("bitrix-proxy", {
-        body: { action: "dashboard_bitrix" },
-      });
+      const { data, error } = await supabase
+        .from("bitrix_tarefas")
+        .select("familia_bitrix_id, familia_titulo, status, prioridade, prazo, responsavel_nome, alterado_em");
+
       if (error) throw error;
-      setFamilias(data.familias ?? []);
-      setTotais(data.totais ?? null);
+
+      const raw = data ?? [];
+
+      const mapa = new Map<number, FamiliaResumo>();
+
+      for (const t of raw) {
+        const id = t.familia_bitrix_id as number;
+        const prazo = t.prazo ? parseISO(t.prazo as string) : null;
+        const alterado = t.alterado_em ? parseISO(t.alterado_em as string) : null;
+        const aberta = t.status !== "completed";
+        const atrasada = aberta && prazo ? isPast(prazo) && !isToday(prazo) : false;
+        const alta = aberta && t.prioridade === "high";
+        const venceHoje = aberta && prazo ? isToday(prazo) : false;
+
+        let f = mapa.get(id);
+        if (!f) {
+          f = {
+            id,
+            titulo: (t.familia_titulo as string) ?? String(id),
+            responsavel_nome: (t.responsavel_nome as string | null) ?? null,
+            ultima_atividade: alterado ? (t.alterado_em as string) : null,
+            total_abertas: 0,
+            atrasadas: 0,
+            alta_prioridade: 0,
+            hoje: 0,
+          };
+          mapa.set(id, f);
+        }
+
+        if (aberta) f.total_abertas++;
+        if (atrasada) f.atrasadas++;
+        if (alta) f.alta_prioridade++;
+        if (venceHoje) f.hoje++;
+
+        if (alterado) {
+          const currentUltima = f.ultima_atividade ? parseISO(f.ultima_atividade) : null;
+          if (!currentUltima || alterado > currentUltima) {
+            f.ultima_atividade = t.alterado_em as string;
+          }
+        }
+
+        if (t.responsavel_nome && !f.responsavel_nome) {
+          f.responsavel_nome = t.responsavel_nome as string;
+        }
+      }
+
+      const lista = Array.from(mapa.values()).sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+      const totaisCalculados: Totais = {
+        total_familias: lista.length,
+        total_abertas: lista.reduce((s, f) => s + f.total_abertas, 0),
+        total_atrasadas: lista.reduce((s, f) => s + f.atrasadas, 0),
+        total_alta_prioridade: lista.reduce((s, f) => s + f.alta_prioridade, 0),
+        total_hoje: lista.reduce((s, f) => s + f.hoje, 0),
+      };
+
+      setFamilias(lista);
+      setTotais(totaisCalculados);
       setLastSync(new Date());
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar dados do Bitrix");
