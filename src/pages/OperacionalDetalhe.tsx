@@ -8,7 +8,6 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Clock,
   AlertTriangle,
   User,
   MessageSquare,
