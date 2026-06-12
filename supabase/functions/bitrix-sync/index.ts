@@ -52,7 +52,7 @@ serve(async (req) => {
       let paginas = 0;
 
       // Busca TODAS as subtarefas (abertas e concluídas)
-      while (next !== null && paginas < 20) {
+      while (next !== null && paginas < 200) {
         paginas++;
         const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
           method: "POST",
