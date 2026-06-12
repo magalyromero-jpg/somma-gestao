@@ -163,8 +163,8 @@ export default function DashboardOperacional() {
         titulo: string;
         emAberto: number;
         atrasadas: number;
-        concluidasSemana: number;
-        alta: number;
+        concluidas: number;
+        total: number;
       }
     >();
     for (const t of tarefasFiltradas) {
@@ -176,15 +176,15 @@ export default function DashboardOperacional() {
           titulo: t.familia_titulo ?? String(id),
           emAberto: 0,
           atrasadas: 0,
-          concluidasSemana: 0,
-          alta: 0,
+          concluidas: 0,
+          total: 0,
         };
         mapa.set(id, f);
       }
+      f.total++;
       if (isAberta(t)) f.emAberto++;
       if (isAtrasada(t)) f.atrasadas++;
-      if (isConcluidaSemana(t)) f.concluidasSemana++;
-      if (isAlta(t)) f.alta++;
+      if (t.status === "completed") f.concluidas++;
     }
     return Array.from(mapa.values()).sort((a, b) => b.emAberto - a.emAberto);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -360,8 +360,8 @@ export default function DashboardOperacional() {
                     <TableHead>Família</TableHead>
                     <TableHead className="text-right">Em aberto</TableHead>
                     <TableHead className="text-right">Atrasadas</TableHead>
-                    <TableHead className="text-right">Concluídas (semana)</TableHead>
-                    <TableHead className="text-right">Alta prioridade</TableHead>
+                    <TableHead className="text-right">Concluídas</TableHead>
+                    <TableHead className="text-right">Total histórico</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,8 +383,8 @@ export default function DashboardOperacional() {
                         <TableCell className="text-right text-destructive">
                           {f.atrasadas || "—"}
                         </TableCell>
-                        <TableCell className="text-right">{f.concluidasSemana || "—"}</TableCell>
-                        <TableCell className="text-right">{f.alta || "—"}</TableCell>
+                        <TableCell className="text-right">{f.concluidas || "—"}</TableCell>
+                        <TableCell className="text-right">{f.total}</TableCell>
                       </TableRow>
                     ))
                   )}
