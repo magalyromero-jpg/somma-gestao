@@ -22,6 +22,8 @@ export default function IntegracaoBitrix() {
   const [savingWebhook, setSavingWebhook] = useState(false);
   const [testando, setTestando] = useState(false);
   const [testeOk, setTesteOk] = useState<boolean | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ familias: number; tarefas_sincronizadas: number } | null>(null);
 
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [marcadores, setMarcadores] = useState<Record<string, string>>({});
@@ -73,6 +75,21 @@ export default function IntegracaoBitrix() {
     finally { setTestando(false); }
   }
 
+  async function sincronizarTudo() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("bitrix-sync", { body: {} });
+      if (error) throw error;
+      setSyncResult({ familias: data?.familias ?? 0, tarefas_sincronizadas: data?.tarefas_sincronizadas ?? 0 });
+      toast({ title: "Sincronização concluída!", description: `${data?.tarefas_sincronizadas ?? 0} tarefas em ${data?.familias ?? 0} famílias.` });
+    } catch (err: any) {
+      toast({ title: "Erro na sincronização", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function buscarMarcadoresBitrix() {
     setLoadingMarcadores(true);
     try {
@@ -83,6 +100,7 @@ export default function IntegracaoBitrix() {
     } catch { }
     finally { setLoadingMarcadores(false); }
   }
+
 
   async function salvarMarcadores() {
     setSavingFamilias(true);
@@ -135,10 +153,16 @@ export default function IntegracaoBitrix() {
               {savingWebhook ? "Salvando..." : "Salvar"}
             </Button>
             {webhookSalvo && (
-              <Button variant="outline" onClick={testarConexao} disabled={testando}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${testando ? "animate-spin" : ""}`} />
-                Testar conexão
-              </Button>
+              <>
+                <Button variant="outline" onClick={testarConexao} disabled={testando}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${testando ? "animate-spin" : ""}`} />
+                  Testar conexão
+                </Button>
+                <Button variant="outline" onClick={sincronizarTudo} disabled={syncing}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Sincronizando..." : "Sincronizar todas as famílias"}
+                </Button>
+              </>
             )}
             {testeOk === true && (
               <Badge className="bg-green-100 text-green-800 border-0">
@@ -148,6 +172,12 @@ export default function IntegracaoBitrix() {
             {testeOk === false && (
               <Badge className="bg-red-100 text-red-800 border-0">
                 <AlertTriangle className="w-3 h-3 mr-1" /> Falha na conexão
+              </Badge>
+            )}
+            {syncResult && (
+              <Badge className="bg-blue-100 text-blue-800 border-0">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                {syncResult.tarefas_sincronizadas} tarefas em {syncResult.familias} famílias
               </Badge>
             )}
           </div>
