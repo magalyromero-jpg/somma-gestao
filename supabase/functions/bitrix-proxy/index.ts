@@ -69,6 +69,41 @@ serve(async (req) => {
       );
     }
 
+    // ── 1a. LISTAR MARCADORES (tags do grupo 25) ──────────────────────────
+    if (action === "listar_marcadores") {
+      const tagsSet = new Set<string>();
+      let start = 0;
+      while (true) {
+        const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filter: { "GROUP_ID": 25 },
+            select: ["ID", "TITLE", "TAGS"],
+            order: { "ID": "ASC" },
+            params: { START: start },
+          }),
+        });
+        const data = await res.json();
+        const tasks = data?.result?.tasks ?? [];
+        for (const t of tasks) {
+          const tags = t.tags ?? t.TAGS ?? [];
+          const list = Array.isArray(tags) ? tags : Object.values(tags ?? {});
+          for (const tag of list) {
+            const name = typeof tag === "string" ? tag : (tag?.title ?? tag?.name);
+            if (name) tagsSet.add(name);
+          }
+        }
+        if (!data?.next) break;
+        start = data.next;
+      }
+
+      return new Response(
+        JSON.stringify({ marcadores: Array.from(tagsSet).sort() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── 1b. DASHBOARD BITRIX ───────────────────────────────────────────────
     if (action === "dashboard_bitrix") {
       const todasFamilias: any[] = [];
