@@ -48,6 +48,7 @@ interface Totais {
   total_atrasadas: number;
   concluidas_semana: number;
   total_alta_prioridade: number;
+  tempo_medio_resolucao: number | null;
 }
 
 export default function OperacionalBitrix() {
