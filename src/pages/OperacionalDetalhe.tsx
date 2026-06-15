@@ -63,12 +63,6 @@ const TIPOS = [
   "Análise/Proposta",
 ];
 
-function diasAtras(de: string | null): string | null {
-  if (!de) return null;
-  const d = differenceInDays(new Date(), parseISO(de));
-  if (d <= 0) return "hoje";
-  return `há ${d} dia${d > 1 ? "s" : ""}`;
-}
 
 function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
   const [expanded, setExpanded] = useState(false);
