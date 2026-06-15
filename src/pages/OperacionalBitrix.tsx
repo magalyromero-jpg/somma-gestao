@@ -420,9 +420,18 @@ export default function OperacionalBitrix() {
                     cx="40%"
                     cy="50%"
                     outerRadius={90}
+                    onClick={(d: any) =>
+                      setTipoSelecionado((c) => (c === d?.tipo ? null : d?.tipo ?? null))
+                    }
+                    className="cursor-pointer"
                   >
-                    {chartTipos.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    {chartTipos.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={PIE_COLORS[i % PIE_COLORS.length]}
+                        stroke={tipoSelecionado === entry.tipo ? "#373C3C" : undefined}
+                        strokeWidth={tipoSelecionado === entry.tipo ? 2 : 0}
+                      />
                     ))}
                   </Pie>
                   <RTooltip />
