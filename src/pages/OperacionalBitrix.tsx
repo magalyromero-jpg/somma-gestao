@@ -83,6 +83,8 @@ export default function OperacionalBitrix() {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [kpiFiltro, setKpiFiltro] = useState<string | null>(null);
+  const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
