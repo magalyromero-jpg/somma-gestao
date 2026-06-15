@@ -463,8 +463,8 @@ export default function OperacionalBitrix() {
                   <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="abertas" fill="#f59e0b" name="Em aberto" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="atrasadas" fill="#ef4444" name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="abertas" fill={COR_ABERTO} name="Em aberto" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="atrasadas" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
