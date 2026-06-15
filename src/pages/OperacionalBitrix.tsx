@@ -69,7 +69,12 @@ const TIPOS_PIE = [
   "Gestão de Contas",
 ];
 
-const PIE_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4", "#94a3b8"];
+// Paleta oficial Somma
+const COR_ABERTO = "#4D6571"; // azul médio
+const COR_ATRASADA = "#CC8B15"; // dourado/alerta
+const COR_CONCLUIDA = "#007374"; // verde-azulado
+const COR_ALTA = "#2E3E44"; // escuro
+const PIE_COLORS = ["#4D6571", "#6F8E9A", "#007374", "#CC8B15", "#2E3E44", "#4B646F", "#373C3C"];
 
 export default function OperacionalBitrix() {
   const navigate = useNavigate();
@@ -78,6 +83,8 @@ export default function OperacionalBitrix() {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [kpiFiltro, setKpiFiltro] = useState<string | null>(null);
+  const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -85,9 +92,8 @@ export default function OperacionalBitrix() {
     try {
       const { data, error } = await supabase
         .from("bitrix_tarefas")
-        .select(
-          "familia_bitrix_id, familia_titulo, status, prioridade, prazo, criado_em, concluido_em, responsavel_nome, alterado_em, marcadores",
-        );
+        .select("*")
+        .neq("status", "completed");
       if (error) throw error;
       setRaw((data ?? []) as TarefaRow[]);
       setLastSync(new Date());
@@ -262,11 +268,27 @@ export default function OperacionalBitrix() {
     }
     return Object.entries(map)
       .map(([nome, v]) => ({ nome, ...v }))
-      .sort((a, b) => b.abertas - a.abertas)
-      .slice(0, 12);
+      .sort((a, b) => b.abertas - a.abertas);
   }, [filtered]);
 
-  const familiasFiltradas = familias;
+  // Tarefas em aberto do tipo selecionado na pizza
+  const tarefasDoTipo = useMemo(() => {
+    if (!tipoSelecionado) return [];
+    return filtered.filter((t) => {
+      if (t.status === "completed") return false;
+      const marc = t.marcadores ?? [];
+      const tipo = TIPOS_PIE.find((tp) => marc.includes(tp)) ?? "Outros";
+      return tipo === tipoSelecionado;
+    });
+  }, [filtered, tipoSelecionado]);
+
+  const familiasFiltradas = useMemo(() => {
+    if (!kpiFiltro) return familias;
+    if (kpiFiltro === "atrasadas") return familias.filter((f) => f.atrasadas > 0);
+    if (kpiFiltro === "alta") return familias.filter((f) => f.alta_prioridade > 0);
+    if (kpiFiltro === "abertas") return familias.filter((f) => f.total_abertas > 0);
+    return familias;
+  }, [familias, kpiFiltro]);
 
   return (
     <>
@@ -291,10 +313,10 @@ export default function OperacionalBitrix() {
           [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
-            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Todas as famílias" />
-            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
+            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Clique para ver todas" active={kpiFiltro === "abertas"} onClick={() => setKpiFiltro((c) => (c === "abertas" ? null : "abertas"))} />
+            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" active={kpiFiltro === "atrasadas"} onClick={() => setKpiFiltro((c) => (c === "atrasadas" ? null : "atrasadas"))} />
             <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
-            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" />
+            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" active={kpiFiltro === "alta"} onClick={() => setKpiFiltro((c) => (c === "alta" ? null : "alta"))} />
             <KpiCard label="Tempo médio resolução" value={totais.tempo_medio_resolucao != null ? `${totais.tempo_medio_resolucao} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Concluídas, criação → conclusão" />
           </>
         )}
@@ -358,8 +380,8 @@ export default function OperacionalBitrix() {
                       );
                     }}
                   />
-                  <Bar dataKey="no_prazo" stackId="a" fill="#f59e0b" name="No prazo" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="atrasadas" stackId="a" fill="#ef4444" name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="no_prazo" stackId="a" fill={COR_ABERTO} name="No prazo" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="atrasadas" stackId="a" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -377,8 +399,8 @@ export default function OperacionalBitrix() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="criadas" fill="#3b82f6" name="Criadas" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="concluidas" fill="#22c55e" name="Concluídas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="criadas" fill={COR_ABERTO} name="Criadas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="concluidas" fill={COR_CONCLUIDA} name="Concluídas" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -398,9 +420,18 @@ export default function OperacionalBitrix() {
                     cx="40%"
                     cy="50%"
                     outerRadius={90}
+                    onClick={(d: any) =>
+                      setTipoSelecionado((c) => (c === d?.tipo ? null : d?.tipo ?? null))
+                    }
+                    className="cursor-pointer"
                   >
-                    {chartTipos.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    {chartTipos.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={PIE_COLORS[i % PIE_COLORS.length]}
+                        stroke={tipoSelecionado === entry.tipo ? "#373C3C" : undefined}
+                        strokeWidth={tipoSelecionado === entry.tipo ? 2 : 0}
+                      />
                     ))}
                   </Pie>
                   <RTooltip />
@@ -432,13 +463,44 @@ export default function OperacionalBitrix() {
                   <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="abertas" fill="#f59e0b" name="Em aberto" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="atrasadas" fill="#ef4444" name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="abertas" fill={COR_ABERTO} name="Em aberto" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="atrasadas" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Lista de tarefas do tipo selecionado na pizza */}
+      {tipoSelecionado && (
+        <Card className="shadow-card mb-8 border-foreground/30">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              Tarefas em aberto · {tipoSelecionado} ({tarefasDoTipo.length})
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setTipoSelecionado(null)}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {tarefasDoTipo.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {tarefasDoTipo.map((t, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="truncate">{t.familia_titulo ?? "—"}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {t.responsavel_nome ?? "Sem responsável"}
+                      {t.prazo ? ` · ${format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {erro && (
