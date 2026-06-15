@@ -93,6 +93,7 @@ export default function OperacionalBitrix() {
       atrasadas = 0,
       concluidasSemana = 0,
       alta = 0;
+    const tempos: number[] = [];
     for (const t of filtrada) {
       const aberta = t.status !== "completed";
       const prazo = t.prazo ? parseISO(t.prazo) : null;
@@ -102,6 +103,10 @@ export default function OperacionalBitrix() {
       if (t.status === "completed" && t.concluido_em) {
         const c = parseISO(t.concluido_em);
         if (c >= inicioSemana) concluidasSemana++;
+        if (t.criado_em) {
+          const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
+          if (d >= 0) tempos.push(d);
+        }
       }
     }
     return {
@@ -109,6 +114,9 @@ export default function OperacionalBitrix() {
       total_atrasadas: atrasadas,
       concluidas_semana: concluidasSemana,
       total_alta_prioridade: alta,
+      tempo_medio_resolucao: tempos.length
+        ? Math.round(tempos.reduce((s, d) => s + d, 0) / tempos.length)
+        : null,
     };
   }, [raw, responsavel]);
 
