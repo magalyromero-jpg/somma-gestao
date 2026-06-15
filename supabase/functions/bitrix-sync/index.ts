@@ -116,14 +116,20 @@ serve(async (req) => {
         let next: number | null = 0;
         let paginas = 0;
 
-        // 3. Busca TODAS as tarefas com a tag da família no grupo
-        while (next !== null && paginas < 200) {
+        // Grupo 29 tem históricos muito grandes (ex: Unicred Eleva ~2500 tarefas).
+        // Para evitar timeout, busca apenas tarefas não concluídas (!STATUS = 5).
+        // Grupo 25 continua buscando tudo (abertas + concluídas).
+        const filtroTarefas: Record<string, unknown> = { "GROUP_ID": grupo.id, "TAG": familia.title };
+        if (grupo.id === 29) filtroTarefas["!STATUS"] = "5";
+
+        // 3. Busca as tarefas com a tag da família no grupo
+        while (next !== null && paginas < 100) {
           paginas++;
           const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              filter: { "GROUP_ID": grupo.id, "TAG": familia.title },
+              filter: filtroTarefas,
               select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
               order: { "ID": "ASC" },
               params: { START: next },
