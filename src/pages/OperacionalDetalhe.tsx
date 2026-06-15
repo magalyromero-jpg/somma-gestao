@@ -449,32 +449,27 @@ export default function OperacionalDetalhe() {
       {/* Aba — Por mês */}
       {aba === "mes" && (
         <Card>
-          <CardContent className="p-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Criadas vs. Concluídas por mês</CardTitle>
+          </CardHeader>
+          <CardContent>
             {loading ? (
               <div className="p-6 space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 rounded" />)}</div>
             ) : porMes.length === 0 ? (
               <p className="text-sm text-muted-foreground py-12 text-center">Sem dados por mês.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Mês</th>
-                    <th className="px-4 py-3 font-medium text-right">Criadas</th>
-                    <th className="px-4 py-3 font-medium text-right">Concluídas</th>
-                    <th className="px-4 py-3 font-medium text-right">Em aberto no período</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {porMes.map((r) => (
-                    <tr key={r.mes} className="border-b border-border/50 last:border-0">
-                      <td className="px-4 py-3 capitalize">{r.mes}</td>
-                      <td className="px-4 py-3 text-right">{r.criadas}</td>
-                      <td className="px-4 py-3 text-right">{r.concluidas}</td>
-                      <td className="px-4 py-3 text-right">{r.aberto}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={[...porMes].reverse()} margin={{ left: 0, right: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} tickFormatter={(v: string) => v.slice(0, 3)} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <RTooltip />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="criadas" fill="#3b82f6" name="Criadas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="concluidas" fill="#22c55e" name="Concluídas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="aberto" fill="#f59e0b" name="Em aberto no período" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
@@ -483,32 +478,26 @@ export default function OperacionalDetalhe() {
       {/* Aba — Por tipo */}
       {aba === "tipo" && (
         <Card>
-          <CardContent className="p-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Tarefas por tipo</CardTitle>
+          </CardHeader>
+          <CardContent>
             {loading ? (
               <div className="p-6 space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 rounded" />)}</div>
             ) : porTipo.length === 0 ? (
               <p className="text-sm text-muted-foreground py-12 text-center">Nenhum tipo encontrado.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Tipo</th>
-                    <th className="px-4 py-3 font-medium text-right">Total</th>
-                    <th className="px-4 py-3 font-medium text-right">Abertas</th>
-                    <th className="px-4 py-3 font-medium text-right">Concluídas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {porTipo.map((r) => (
-                    <tr key={r.tipo} className="border-b border-border/50 last:border-0">
-                      <td className="px-4 py-3">{r.tipo}</td>
-                      <td className="px-4 py-3 text-right">{r.total}</td>
-                      <td className="px-4 py-3 text-right">{r.abertas}</td>
-                      <td className="px-4 py-3 text-right">{r.concluidas}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ResponsiveContainer width="100%" height={Math.max(280, porTipo.length * 48)}>
+                <BarChart data={porTipo} layout="vertical" margin={{ left: 8, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="tipo" width={150} tick={{ fontSize: 11 }} />
+                  <RTooltip />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="abertas" stackId="a" fill="#f59e0b" name="Abertas" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="concluidas" stackId="a" fill="#22c55e" name="Concluídas" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
