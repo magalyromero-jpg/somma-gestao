@@ -871,6 +871,10 @@ export default function OperacionalDetalhe() {
           </CardContent>
         </Card>
       )}
+
+      {/* Aba — Perfil */}
+      {aba === "perfil" && taskId && <PerfilTab taskId={taskId} titulo={titulo} />}
     </>
+
   );
 }
