@@ -65,6 +65,7 @@ export type Database = {
           familia_bitrix_id: number | null
           familia_tag: string | null
           familia_titulo: string | null
+          grupo_bitrix: number | null
           id: string
           link_bitrix: string | null
           marcadores: string[] | null
@@ -87,6 +88,7 @@ export type Database = {
           familia_bitrix_id?: number | null
           familia_tag?: string | null
           familia_titulo?: string | null
+          grupo_bitrix?: number | null
           id?: string
           link_bitrix?: string | null
           marcadores?: string[] | null
@@ -109,6 +111,7 @@ export type Database = {
           familia_bitrix_id?: number | null
           familia_tag?: string | null
           familia_titulo?: string | null
+          grupo_bitrix?: number | null
           id?: string
           link_bitrix?: string | null
           marcadores?: string[] | null
