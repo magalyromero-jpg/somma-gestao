@@ -380,8 +380,8 @@ export default function OperacionalBitrix() {
                       );
                     }}
                   />
-                  <Bar dataKey="no_prazo" stackId="a" fill="#f59e0b" name="No prazo" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="atrasadas" stackId="a" fill="#ef4444" name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="no_prazo" stackId="a" fill={COR_ABERTO} name="No prazo" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="atrasadas" stackId="a" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
