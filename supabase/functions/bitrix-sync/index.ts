@@ -46,7 +46,7 @@ serve(async (req) => {
 
     // Processa cada grupo Bitrix configurado
     for (const grupo of GRUPOS) {
-      const tiposOperacionais = new Set(grupo.excluir.map((s) => s.trim().toLowerCase()));
+      const tiposOperacionais = TAGS_OPERACIONAIS;
 
       // 1. Busca TODAS as tarefas do grupo para coletar tags
       const tagsSet = new Set<string>();
