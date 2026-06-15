@@ -12,7 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
-import DashboardOperacional from "./pages/DashboardOperacional";
+
 import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
 import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
@@ -52,7 +52,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
               <Route path="/operacional" element={<OperacionalBitrix />} />
-              <Route path="/dashboard-operacional" element={<ProtectedRoute requireRole={["admin", "gestor"]}><DashboardOperacional /></ProtectedRoute>} />
+              
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/sync-bitrix" element={<SyncBitrix />} />
               <Route path="/imoveis" element={<Imoveis />} />

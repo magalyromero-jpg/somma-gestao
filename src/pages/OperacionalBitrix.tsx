@@ -1,15 +1,33 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isPast, isToday, parseISO, isSameDay } from "date-fns";
+import { format, isPast, isToday, parseISO, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, Users } from "lucide-react";
+import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { KpiCard } from "@/components/KpiCard";
+
+interface TarefaRow {
+  familia_bitrix_id: number | null;
+  familia_titulo: string | null;
+  status: string;
+  prioridade: string;
+  prazo: string | null;
+  concluido_em: string | null;
+  responsavel_nome: string | null;
+  alterado_em: string | null;
+}
 
 interface FamiliaResumo {
   id: number;
@@ -20,28 +38,23 @@ interface FamiliaResumo {
   atrasadas: number;
   alta_prioridade: number;
   hoje: number;
+  responsaveis: Set<string>;
 }
 
 interface Totais {
-  total_familias: number;
   total_abertas: number;
   total_atrasadas: number;
+  concluidas_semana: number;
   total_alta_prioridade: number;
-  total_hoje: number;
 }
-
-type Filtro = "todas" | "atrasadas" | "hoje" | "alta";
 
 export default function OperacionalBitrix() {
   const navigate = useNavigate();
-  const [familias, setFamilias] = useState<FamiliaResumo[]>([]);
-  const [totais, setTotais] = useState<Totais | null>(null);
+  const [raw, setRaw] = useState<TarefaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<Filtro>("todas");
-
-  const now = new Date();
+  const [responsavel, setResponsavel] = useState<string>("todos");
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -49,67 +62,9 @@ export default function OperacionalBitrix() {
     try {
       const { data, error } = await supabase
         .from("bitrix_tarefas")
-        .select("familia_bitrix_id, familia_titulo, status, prioridade, prazo, responsavel_nome, alterado_em");
-
+        .select("familia_bitrix_id, familia_titulo, status, prioridade, prazo, concluido_em, responsavel_nome, alterado_em");
       if (error) throw error;
-
-      const raw = data ?? [];
-
-      const mapa = new Map<number, FamiliaResumo>();
-
-      for (const t of raw) {
-        const id = t.familia_bitrix_id as number;
-        const prazo = t.prazo ? parseISO(t.prazo as string) : null;
-        const alterado = t.alterado_em ? parseISO(t.alterado_em as string) : null;
-        const aberta = t.status !== "completed";
-        const atrasada = aberta && prazo ? isPast(prazo) && !isToday(prazo) : false;
-        const alta = aberta && t.prioridade === "high";
-        const venceHoje = aberta && prazo ? isToday(prazo) : false;
-
-        let f = mapa.get(id);
-        if (!f) {
-          f = {
-            id,
-            titulo: (t.familia_titulo as string) ?? String(id),
-            responsavel_nome: (t.responsavel_nome as string | null) ?? null,
-            ultima_atividade: alterado ? (t.alterado_em as string) : null,
-            total_abertas: 0,
-            atrasadas: 0,
-            alta_prioridade: 0,
-            hoje: 0,
-          };
-          mapa.set(id, f);
-        }
-
-        if (aberta) f.total_abertas++;
-        if (atrasada) f.atrasadas++;
-        if (alta) f.alta_prioridade++;
-        if (venceHoje) f.hoje++;
-
-        if (alterado) {
-          const currentUltima = f.ultima_atividade ? parseISO(f.ultima_atividade) : null;
-          if (!currentUltima || alterado > currentUltima) {
-            f.ultima_atividade = t.alterado_em as string;
-          }
-        }
-
-        if (t.responsavel_nome && !f.responsavel_nome) {
-          f.responsavel_nome = t.responsavel_nome as string;
-        }
-      }
-
-      const lista = Array.from(mapa.values()).sort((a, b) => a.titulo.localeCompare(b.titulo));
-
-      const totaisCalculados: Totais = {
-        total_familias: lista.length,
-        total_abertas: lista.reduce((s, f) => s + f.total_abertas, 0),
-        total_atrasadas: lista.reduce((s, f) => s + f.atrasadas, 0),
-        total_alta_prioridade: lista.reduce((s, f) => s + f.alta_prioridade, 0),
-        total_hoje: lista.reduce((s, f) => s + f.hoje, 0),
-      };
-
-      setFamilias(lista);
-      setTotais(totaisCalculados);
+      setRaw((data ?? []) as TarefaRow[]);
       setLastSync(new Date());
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar dados do Bitrix");
@@ -122,19 +77,82 @@ export default function OperacionalBitrix() {
     carregar();
   }, [carregar]);
 
-  const familiasFiltradas = familias.filter((f) => {
-    if (filtro === "atrasadas") return f.atrasadas > 0;
-    if (filtro === "hoje") return f.hoje > 0;
-    if (filtro === "alta") return f.alta_prioridade > 0;
-    return true;
-  });
+  const responsaveis = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of raw) if (t.responsavel_nome) set.add(t.responsavel_nome);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [raw]);
 
-  const filtros: { key: Filtro; label: string }[] = [
-    { key: "todas", label: "Todos os clientes" },
-    { key: "atrasadas", label: "Com atrasadas" },
-    { key: "hoje", label: "Vencem hoje" },
-    { key: "alta", label: "Alta prioridade" },
-  ];
+  const totais: Totais = useMemo(() => {
+    const inicioSemana = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const filtrada = responsavel === "todos" ? raw : raw.filter((t) => t.responsavel_nome === responsavel);
+    let abertas = 0,
+      atrasadas = 0,
+      concluidasSemana = 0,
+      alta = 0;
+    for (const t of filtrada) {
+      const aberta = t.status !== "completed";
+      const prazo = t.prazo ? parseISO(t.prazo) : null;
+      if (aberta) abertas++;
+      if (aberta && prazo && isPast(prazo) && !isToday(prazo)) atrasadas++;
+      if (aberta && t.prioridade === "high") alta++;
+      if (t.status === "completed" && t.concluido_em) {
+        const c = parseISO(t.concluido_em);
+        if (c >= inicioSemana) concluidasSemana++;
+      }
+    }
+    return {
+      total_abertas: abertas,
+      total_atrasadas: atrasadas,
+      concluidas_semana: concluidasSemana,
+      total_alta_prioridade: alta,
+    };
+  }, [raw, responsavel]);
+
+  const familias = useMemo(() => {
+    const mapa = new Map<number, FamiliaResumo>();
+    for (const t of raw) {
+      if (t.familia_bitrix_id == null) continue;
+      const id = t.familia_bitrix_id;
+      const prazo = t.prazo ? parseISO(t.prazo) : null;
+      const alterado = t.alterado_em ? parseISO(t.alterado_em) : null;
+      const aberta = t.status !== "completed";
+      const atrasada = aberta && prazo ? isPast(prazo) && !isToday(prazo) : false;
+      const alta = aberta && t.prioridade === "high";
+      const venceHoje = aberta && prazo ? isToday(prazo) : false;
+
+      let f = mapa.get(id);
+      if (!f) {
+        f = {
+          id,
+          titulo: t.familia_titulo ?? String(id),
+          responsavel_nome: t.responsavel_nome ?? null,
+          ultima_atividade: alterado ? t.alterado_em : null,
+          total_abertas: 0,
+          atrasadas: 0,
+          alta_prioridade: 0,
+          hoje: 0,
+          responsaveis: new Set<string>(),
+        };
+        mapa.set(id, f);
+      }
+      if (t.responsavel_nome) f.responsaveis.add(t.responsavel_nome);
+      if (aberta) f.total_abertas++;
+      if (atrasada) f.atrasadas++;
+      if (alta) f.alta_prioridade++;
+      if (venceHoje) f.hoje++;
+      if (alterado) {
+        const cur = f.ultima_atividade ? parseISO(f.ultima_atividade) : null;
+        if (!cur || alterado > cur) f.ultima_atividade = t.alterado_em;
+      }
+      if (t.responsavel_nome && !f.responsavel_nome) f.responsavel_nome = t.responsavel_nome;
+    }
+    return Array.from(mapa.values()).sort((a, b) => a.titulo.localeCompare(b.titulo));
+  }, [raw]);
+
+  const familiasFiltradas = familias.filter(
+    (f) => responsavel === "todos" || f.responsaveis.has(responsavel),
+  );
 
   return (
     <>
@@ -142,70 +160,45 @@ export default function OperacionalBitrix() {
         title="Operacional"
         subtitle="Tarefas das famílias sincronizadas do Bitrix"
         actions={
-          <Button variant="outline" size="sm" onClick={carregar} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-3">
+            {lastSync && (
+              <span className="text-xs text-muted-foreground">Sync {format(lastSync, "HH:mm")}</span>
+            )}
+            <Button variant="outline" size="sm" onClick={carregar} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {loading ? (
           [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
-        ) : totais ? (
+        ) : (
           <>
-            <KpiCard
-              label="Famílias"
-              value={String(totais.total_familias)}
-              icon={<Users className="h-4 w-4" />}
-              hint="Total no Bitrix"
-            />
-            <KpiCard
-              label="Em aberto"
-              value={String(totais.total_abertas)}
-              icon={<ListTodo className="h-4 w-4" />}
-              hint="Todas as famílias"
-            />
-            <KpiCard
-              label="Atrasadas"
-              value={String(totais.total_atrasadas)}
-              icon={<Clock className="h-4 w-4" />}
-              hint="Com prazo vencido"
-            />
-            <KpiCard
-              label="Alta prioridade"
-              value={String(totais.total_alta_prioridade)}
-              icon={<Flame className="h-4 w-4" />}
-              hint="Marcadas como urgentes"
-            />
+            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Todas as famílias" />
+            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
+            <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
+            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" />
           </>
-        ) : null}
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {filtros.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFiltro(f.key)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                filtro === f.key
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-muted-foreground hover:border-foreground/50"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {lastSync && (
-            <span className="text-xs text-muted-foreground">
-              Sync {format(lastSync, "HH:mm")}
-            </span>
-          )}
-        </div>
+        <Select value={responsavel} onValueChange={setResponsavel}>
+          <SelectTrigger className="w-full md:w-64">
+            <SelectValue placeholder="Filtrar por responsável" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os responsáveis</SelectItem>
+            {responsaveis.map((r) => (
+              <SelectItem key={r} value={r}>
+                {r}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {erro && (
@@ -224,17 +217,11 @@ export default function OperacionalBitrix() {
           ))}
         </div>
       ) : familiasFiltradas.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-12 text-center">
-          Nenhum cliente encontrado.
-        </p>
+        <p className="text-sm text-muted-foreground py-12 text-center">Nenhum cliente encontrado.</p>
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {familiasFiltradas.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => navigate(`/operacional/${f.id}`)}
-              className="w-full text-left"
-            >
+            <button key={f.id} onClick={() => navigate(`/operacional/${f.id}`)} className="w-full text-left">
               <Card className="shadow-card border-border/70 hover:border-foreground/30 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
@@ -250,13 +237,13 @@ export default function OperacionalBitrix() {
                             {f.atrasadas} atrasada{f.atrasadas > 1 ? "s" : ""}
                           </Badge>
                         )}
-                        {f.hoje > 0 && f.atrasadas === 0 && (
-                          <Badge variant="secondary" className="text-xs">
+                        {f.hoje > 0 && (
+                          <Badge className="text-xs bg-orange-500 text-white hover:bg-orange-500">
                             {f.hoje} hoje
                           </Badge>
                         )}
                         {f.alta_prioridade > 0 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge className="text-xs bg-amber-400 text-amber-950 hover:bg-amber-400">
                             <Flame className="h-3 w-3 mr-1" />
                             {f.alta_prioridade}
                           </Badge>
@@ -266,19 +253,14 @@ export default function OperacionalBitrix() {
                       <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         {f.responsavel_nome && <span>{f.responsavel_nome}</span>}
                         {f.ultima_atividade && (
-                          <span>
-                            Última atividade{" "}
-                            {format(new Date(f.ultima_atividade), "dd/MM", { locale: ptBR })}
-                          </span>
+                          <span>Última atividade {format(new Date(f.ultima_atividade), "dd/MM", { locale: ptBR })}</span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-lg font-semibold text-foreground">
-                          {f.total_abertas}
-                        </div>
+                        <div className="text-lg font-semibold text-foreground">{f.total_abertas}</div>
                         <div className="text-xs text-muted-foreground">em aberto</div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
