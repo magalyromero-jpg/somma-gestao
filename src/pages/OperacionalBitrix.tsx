@@ -27,6 +27,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { KpiCard } from "@/components/KpiCard";
 
 interface TarefaRow {
+  bitrix_id: number | null;
+  titulo: string | null;
   familia_bitrix_id: number | null;
   familia_titulo: string | null;
   status: string;
@@ -37,6 +39,7 @@ interface TarefaRow {
   responsavel_nome: string | null;
   alterado_em: string | null;
   marcadores: string[] | null;
+  link_bitrix: string | null;
 }
 
 interface FamiliaResumo {
