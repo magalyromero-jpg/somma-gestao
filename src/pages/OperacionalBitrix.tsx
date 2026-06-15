@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, isPast, isToday, parseISO, startOfWeek, differenceInDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer, Users } from "lucide-react";
+import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer, Users, ExternalLink } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
