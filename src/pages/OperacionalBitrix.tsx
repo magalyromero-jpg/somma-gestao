@@ -472,6 +472,37 @@ export default function OperacionalBitrix() {
         </div>
       )}
 
+      {/* Lista de tarefas do tipo selecionado na pizza */}
+      {tipoSelecionado && (
+        <Card className="shadow-card mb-8 border-foreground/30">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              Tarefas em aberto · {tipoSelecionado} ({tarefasDoTipo.length})
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setTipoSelecionado(null)}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {tarefasDoTipo.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {tarefasDoTipo.map((t, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="truncate">{t.familia_titulo ?? "—"}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {t.responsavel_nome ?? "Sem responsável"}
+                      {t.prazo ? ` · ${format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {erro && (
         <Card className="border-destructive/40 mb-4">
           <CardContent className="p-4 flex items-start gap-3">
