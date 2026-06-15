@@ -273,7 +273,18 @@ export default function OperacionalBitrix() {
                         {f.ultima_atividade && (
                           <span>Última atividade {format(new Date(f.ultima_atividade), "dd/MM", { locale: ptBR })}</span>
                         )}
+                        {f.tempos_resolucao.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Timer className="h-3 w-3" />
+                            Tempo médio{" "}
+                            {Math.round(
+                              f.tempos_resolucao.reduce((s, d) => s + d, 0) / f.tempos_resolucao.length,
+                            )}{" "}
+                            d
+                          </span>
+                        )}
                       </div>
+
                     </div>
 
                     <div className="flex items-center gap-3">
