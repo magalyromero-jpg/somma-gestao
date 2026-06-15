@@ -24,6 +24,7 @@ interface TarefaRow {
   status: string;
   prioridade: string;
   prazo: string | null;
+  criado_em: string | null;
   concluido_em: string | null;
   responsavel_nome: string | null;
   alterado_em: string | null;
