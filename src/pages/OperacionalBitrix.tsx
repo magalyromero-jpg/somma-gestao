@@ -156,13 +156,12 @@ export default function OperacionalBitrix() {
   const kpis = useMemo(() => {
     const totalAbertas = abertas.length;
     const totalAtrasadas = abertas.filter(isAtrasada).length;
-    const clientes = new Set<number>();
-    for (const t of abertas) if (t.familia_bitrix_id != null) clientes.add(t.familia_bitrix_id);
+    const clientesAtivos = new Set(abertas.map((t) => t.familia_titulo)).size;
     return {
       totalAbertas,
       totalAtrasadas,
       tempoMedio: tempoPorCliente.global,
-      totalClientes: clientes.size,
+      totalClientes: clientesAtivos,
     };
   }, [abertas, tempoPorCliente]);
 
