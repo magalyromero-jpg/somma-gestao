@@ -286,33 +286,26 @@ export default function OperacionalBitrix() {
     });
   }, [filtered, tipoSelecionado]);
 
-  // Tarefas em aberto do responsável selecionado, agrupadas por família
+  // Tarefas em aberto do responsável selecionado, agrupadas por família (título)
   const detalheResponsavel = useMemo(() => {
     if (!responsavelSelecionado) return null;
     const tarefas = raw.filter(
       (t) => t.responsavel_nome === responsavelSelecionado && t.status !== "completed",
     );
-    const grupos = new Map<
-      string,
-      { familia_id: number | null; titulo: string; tarefas: TarefaRow[] }
-    >();
-    for (const t of tarefas) {
-      const key = t.familia_bitrix_id != null ? String(t.familia_bitrix_id) : "sem-familia";
-      let g = grupos.get(key);
-      if (!g) {
-        g = {
-          familia_id: t.familia_bitrix_id ?? null,
-          titulo: t.familia_titulo ?? "Sem família",
-          tarefas: [],
-        };
-        grupos.set(key, g);
-      }
-      g.tarefas.push(t);
-    }
+    const grupos = tarefas.reduce((acc, t) => {
+      const chave = t.familia_titulo ?? 'Sem família';
+      if (!acc[chave]) acc[chave] = {
+        nome: t.familia_titulo ?? 'Sem família',
+        familia_bitrix_id: t.familia_bitrix_id,
+        tarefas: [],
+      };
+      acc[chave].tarefas.push(t);
+      return acc;
+    }, {} as Record<string, { nome: string; familia_bitrix_id: number | null; tarefas: TarefaRow[] }>);
     return {
       nome: responsavelSelecionado,
       total: tarefas.length,
-      grupos: Array.from(grupos.values()).sort((a, b) => b.tarefas.length - a.tarefas.length),
+      grupos: Object.values(grupos).sort((a, b) => b.tarefas.length - a.tarefas.length),
     };
   }, [raw, responsavelSelecionado]);
 
