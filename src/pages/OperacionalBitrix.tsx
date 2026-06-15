@@ -97,7 +97,8 @@ export default function OperacionalBitrix() {
       const { data, error } = await supabase
         .from("bitrix_tarefas")
         .select("*")
-        .neq("status", "completed");
+        .neq("status", "completed")
+        .order("familia_titulo");
       if (error) throw error;
       setRaw((data ?? []) as TarefaRow[]);
       setLastSync(new Date());
