@@ -251,7 +251,7 @@ export default function OperacionalDetalhe() {
         mes: format(new Date(`${k}-01T00:00:00`), "MMMM yyyy", { locale: ptBR }),
         criadas: v.criadas,
         concluidas: v.concluidas,
-        aberto: v.criadas - v.concluidas,
+        aberto: Math.max(0, v.criadas - v.concluidas),
       }));
   }, [tarefas]);
 
