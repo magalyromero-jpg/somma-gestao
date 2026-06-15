@@ -40,6 +40,7 @@ interface FamiliaResumo {
   alta_prioridade: number;
   hoje: number;
   responsaveis: Set<string>;
+  tempos_resolucao: number[];
 }
 
 interface Totais {
