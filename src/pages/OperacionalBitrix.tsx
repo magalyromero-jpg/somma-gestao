@@ -92,9 +92,8 @@ export default function OperacionalBitrix() {
     try {
       const { data, error } = await supabase
         .from("bitrix_tarefas")
-        .select(
-          "familia_bitrix_id, familia_titulo, status, prioridade, prazo, criado_em, concluido_em, responsavel_nome, alterado_em, marcadores",
-        );
+        .select("*")
+        .neq("status", "completed");
       if (error) throw error;
       setRaw((data ?? []) as TarefaRow[]);
       setLastSync(new Date());
