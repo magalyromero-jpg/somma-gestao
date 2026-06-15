@@ -343,6 +343,81 @@ export type Database = {
           },
         ]
       }
+      clientes_integrantes: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          familia_bitrix_id: number
+          id: string
+          nome: string
+          observacao: string | null
+          relacao: string | null
+          telefone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          familia_bitrix_id: number
+          id?: string
+          nome: string
+          observacao?: string | null
+          relacao?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          familia_bitrix_id?: number
+          id?: string
+          nome?: string
+          observacao?: string | null
+          relacao?: string | null
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      clientes_perfil: {
+        Row: {
+          area_gestao_contas: boolean | null
+          area_imoveis: boolean | null
+          area_investimentos: boolean | null
+          area_planejamento: boolean | null
+          created_at: string | null
+          familia_bitrix_id: number
+          familia_titulo: string
+          id: string
+          observacao_geral: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          area_gestao_contas?: boolean | null
+          area_imoveis?: boolean | null
+          area_investimentos?: boolean | null
+          area_planejamento?: boolean | null
+          created_at?: string | null
+          familia_bitrix_id: number
+          familia_titulo: string
+          id?: string
+          observacao_geral?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          area_gestao_contas?: boolean | null
+          area_imoveis?: boolean | null
+          area_investimentos?: boolean | null
+          area_planejamento?: boolean | null
+          created_at?: string | null
+          familia_bitrix_id?: number
+          familia_titulo?: string
+          id?: string
+          observacao_geral?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       configuracoes: {
         Row: {
           chave: string
@@ -1261,6 +1336,36 @@ export type Database = {
           taxa_adm?: number | null
           valor_bruto?: number
           valor_liquido?: number | null
+        }
+        Relationships: []
+      }
+      tarefas_observacoes: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          bitrix_task_id: number
+          created_at: string | null
+          familia_bitrix_id: number | null
+          id: string
+          texto: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          bitrix_task_id: number
+          created_at?: string | null
+          familia_bitrix_id?: number | null
+          id?: string
+          texto: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          bitrix_task_id?: number
+          created_at?: string | null
+          familia_bitrix_id?: number | null
+          id?: string
+          texto?: string
         }
         Relationships: []
       }
