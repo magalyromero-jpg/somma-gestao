@@ -14,45 +14,21 @@ function mapPrioridade(p: string): string {
   return ({ "2": "high", "1": "average", "0": "low" } as any)[p] ?? "average";
 }
 
-// Configuração por grupo: tipos operacionais / não-família a excluir
-const GRUPOS: { id: number; nome: string; excluir: string[] }[] = [
-  {
-    id: 25,
-    nome: "Somma",
-    excluir: [
-      "Operacional",
-      "Gestão Patrimonial",
-      "Acompanhamento",
-      "Analítico",
-      "Planejamento Patrimonial",
-      "Gestão de Contas",
-      "Due Diligence Prévio",
-      "Negócios",
-      "Gestão de Patrimônio",
-      "Análise/Proposta",
-    ],
-  },
-  {
-    id: 29,
-    nome: "Lidderar",
-    excluir: [
-      "GSI",
-      "GSI-01",
-      "GSI-02",
-      "GSI-03",
-      "GSI-05",
-      "GSI-06",
-      "GSI-07",
-      "GSI-08",
-      "LIDDERAR",
-      "Organização",
-      "Sistema",
-      "Acompanhamento",
-      "Analítico",
-      "Operacional",
-      "MFO",
-    ],
-  },
+// Tags que NÃO são famílias e devem ser excluídas em ambos os grupos
+const TAGS_OPERACIONAIS = new Set([
+  "Operacional", "Gestão Patrimonial", "Acompanhamento", "Analítico",
+  "Planejamento Patrimonial", "Gestão de Contas", "Due Diligence Prévio",
+  "Negócios", "Análise/Proposta", "Gestão de Patrimônio",
+  "GSI", "GSI-01", "GSI-02", "GSI-03", "GSI-05", "GSI-06", "GSI-07", "GSI-08",
+  "LIDDERAR", "Organização", "Sistema", "TI", "MFO", "Blue Doors",
+  "Comercial", "Conteúdo", "Jurídico", "Área do Cliente",
+  "Unicred", "Unicred - Premium", "Unicred Porto Alegre",
+  "crm", "Atualização cadastral",
+]);
+
+const GRUPOS: { id: number; nome: string }[] = [
+  { id: 25, nome: "Somma" },
+  { id: 29, nome: "Lidderar" },
 ];
 
 serve(async (req) => {
@@ -70,7 +46,7 @@ serve(async (req) => {
 
     // Processa cada grupo Bitrix configurado
     for (const grupo of GRUPOS) {
-      const tiposOperacionais = new Set(grupo.excluir.map((s) => s.trim().toLowerCase()));
+      const tiposOperacionais = TAGS_OPERACIONAIS;
 
       // 1. Busca TODAS as tarefas do grupo para coletar tags
       const tagsSet = new Set<string>();
