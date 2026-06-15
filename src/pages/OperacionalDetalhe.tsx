@@ -164,7 +164,7 @@ export default function OperacionalDetalhe() {
       if (error) throw error;
       const lista = (data ?? []) as unknown as Tarefa[];
       setTarefas(lista);
-      setTitulo(lista[0]?.["familia_titulo" as keyof Tarefa] as unknown as string ?? taskId);
+      setTitulo((lista[0] as any)?.familia_titulo ?? taskId);
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar tarefas");
     } finally {
