@@ -268,11 +268,27 @@ export default function OperacionalBitrix() {
     }
     return Object.entries(map)
       .map(([nome, v]) => ({ nome, ...v }))
-      .sort((a, b) => b.abertas - a.abertas)
-      .slice(0, 12);
+      .sort((a, b) => b.abertas - a.abertas);
   }, [filtered]);
 
-  const familiasFiltradas = familias;
+  // Tarefas em aberto do tipo selecionado na pizza
+  const tarefasDoTipo = useMemo(() => {
+    if (!tipoSelecionado) return [];
+    return filtered.filter((t) => {
+      if (t.status === "completed") return false;
+      const marc = t.marcadores ?? [];
+      const tipo = TIPOS_PIE.find((tp) => marc.includes(tp)) ?? "Outros";
+      return tipo === tipoSelecionado;
+    });
+  }, [filtered, tipoSelecionado]);
+
+  const familiasFiltradas = useMemo(() => {
+    if (!kpiFiltro) return familias;
+    if (kpiFiltro === "atrasadas") return familias.filter((f) => f.atrasadas > 0);
+    if (kpiFiltro === "alta") return familias.filter((f) => f.alta_prioridade > 0);
+    if (kpiFiltro === "abertas") return familias.filter((f) => f.total_abertas > 0);
+    return familias;
+  }, [familias, kpiFiltro]);
 
   return (
     <>
