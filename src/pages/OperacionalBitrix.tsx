@@ -69,7 +69,12 @@ const TIPOS_PIE = [
   "Gestão de Contas",
 ];
 
-const PIE_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4", "#94a3b8"];
+// Paleta oficial Somma
+const COR_ABERTO = "#4D6571"; // azul médio
+const COR_ATRASADA = "#CC8B15"; // dourado/alerta
+const COR_CONCLUIDA = "#007374"; // verde-azulado
+const COR_ALTA = "#2E3E44"; // escuro
+const PIE_COLORS = ["#4D6571", "#6F8E9A", "#007374", "#CC8B15", "#2E3E44", "#4B646F", "#373C3C"];
 
 export default function OperacionalBitrix() {
   const navigate = useNavigate();
