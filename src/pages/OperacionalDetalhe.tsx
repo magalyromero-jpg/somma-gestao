@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { format, isPast, isToday, parseISO, differenceInDays } from "date-fns";
+import { format, isPast, isToday, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ArrowLeft,
@@ -63,19 +63,13 @@ const TIPOS = [
   "Análise/Proposta",
 ];
 
-function diasAtras(de: string | null): string | null {
-  if (!de) return null;
-  const d = differenceInDays(new Date(), parseISO(de));
-  if (d <= 0) return "hoje";
-  return `há ${d} dia${d > 1 ? "s" : ""}`;
-}
 
 function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
   const [expanded, setExpanded] = useState(false);
   const prazoDate = tarefa.prazo ? new Date(tarefa.prazo) : null;
   const atrasado = prazoDate && isPast(prazoDate) && !isToday(prazoDate);
   const hoje = prazoDate && isToday(prazoDate);
-  const tempoAberto = diasAtras(tarefa.criado_em);
+  const diasAberto = tarefa.criado_em ? differenceInDays(new Date(), new Date(tarefa.criado_em)) : null;
 
   return (
     <Card className="border-border/70">
@@ -100,12 +94,12 @@ function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
                 {tarefa.responsavel_nome}
               </span>
             )}
-            {tempoAberto && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Aberta {tempoAberto}
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {diasAberto != null
+                ? `Aberta há ${diasAberto} dia${diasAberto !== 1 ? "s" : ""}`
+                : "Data desconhecida"}
+            </span>
           </div>
         </div>
 
@@ -257,7 +251,7 @@ export default function OperacionalDetalhe() {
         mes: format(new Date(`${k}-01T00:00:00`), "MMMM yyyy", { locale: ptBR }),
         criadas: v.criadas,
         concluidas: v.concluidas,
-        aberto: v.criadas - v.concluidas,
+        aberto: Math.max(0, v.criadas - v.concluidas),
       }));
   }, [tarefas]);
 

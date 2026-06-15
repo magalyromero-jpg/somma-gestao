@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isPast, isToday, parseISO, startOfWeek } from "date-fns";
+import { format, isPast, isToday, parseISO, startOfWeek, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2 } from "lucide-react";
+import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ interface TarefaRow {
   status: string;
   prioridade: string;
   prazo: string | null;
+  criado_em: string | null;
   concluido_em: string | null;
   responsavel_nome: string | null;
   alterado_em: string | null;
@@ -39,6 +40,7 @@ interface FamiliaResumo {
   alta_prioridade: number;
   hoje: number;
   responsaveis: Set<string>;
+  tempos_resolucao: number[];
 }
 
 interface Totais {
@@ -46,6 +48,7 @@ interface Totais {
   total_atrasadas: number;
   concluidas_semana: number;
   total_alta_prioridade: number;
+  tempo_medio_resolucao: number | null;
 }
 
 export default function OperacionalBitrix() {
@@ -62,7 +65,7 @@ export default function OperacionalBitrix() {
     try {
       const { data, error } = await supabase
         .from("bitrix_tarefas")
-        .select("familia_bitrix_id, familia_titulo, status, prioridade, prazo, concluido_em, responsavel_nome, alterado_em");
+        .select("familia_bitrix_id, familia_titulo, status, prioridade, prazo, criado_em, concluido_em, responsavel_nome, alterado_em");
       if (error) throw error;
       setRaw((data ?? []) as TarefaRow[]);
       setLastSync(new Date());
@@ -90,6 +93,7 @@ export default function OperacionalBitrix() {
       atrasadas = 0,
       concluidasSemana = 0,
       alta = 0;
+    const tempos: number[] = [];
     for (const t of filtrada) {
       const aberta = t.status !== "completed";
       const prazo = t.prazo ? parseISO(t.prazo) : null;
@@ -99,6 +103,10 @@ export default function OperacionalBitrix() {
       if (t.status === "completed" && t.concluido_em) {
         const c = parseISO(t.concluido_em);
         if (c >= inicioSemana) concluidasSemana++;
+        if (t.criado_em) {
+          const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
+          if (d >= 0) tempos.push(d);
+        }
       }
     }
     return {
@@ -106,6 +114,9 @@ export default function OperacionalBitrix() {
       total_atrasadas: atrasadas,
       concluidas_semana: concluidasSemana,
       total_alta_prioridade: alta,
+      tempo_medio_resolucao: tempos.length
+        ? Math.round(tempos.reduce((s, d) => s + d, 0) / tempos.length)
+        : null,
     };
   }, [raw, responsavel]);
 
@@ -133,8 +144,13 @@ export default function OperacionalBitrix() {
           alta_prioridade: 0,
           hoje: 0,
           responsaveis: new Set<string>(),
+          tempos_resolucao: [],
         };
         mapa.set(id, f);
+      }
+      if (t.status === "completed" && t.criado_em && t.concluido_em) {
+        const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
+        if (d >= 0) f.tempos_resolucao.push(d);
       }
       if (t.responsavel_nome) f.responsaveis.add(t.responsavel_nome);
       if (aberta) f.total_abertas++;
@@ -172,18 +188,20 @@ export default function OperacionalBitrix() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {loading ? (
-          [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
+          [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
             <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Todas as famílias" />
             <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
             <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
             <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" />
+            <KpiCard label="Tempo médio resolução" value={totais.tempo_medio_resolucao != null ? `${totais.tempo_medio_resolucao} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Concluídas, criação → conclusão" />
           </>
         )}
       </div>
+
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <Select value={responsavel} onValueChange={setResponsavel}>
@@ -255,7 +273,18 @@ export default function OperacionalBitrix() {
                         {f.ultima_atividade && (
                           <span>Última atividade {format(new Date(f.ultima_atividade), "dd/MM", { locale: ptBR })}</span>
                         )}
+                        {f.tempos_resolucao.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Timer className="h-3 w-3" />
+                            Tempo médio{" "}
+                            {Math.round(
+                              f.tempos_resolucao.reduce((s, d) => s + d, 0) / f.tempos_resolucao.length,
+                            )}{" "}
+                            d
+                          </span>
+                        )}
                       </div>
+
                     </div>
 
                     <div className="flex items-center gap-3">
