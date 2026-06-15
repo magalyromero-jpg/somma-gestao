@@ -107,6 +107,11 @@ serve(async (req) => {
         .filter((tag) => !tiposOperacionais.has(tag.trim().toLowerCase()))
         .map((tag) => ({ title: tag }));
 
+      // Garante que Família Brandão (grupo 29) esteja na lista com ID conhecido
+      if (grupo.id === 29 && !familias.some((f) => f.title === "Família Brandão")) {
+        familias.push({ title: "Família Brandão" });
+      }
+
       console.log(`[Grupo ${grupo.id} - ${grupo.nome}] Sincronizando ${familias.length} famílias: ${familias.map((f) => f.title).join(", ")}`);
       totalFamilias += familias.length;
 
@@ -172,9 +177,7 @@ serve(async (req) => {
           .map((t: any) => ({
             bitrix_id: parseInt(t.id),
             bitrix_parent_id: parseInt(t.parentId) || null,
-            // NÃO incluímos familia_bitrix_id no payload: ao usar upsert por bitrix_id,
-            // omitir a coluna preserva o valor já definido manualmente no banco
-            // e mantém null (default) para registros novos.
+            familia_bitrix_id: (grupo.id === 29 && familia.title === "Família Brandão") ? 83232 : null,
             familia_tag: familia.title,
             familia_titulo: familia.title,
             grupo_bitrix: grupo.id,
