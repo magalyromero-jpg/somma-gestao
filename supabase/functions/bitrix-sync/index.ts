@@ -107,6 +107,11 @@ serve(async (req) => {
         .filter((tag) => !tiposOperacionais.has(tag.trim().toLowerCase()))
         .map((tag) => ({ title: tag }));
 
+      // Garante que Família Brandão (grupo 29) esteja na lista com ID conhecido
+      if (grupo.id === 29 && !familias.some((f) => f.title === "Família Brandão")) {
+        familias.push({ title: "Família Brandão" });
+      }
+
       console.log(`[Grupo ${grupo.id} - ${grupo.nome}] Sincronizando ${familias.length} famílias: ${familias.map((f) => f.title).join(", ")}`);
       totalFamilias += familias.length;
 
