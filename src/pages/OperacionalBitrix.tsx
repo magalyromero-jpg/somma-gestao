@@ -399,8 +399,8 @@ export default function OperacionalBitrix() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="criadas" fill="#3b82f6" name="Criadas" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="concluidas" fill="#22c55e" name="Concluídas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="criadas" fill={COR_ABERTO} name="Criadas" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="concluidas" fill={COR_CONCLUIDA} name="Concluídas" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
