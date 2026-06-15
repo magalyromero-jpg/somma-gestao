@@ -497,13 +497,116 @@ export default function OperacionalBitrix() {
                   <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="abertas" fill={COR_ABERTO} name="Em aberto" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="atrasadas" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar
+                    dataKey="abertas"
+                    fill={COR_ABERTO}
+                    name="Em aberto"
+                    radius={[0, 4, 4, 0]}
+                    className="cursor-pointer"
+                    onClick={(d: any) =>
+                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
+                    }
+                  />
+                  <Bar
+                    dataKey="atrasadas"
+                    fill={COR_ATRASADA}
+                    name="Atrasadas"
+                    radius={[0, 4, 4, 0]}
+                    className="cursor-pointer"
+                    onClick={(d: any) =>
+                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
+                    }
+                  />
                 </BarChart>
               </ResponsiveContainer>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {chartResponsaveis.map((r) => (
+                  <Button
+                    key={r.nome}
+                    variant={responsavelSelecionado === r.nome ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() =>
+                      setResponsavelSelecionado((c) => (c === r.nome ? null : r.nome))
+                    }
+                  >
+                    {r.nome} · {r.abertas}
+                  </Button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Painel do responsável selecionado */}
+      {detalheResponsavel && (
+        <Card className="shadow-card mb-8 border-foreground/30">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">{detalheResponsavel.nome}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {detalheResponsavel.total} tarefa{detalheResponsavel.total !== 1 ? "s" : ""} em aberto
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setResponsavelSelecionado(null)}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {detalheResponsavel.grupos.map((g, gi) => (
+              <div key={gi}>
+                {g.familia_id != null ? (
+                  <button
+                    onClick={() => navigate(`/operacional/${g.familia_id}`)}
+                    className="text-sm font-medium text-foreground hover:underline"
+                  >
+                    {g.titulo} ({g.tarefas.length})
+                  </button>
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {g.titulo} ({g.tarefas.length})
+                  </span>
+                )}
+                <div className="mt-1 divide-y divide-border">
+                  {g.tarefas.map((t, ti) => {
+                    const atrasada =
+                      t.prazo && isPast(parseISO(t.prazo)) && !isToday(parseISO(t.prazo));
+                    return (
+                      <div key={ti} className="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span className="truncate flex-1">{t.titulo ?? "—"}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant={atrasada ? "destructive" : "secondary"}
+                            className="text-xs"
+                          >
+                            {atrasada ? "Atrasada" : "Em aberto"}
+                          </Badge>
+                          {t.prazo && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}
+                            </span>
+                          )}
+                          {t.link_bitrix && (
+                            <a
+                              href={t.link_bitrix}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground"
+                              title="Abrir no Bitrix"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Lista de tarefas do tipo selecionado na pizza */}
