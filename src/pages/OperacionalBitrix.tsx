@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isPast, isToday, parseISO, startOfWeek } from "date-fns";
+import { format, isPast, isToday, parseISO, startOfWeek, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
