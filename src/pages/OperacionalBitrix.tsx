@@ -313,10 +313,10 @@ export default function OperacionalBitrix() {
           [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
-            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Todas as famílias" />
-            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
+            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Clique para ver todas" active={kpiFiltro === "abertas"} onClick={() => setKpiFiltro((c) => (c === "abertas" ? null : "abertas"))} />
+            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" active={kpiFiltro === "atrasadas"} onClick={() => setKpiFiltro((c) => (c === "atrasadas" ? null : "atrasadas"))} />
             <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
-            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" />
+            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" active={kpiFiltro === "alta"} onClick={() => setKpiFiltro((c) => (c === "alta" ? null : "alta"))} />
             <KpiCard label="Tempo médio resolução" value={totais.tempo_medio_resolucao != null ? `${totais.tempo_medio_resolucao} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Concluídas, criação → conclusão" />
           </>
         )}
