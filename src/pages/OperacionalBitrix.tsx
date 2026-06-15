@@ -188,18 +188,20 @@ export default function OperacionalBitrix() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {loading ? (
-          [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
+          [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
             <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Todas as famílias" />
             <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
             <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
             <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" />
+            <KpiCard label="Tempo médio resolução" value={totais.tempo_medio_resolucao != null ? `${totais.tempo_medio_resolucao} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Concluídas, criação → conclusão" />
           </>
         )}
       </div>
+
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <Select value={responsavel} onValueChange={setResponsavel}>
