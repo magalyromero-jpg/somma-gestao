@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, isPast, isToday, parseISO, startOfWeek, differenceInDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer, Users } from "lucide-react";
+import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer, Users, ExternalLink } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -27,6 +27,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { KpiCard } from "@/components/KpiCard";
 
 interface TarefaRow {
+  bitrix_id: number | null;
+  titulo: string | null;
   familia_bitrix_id: number | null;
   familia_titulo: string | null;
   status: string;
@@ -37,6 +39,7 @@ interface TarefaRow {
   responsavel_nome: string | null;
   alterado_em: string | null;
   marcadores: string[] | null;
+  link_bitrix: string | null;
 }
 
 interface FamiliaResumo {
@@ -85,6 +88,7 @@ export default function OperacionalBitrix() {
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [kpiFiltro, setKpiFiltro] = useState<string | null>(null);
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
+  const [responsavelSelecionado, setResponsavelSelecionado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -282,6 +286,36 @@ export default function OperacionalBitrix() {
     });
   }, [filtered, tipoSelecionado]);
 
+  // Tarefas em aberto do responsável selecionado, agrupadas por família
+  const detalheResponsavel = useMemo(() => {
+    if (!responsavelSelecionado) return null;
+    const tarefas = raw.filter(
+      (t) => t.responsavel_nome === responsavelSelecionado && t.status !== "completed",
+    );
+    const grupos = new Map<
+      string,
+      { familia_id: number | null; titulo: string; tarefas: TarefaRow[] }
+    >();
+    for (const t of tarefas) {
+      const key = t.familia_bitrix_id != null ? String(t.familia_bitrix_id) : "sem-familia";
+      let g = grupos.get(key);
+      if (!g) {
+        g = {
+          familia_id: t.familia_bitrix_id ?? null,
+          titulo: t.familia_titulo ?? "Sem família",
+          tarefas: [],
+        };
+        grupos.set(key, g);
+      }
+      g.tarefas.push(t);
+    }
+    return {
+      nome: responsavelSelecionado,
+      total: tarefas.length,
+      grupos: Array.from(grupos.values()).sort((a, b) => b.tarefas.length - a.tarefas.length),
+    };
+  }, [raw, responsavelSelecionado]);
+
   const familiasFiltradas = useMemo(() => {
     if (!kpiFiltro) return familias;
     if (kpiFiltro === "atrasadas") return familias.filter((f) => f.atrasadas > 0);
@@ -463,13 +497,116 @@ export default function OperacionalBitrix() {
                   <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
                   <RTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="abertas" fill={COR_ABERTO} name="Em aberto" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="atrasadas" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
+                  <Bar
+                    dataKey="abertas"
+                    fill={COR_ABERTO}
+                    name="Em aberto"
+                    radius={[0, 4, 4, 0]}
+                    className="cursor-pointer"
+                    onClick={(d: any) =>
+                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
+                    }
+                  />
+                  <Bar
+                    dataKey="atrasadas"
+                    fill={COR_ATRASADA}
+                    name="Atrasadas"
+                    radius={[0, 4, 4, 0]}
+                    className="cursor-pointer"
+                    onClick={(d: any) =>
+                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
+                    }
+                  />
                 </BarChart>
               </ResponsiveContainer>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {chartResponsaveis.map((r) => (
+                  <Button
+                    key={r.nome}
+                    variant={responsavelSelecionado === r.nome ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() =>
+                      setResponsavelSelecionado((c) => (c === r.nome ? null : r.nome))
+                    }
+                  >
+                    {r.nome} · {r.abertas}
+                  </Button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Painel do responsável selecionado */}
+      {detalheResponsavel && (
+        <Card className="shadow-card mb-8 border-foreground/30">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">{detalheResponsavel.nome}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {detalheResponsavel.total} tarefa{detalheResponsavel.total !== 1 ? "s" : ""} em aberto
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setResponsavelSelecionado(null)}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {detalheResponsavel.grupos.map((g, gi) => (
+              <div key={gi}>
+                {g.familia_id != null ? (
+                  <button
+                    onClick={() => navigate(`/operacional/${g.familia_id}`)}
+                    className="text-sm font-medium text-foreground hover:underline"
+                  >
+                    {g.titulo} ({g.tarefas.length})
+                  </button>
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {g.titulo} ({g.tarefas.length})
+                  </span>
+                )}
+                <div className="mt-1 divide-y divide-border">
+                  {g.tarefas.map((t, ti) => {
+                    const atrasada =
+                      t.prazo && isPast(parseISO(t.prazo)) && !isToday(parseISO(t.prazo));
+                    return (
+                      <div key={ti} className="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span className="truncate flex-1">{t.titulo ?? "—"}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant={atrasada ? "destructive" : "secondary"}
+                            className="text-xs"
+                          >
+                            {atrasada ? "Atrasada" : "Em aberto"}
+                          </Badge>
+                          {t.prazo && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}
+                            </span>
+                          )}
+                          {t.link_bitrix && (
+                            <a
+                              href={t.link_bitrix}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground"
+                              title="Abrir no Bitrix"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Lista de tarefas do tipo selecionado na pizza */}
