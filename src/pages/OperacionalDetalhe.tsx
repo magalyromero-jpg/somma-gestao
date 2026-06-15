@@ -75,7 +75,7 @@ function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
   const prazoDate = tarefa.prazo ? new Date(tarefa.prazo) : null;
   const atrasado = prazoDate && isPast(prazoDate) && !isToday(prazoDate);
   const hoje = prazoDate && isToday(prazoDate);
-  const tempoAberto = diasAtras(tarefa.criado_em);
+  const diasAberto = tarefa.criado_em ? differenceInDays(new Date(), new Date(tarefa.criado_em)) : null;
 
   return (
     <Card className="border-border/70">
