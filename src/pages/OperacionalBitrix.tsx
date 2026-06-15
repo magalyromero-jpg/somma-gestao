@@ -144,8 +144,13 @@ export default function OperacionalBitrix() {
           alta_prioridade: 0,
           hoje: 0,
           responsaveis: new Set<string>(),
+          tempos_resolucao: [],
         };
         mapa.set(id, f);
+      }
+      if (t.status === "completed" && t.criado_em && t.concluido_em) {
+        const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
+        if (d >= 0) f.tempos_resolucao.push(d);
       }
       if (t.responsavel_nome) f.responsaveis.add(t.responsavel_nome);
       if (aberta) f.total_abertas++;
