@@ -1,30 +1,25 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isPast, isToday, parseISO, startOfWeek, differenceInDays, subMonths } from "date-fns";
+import { format, isPast, isToday, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, AlertTriangle, Clock, Flame, ListTodo, ChevronRight, CheckCircle2, Timer, Users, ExternalLink } from "lucide-react";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RTooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+  RefreshCw,
+  Clock,
+  ListTodo,
+  Timer,
+  Users,
+  ChevronRight,
+  ArrowUpDown,
+  X,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { KpiCard } from "@/components/KpiCard";
+import { cn } from "@/lib/utils";
 
 interface TarefaRow {
   bitrix_id: number | null;
@@ -39,68 +34,84 @@ interface TarefaRow {
   responsavel_nome: string | null;
   alterado_em: string | null;
   marcadores: string[] | null;
-  link_bitrix: string | null;
 }
 
-interface FamiliaResumo {
-  id: number;
-  titulo: string;
-  responsavel_nome: string | null;
-  ultima_atividade: string | null;
-  total_abertas: number;
-  atrasadas: number;
-  alta_prioridade: number;
-  hoje: number;
-  responsaveis: Set<string>;
-  tempos_resolucao: number[];
+interface ConcluidaRow {
+  criado_em: string | null;
+  concluido_em: string | null;
+  familia_titulo: string | null;
+  familia_bitrix_id: number | null;
 }
 
-interface Totais {
-  total_abertas: number;
-  total_atrasadas: number;
-  concluidas_semana: number;
-  total_alta_prioridade: number;
-  tempo_medio_resolucao: number | null;
-}
+// Paleta oficial Somma
+const SOMMA = ["#4D6571", "#2E3E44", "#6F8E9A", "#007374", "#CC8B15", "#4B646F", "#373C3C"];
 
-const TIPOS_PIE = [
+// Tipos de demanda operacionais
+const TIPOS_DEMANDA = [
   "Operacional",
-  "Gestão Patrimonial",
-  "Acompanhamento",
   "Analítico",
+  "Acompanhamento",
+  "Gestão Patrimonial",
   "Planejamento Patrimonial",
   "Gestão de Contas",
 ];
+const TIPOS_SET = new Set(TIPOS_DEMANDA);
 
-// Paleta oficial Somma
-const COR_ABERTO = "#4D6571"; // azul médio
-const COR_ATRASADA = "#CC8B15"; // dourado/alerta
-const COR_CONCLUIDA = "#007374"; // verde-azulado
-const COR_ALTA = "#2E3E44"; // escuro
-const PIE_COLORS = ["#4D6571", "#6F8E9A", "#007374", "#CC8B15", "#2E3E44", "#4B646F", "#373C3C"];
+function isAtrasada(t: { prazo: string | null; status: string }): boolean {
+  if (t.status === "completed" || !t.prazo) return false;
+  const p = parseISO(t.prazo);
+  return isPast(p) && !isToday(p);
+}
+
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+type SortKey = "cliente" | "abertas" | "atrasadas" | "tipo" | "tempo" | "atividade";
+type SortDir = "asc" | "desc";
+
+interface ClienteResumo {
+  id: number | null;
+  titulo: string;
+  abertas: number;
+  atrasadas: number;
+  tipoPredominante: string;
+  tempoMedio: number | null;
+  ultimaAtividade: string | null;
+}
 
 export default function OperacionalBitrix() {
   const navigate = useNavigate();
-  const [raw, setRaw] = useState<TarefaRow[]>([]);
+  const [abertas, setAbertas] = useState<TarefaRow[]>([]);
+  const [concluidas, setConcluidas] = useState<ConcluidaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [selecionados, setSelecionados] = useState<string[]>([]);
-  const [kpiFiltro, setKpiFiltro] = useState<string | null>(null);
+
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
   const [responsavelSelecionado, setResponsavelSelecionado] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("atrasadas");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
     try {
-      const { data, error } = await supabase
-        .from("bitrix_tarefas")
-        .select("*")
-        .neq("status", "completed")
-        .order("familia_titulo");
-      if (error) throw error;
-      setRaw((data ?? []) as TarefaRow[]);
+      const [r1, r2] = await Promise.all([
+        supabase.from("bitrix_tarefas").select("*").neq("status", "completed"),
+        supabase
+          .from("bitrix_tarefas")
+          .select("criado_em,concluido_em,familia_titulo,familia_bitrix_id")
+          .eq("status", "completed")
+          .not("criado_em", "is", null)
+          .not("concluido_em", "is", null),
+      ]);
+      if (r1.error) throw r1.error;
+      if (r2.error) throw r2.error;
+      setAbertas((r1.data ?? []) as TarefaRow[]);
+      setConcluidas((r2.data ?? []) as ConcluidaRow[]);
       setLastSync(new Date());
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar dados do Bitrix");
@@ -113,193 +124,87 @@ export default function OperacionalBitrix() {
     carregar();
   }, [carregar]);
 
-  const responsaveis = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of raw) if (t.responsavel_nome) set.add(t.responsavel_nome);
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [raw]);
+  // Tipo de uma tarefa (primeiro tipo de demanda presente nos marcadores)
+  const tipoDaTarefa = useCallback((t: TarefaRow): string | null => {
+    const marc = t.marcadores ?? [];
+    return TIPOS_DEMANDA.find((tp) => marc.includes(tp)) ?? null;
+  }, []);
 
-  const filtered = useMemo(() => {
-    if (selecionados.length === 0) return raw;
-    return raw.filter((t) => t.responsavel_nome && selecionados.includes(t.responsavel_nome));
-  }, [raw, selecionados]);
-
-  const toggleResponsavel = (nome: string) =>
-    setSelecionados((cur) => (cur.includes(nome) ? cur.filter((n) => n !== nome) : [...cur, nome]));
-
-  const totais: Totais = useMemo(() => {
-    const inicioSemana = startOfWeek(new Date(), { weekStartsOn: 1 });
-    let abertas = 0,
-      atrasadas = 0,
-      concluidasSemana = 0,
-      alta = 0;
-    const tempos: number[] = [];
-    for (const t of filtered) {
-      const aberta = t.status !== "completed";
-      const prazo = t.prazo ? parseISO(t.prazo) : null;
-      if (aberta) abertas++;
-      if (aberta && prazo && isPast(prazo) && !isToday(prazo)) atrasadas++;
-      if (aberta && t.prioridade === "high") alta++;
-      if (t.status === "completed" && t.concluido_em) {
-        const c = parseISO(t.concluido_em);
-        if (c >= inicioSemana) concluidasSemana++;
-        if (t.criado_em) {
-          const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
-          if (d >= 0) tempos.push(d);
-        }
+  // ---- Tempo médio de resolução por cliente (concluídas) ----
+  const tempoPorCliente = useMemo(() => {
+    const map = new Map<number, number[]>();
+    let global: number[] = [];
+    for (const c of concluidas) {
+      if (!c.criado_em || !c.concluido_em) continue;
+      const d = differenceInDays(parseISO(c.concluido_em), parseISO(c.criado_em));
+      if (d < 0) continue;
+      global.push(d);
+      if (c.familia_bitrix_id != null) {
+        const arr = map.get(c.familia_bitrix_id) ?? [];
+        arr.push(d);
+        map.set(c.familia_bitrix_id, arr);
       }
     }
+    const media = (arr: number[]) =>
+      arr.length ? Math.round(arr.reduce((s, n) => s + n, 0) / arr.length) : null;
+    const porCliente = new Map<number, number | null>();
+    for (const [id, arr] of map) porCliente.set(id, media(arr));
+    return { porCliente, global: media(global) };
+  }, [concluidas]);
+
+  // ---- KPIs ----
+  const kpis = useMemo(() => {
+    const totalAbertas = abertas.length;
+    const totalAtrasadas = abertas.filter(isAtrasada).length;
+    const clientes = new Set<number>();
+    for (const t of abertas) if (t.familia_bitrix_id != null) clientes.add(t.familia_bitrix_id);
     return {
-      total_abertas: abertas,
-      total_atrasadas: atrasadas,
-      concluidas_semana: concluidasSemana,
-      total_alta_prioridade: alta,
-      tempo_medio_resolucao: tempos.length
-        ? Math.round(tempos.reduce((s, d) => s + d, 0) / tempos.length)
-        : null,
+      totalAbertas,
+      totalAtrasadas,
+      tempoMedio: tempoPorCliente.global,
+      totalClientes: clientes.size,
     };
-  }, [filtered]);
+  }, [abertas, tempoPorCliente]);
 
-  const familias = useMemo(() => {
-    const mapa = new Map<number, FamiliaResumo>();
-    for (const t of filtered) {
-      if (t.familia_bitrix_id == null) continue;
-      const id = t.familia_bitrix_id;
-      const prazo = t.prazo ? parseISO(t.prazo) : null;
-      const alterado = t.alterado_em ? parseISO(t.alterado_em) : null;
-      const aberta = t.status !== "completed";
-      const atrasada = aberta && prazo ? isPast(prazo) && !isToday(prazo) : false;
-      const alta = aberta && t.prioridade === "high";
-      const venceHoje = aberta && prazo ? isToday(prazo) : false;
-
-      let f = mapa.get(id);
-      if (!f) {
-        f = {
-          id,
-          titulo: t.familia_titulo ?? String(id),
-          responsavel_nome: t.responsavel_nome ?? null,
-          ultima_atividade: alterado ? t.alterado_em : null,
-          total_abertas: 0,
-          atrasadas: 0,
-          alta_prioridade: 0,
-          hoje: 0,
-          responsaveis: new Set<string>(),
-          tempos_resolucao: [],
-        };
-        mapa.set(id, f);
-      }
-      if (t.status === "completed" && t.criado_em && t.concluido_em) {
-        const d = differenceInDays(parseISO(t.concluido_em), parseISO(t.criado_em));
-        if (d >= 0) f.tempos_resolucao.push(d);
-      }
-      if (t.responsavel_nome) f.responsaveis.add(t.responsavel_nome);
-      if (aberta) f.total_abertas++;
-      if (atrasada) f.atrasadas++;
-      if (alta) f.alta_prioridade++;
-      if (venceHoje) f.hoje++;
-      if (alterado) {
-        const cur = f.ultima_atividade ? parseISO(f.ultima_atividade) : null;
-        if (!cur || alterado > cur) f.ultima_atividade = t.alterado_em;
-      }
-      if (t.responsavel_nome && !f.responsavel_nome) f.responsavel_nome = t.responsavel_nome;
-    }
-    return Array.from(mapa.values()).sort((a, b) => a.titulo.localeCompare(b.titulo));
-  }, [filtered]);
-
-  // ---- Dados dos gráficos ----
-  const chartFamilias = useMemo(
-    () =>
-      familias
-        .map((f) => ({
-          nome: f.titulo,
-          atrasadas: f.atrasadas,
-          no_prazo: Math.max(0, f.total_abertas - f.atrasadas),
-          abertas: f.total_abertas,
-          tempo_medio: f.tempos_resolucao.length
-            ? Math.round(f.tempos_resolucao.reduce((s, d) => s + d, 0) / f.tempos_resolucao.length)
-            : null,
-        }))
-        .filter((f) => f.abertas > 0)
-        .sort((a, b) => b.abertas - a.abertas)
-        .slice(0, 12),
-    [familias],
-  );
-
-  const chartMeses = useMemo(() => {
-    const now = new Date();
-    const keys: { key: string; label: string }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = subMonths(now, i);
-      keys.push({ key: format(d, "yyyy-MM"), label: format(d, "MMM/yy", { locale: ptBR }) });
-    }
-    const map: Record<string, { criadas: number; concluidas: number }> = {};
-    for (const k of keys) map[k.key] = { criadas: 0, concluidas: 0 };
-    for (const t of filtered) {
-      if (t.criado_em) {
-        const k = format(parseISO(t.criado_em), "yyyy-MM");
-        if (map[k]) map[k].criadas++;
-      }
-      if (t.concluido_em) {
-        const k = format(parseISO(t.concluido_em), "yyyy-MM");
-        if (map[k]) map[k].concluidas++;
-      }
-    }
-    return keys.map((k) => ({ mes: k.label, criadas: map[k.key].criadas, concluidas: map[k.key].concluidas }));
-  }, [filtered]);
-
-  const chartTipos = useMemo(() => {
+  // ---- Por tipo de demanda ----
+  const porTipo = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const t of filtered) {
-      if (t.status === "completed") continue;
-      const marc = t.marcadores ?? [];
-      const tipo = TIPOS_PIE.find((tp) => marc.includes(tp)) ?? "Outros";
-      counts[tipo] = (counts[tipo] ?? 0) + 1;
+    for (const tp of TIPOS_DEMANDA) counts[tp] = 0;
+    for (const t of abertas) {
+      const tp = tipoDaTarefa(t);
+      if (tp) counts[tp]++;
     }
-    const ordem = [...TIPOS_PIE, "Outros"];
-    return ordem
-      .map((tipo) => ({ tipo, total: counts[tipo] ?? 0 }))
-      .filter((r) => r.total > 0);
-  }, [filtered]);
+    const max = Math.max(1, ...Object.values(counts));
+    return TIPOS_DEMANDA.map((tp, i) => ({
+      tipo: tp,
+      total: counts[tp],
+      pct: (counts[tp] / max) * 100,
+      cor: SOMMA[i % SOMMA.length],
+    }));
+  }, [abertas, tipoDaTarefa]);
 
-  const chartResponsaveis = useMemo(() => {
-    const map: Record<string, { abertas: number; atrasadas: number }> = {};
-    for (const t of filtered) {
-      if (t.status === "completed") continue;
+  // ---- Por responsável ----
+  const porResponsavel = useMemo(() => {
+    const map = new Map<string, { abertas: number; atrasadas: number }>();
+    for (const t of abertas) {
       const nome = t.responsavel_nome ?? "Sem responsável";
-      map[nome] = map[nome] ?? { abertas: 0, atrasadas: 0 };
-      map[nome].abertas++;
-      const prazo = t.prazo ? parseISO(t.prazo) : null;
-      if (prazo && isPast(prazo) && !isToday(prazo)) map[nome].atrasadas++;
+      const cur = map.get(nome) ?? { abertas: 0, atrasadas: 0 };
+      cur.abertas++;
+      if (isAtrasada(t)) cur.atrasadas++;
+      map.set(nome, cur);
     }
-    return Object.entries(map)
+    return Array.from(map.entries())
       .map(([nome, v]) => ({ nome, ...v }))
       .sort((a, b) => b.abertas - a.abertas);
-  }, [filtered]);
+  }, [abertas]);
 
-  // Tarefas em aberto do tipo selecionado na pizza
-  const tarefasDoTipo = useMemo(() => {
-    if (!tipoSelecionado) return [];
-    return filtered.filter((t) => {
-      if (t.status === "completed") return false;
-      const marc = t.marcadores ?? [];
-      const tipo = TIPOS_PIE.find((tp) => marc.includes(tp)) ?? "Outros";
-      return tipo === tipoSelecionado;
-    });
-  }, [filtered, tipoSelecionado]);
-
-  // Tarefas em aberto do responsável selecionado, agrupadas por família (título)
+  // ---- Detalhe do responsável selecionado ----
   const detalheResponsavel = useMemo(() => {
     if (!responsavelSelecionado) return null;
-    const tarefas = raw.filter(
-      (t) => t.responsavel_nome === responsavelSelecionado && t.status !== "completed",
-    );
+    const tarefas = abertas.filter((t) => (t.responsavel_nome ?? "Sem responsável") === responsavelSelecionado);
     const grupos = tarefas.reduce((acc, t) => {
-      const chave = t.familia_titulo ?? 'Sem família';
-      if (!acc[chave]) acc[chave] = {
-        nome: t.familia_titulo ?? 'Sem família',
-        familia_bitrix_id: t.familia_bitrix_id,
-        tarefas: [],
-      };
+      const chave = t.familia_titulo ?? "Sem família";
+      if (!acc[chave]) acc[chave] = { nome: chave, familia_bitrix_id: t.familia_bitrix_id, tarefas: [] };
       acc[chave].tarefas.push(t);
       return acc;
     }, {} as Record<string, { nome: string; familia_bitrix_id: number | null; tarefas: TarefaRow[] }>);
@@ -308,21 +213,138 @@ export default function OperacionalBitrix() {
       total: tarefas.length,
       grupos: Object.values(grupos).sort((a, b) => b.tarefas.length - a.tarefas.length),
     };
-  }, [raw, responsavelSelecionado]);
+  }, [abertas, responsavelSelecionado]);
 
-  const familiasFiltradas = useMemo(() => {
-    if (!kpiFiltro) return familias;
-    if (kpiFiltro === "atrasadas") return familias.filter((f) => f.atrasadas > 0);
-    if (kpiFiltro === "alta") return familias.filter((f) => f.alta_prioridade > 0);
-    if (kpiFiltro === "abertas") return familias.filter((f) => f.total_abertas > 0);
-    return familias;
-  }, [familias, kpiFiltro]);
+  // ---- Resumo por cliente (tabela) ----
+  const clientes: ClienteResumo[] = useMemo(() => {
+    const map = new Map<string, ClienteResumo & { tipoCount: Record<string, number> }>();
+    for (const t of abertas) {
+      const chaveTitulo = t.familia_titulo ?? "Sem cliente";
+      const key = t.familia_bitrix_id != null ? `id:${t.familia_bitrix_id}` : `nome:${chaveTitulo}`;
+      let c = map.get(key);
+      if (!c) {
+        c = {
+          id: t.familia_bitrix_id,
+          titulo: chaveTitulo,
+          abertas: 0,
+          atrasadas: 0,
+          tipoPredominante: "—",
+          tempoMedio: t.familia_bitrix_id != null ? tempoPorCliente.porCliente.get(t.familia_bitrix_id) ?? null : null,
+          ultimaAtividade: null,
+          tipoCount: {},
+        };
+        map.set(key, c);
+      }
+      c.abertas++;
+      if (isAtrasada(t)) c.atrasadas++;
+      // tipo predominante: expande marcadores excluindo nome do cliente e não-operacionais
+      for (const m of t.marcadores ?? []) {
+        if (m === c.titulo) continue;
+        if (!TIPOS_SET.has(m)) continue;
+        c.tipoCount[m] = (c.tipoCount[m] ?? 0) + 1;
+      }
+      const alterado = t.alterado_em ?? t.criado_em;
+      if (alterado) {
+        if (!c.ultimaAtividade || parseISO(alterado) > parseISO(c.ultimaAtividade)) c.ultimaAtividade = alterado;
+      }
+    }
+    return Array.from(map.values()).map((c) => {
+      const entries = Object.entries(c.tipoCount).sort((a, b) => b[1] - a[1]);
+      return { ...c, tipoPredominante: entries.length ? entries[0][0] : "—" };
+    });
+  }, [abertas, tempoPorCliente]);
+
+  // ---- Filtragem da tabela ----
+  const clientesFiltrados = useMemo(() => {
+    let lista = clientes;
+    if (tipoSelecionado) {
+      const idsComTipo = new Set<string>();
+      for (const t of abertas) {
+        if (tipoDaTarefa(t) === tipoSelecionado) {
+          const chaveTitulo = t.familia_titulo ?? "Sem cliente";
+          idsComTipo.add(t.familia_bitrix_id != null ? `id:${t.familia_bitrix_id}` : `nome:${chaveTitulo}`);
+        }
+      }
+      lista = lista.filter((c) =>
+        idsComTipo.has(c.id != null ? `id:${c.id}` : `nome:${c.titulo}`),
+      );
+    }
+    if (responsavelSelecionado) {
+      const idsComResp = new Set<string>();
+      for (const t of abertas) {
+        if ((t.responsavel_nome ?? "Sem responsável") === responsavelSelecionado) {
+          const chaveTitulo = t.familia_titulo ?? "Sem cliente";
+          idsComResp.add(t.familia_bitrix_id != null ? `id:${t.familia_bitrix_id}` : `nome:${chaveTitulo}`);
+        }
+      }
+      lista = lista.filter((c) =>
+        idsComResp.has(c.id != null ? `id:${c.id}` : `nome:${c.titulo}`),
+      );
+    }
+    return lista;
+  }, [clientes, tipoSelecionado, responsavelSelecionado, abertas, tipoDaTarefa]);
+
+  const clientesOrdenados = useMemo(() => {
+    const arr = [...clientesFiltrados];
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "cliente":
+          cmp = a.titulo.localeCompare(b.titulo);
+          break;
+        case "abertas":
+          cmp = a.abertas - b.abertas;
+          break;
+        case "atrasadas":
+          cmp = a.atrasadas - b.atrasadas || a.abertas - b.abertas;
+          break;
+        case "tipo":
+          cmp = a.tipoPredominante.localeCompare(b.tipoPredominante);
+          break;
+        case "tempo":
+          cmp = (a.tempoMedio ?? -1) - (b.tempoMedio ?? -1);
+          break;
+        case "atividade":
+          cmp = (a.ultimaAtividade ?? "").localeCompare(b.ultimaAtividade ?? "");
+          break;
+      }
+      return cmp * dir;
+    });
+    return arr;
+  }, [clientesFiltrados, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "cliente" || key === "tipo" ? "asc" : "desc");
+    }
+  };
+
+  const Th = ({ k, children, className }: { k: SortKey; children: React.ReactNode; className?: string }) => (
+    <th
+      className={cn(
+        "px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground cursor-pointer select-none hover:text-foreground",
+        className,
+      )}
+      onClick={() => toggleSort(k)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        <ArrowUpDown className={cn("h-3 w-3", sortKey === k ? "text-foreground" : "opacity-30")} />
+      </span>
+    </th>
+  );
+
+  const filtroAtivo = tipoSelecionado || responsavelSelecionado;
 
   return (
     <>
       <PageHeader
         title="Operacional"
-        subtitle="Tarefas das famílias sincronizadas do Bitrix"
+        subtitle="Visão estratégica das tarefas sincronizadas do Bitrix"
         actions={
           <div className="flex items-center gap-3">
             {lastSync && (
@@ -336,197 +358,103 @@ export default function OperacionalBitrix() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {erro && <p className="mb-4 text-sm text-red-500">{erro}</p>}
+
+      {/* Linha 1 — KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {loading ? (
-          [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
+          [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
-            <KpiCard label="Em aberto" value={String(totais.total_abertas)} icon={<ListTodo className="h-4 w-4" />} hint="Clique para ver todas" active={kpiFiltro === "abertas"} onClick={() => setKpiFiltro((c) => (c === "abertas" ? null : "abertas"))} />
-            <KpiCard label="Atrasadas" value={String(totais.total_atrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" active={kpiFiltro === "atrasadas"} onClick={() => setKpiFiltro((c) => (c === "atrasadas" ? null : "atrasadas"))} />
-            <KpiCard label="Concluídas esta semana" value={String(totais.concluidas_semana)} icon={<CheckCircle2 className="h-4 w-4" />} hint="Desde segunda-feira" />
-            <KpiCard label="Alta prioridade" value={String(totais.total_alta_prioridade)} icon={<Flame className="h-4 w-4" />} hint="Marcadas como urgentes" active={kpiFiltro === "alta"} onClick={() => setKpiFiltro((c) => (c === "alta" ? null : "alta"))} />
-            <KpiCard label="Tempo médio resolução" value={totais.tempo_medio_resolucao != null ? `${totais.tempo_medio_resolucao} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Concluídas, criação → conclusão" />
+            <KpiCard label="Em aberto" value={String(kpis.totalAbertas)} icon={<ListTodo className="h-4 w-4" />} hint="Total de tarefas ativas" />
+            <KpiCard label="Atrasadas" value={String(kpis.totalAtrasadas)} icon={<Clock className="h-4 w-4" />} hint="Com prazo vencido" />
+            <KpiCard label="Tempo médio resolução" value={kpis.tempoMedio != null ? `${kpis.tempoMedio} d` : "—"} icon={<Timer className="h-4 w-4" />} hint="Criação → conclusão" />
+            <KpiCard label="Clientes ativos" value={String(kpis.totalClientes)} icon={<Users className="h-4 w-4" />} hint="Com tarefas em aberto" />
           </>
         )}
       </div>
 
-      {/* Filtro multi-seleção de responsáveis */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="justify-start">
-              <Users className="h-4 w-4 mr-2" />
-              {selecionados.length === 0
-                ? "Todos os responsáveis"
-                : `${selecionados.length} responsáve${selecionados.length > 1 ? "is" : "l"}`}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 p-0" align="start">
-            <div className="max-h-72 overflow-y-auto p-2 space-y-1">
-              {responsaveis.map((r) => (
-                <label key={r} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted cursor-pointer">
-                  <Checkbox checked={selecionados.includes(r)} onCheckedChange={() => toggleResponsavel(r)} />
-                  <span className="truncate">{r}</span>
-                </label>
-              ))}
-            </div>
-            {selecionados.length > 0 && (
-              <div className="border-t border-border p-2">
-                <Button variant="ghost" size="sm" className="w-full" onClick={() => setSelecionados([])}>
-                  Limpar seleção
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Gráficos estratégicos */}
+      {/* Linha 2 — dois blocos */}
       {!loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Bloco esquerdo — por tipo de demanda */}
           <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Tarefas em aberto por família</CardTitle>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium">Por tipo de demanda</CardTitle>
+              {tipoSelecionado && (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTipoSelecionado(null)}>
+                  <X className="h-3 w-3 mr-1" /> Limpar
+                </Button>
+              )}
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={chartFamilias} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
-                  <RTooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const d = payload[0].payload as any;
-                      return (
-                        <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs shadow-xl">
-                          <p className="font-medium mb-1">{d.nome}</p>
-                          <p>Em aberto: {d.abertas}</p>
-                          <p>Atrasadas: {d.atrasadas}</p>
-                          <p>Tempo médio: {d.tempo_medio != null ? `${d.tempo_medio} d` : "—"}</p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="no_prazo" stackId="a" fill={COR_ABERTO} name="No prazo" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="atrasadas" stackId="a" fill={COR_ATRASADA} name="Atrasadas" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Volume mensal (últimos 6 meses)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={chartMeses} margin={{ left: 0, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <RTooltip />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="criadas" fill={COR_ABERTO} name="Criadas" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="concluidas" fill={COR_CONCLUIDA} name="Concluídas" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Distribuição por tipo (em aberto)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={chartTipos}
-                    dataKey="total"
-                    nameKey="tipo"
-                    cx="40%"
-                    cy="50%"
-                    outerRadius={90}
-                    onClick={(d: any) =>
-                      setTipoSelecionado((c) => (c === d?.tipo ? null : d?.tipo ?? null))
-                    }
-                    className="cursor-pointer"
+            <CardContent className="space-y-3 pt-2">
+              {porTipo.map((d) => {
+                const ativo = tipoSelecionado === d.tipo;
+                return (
+                  <button
+                    key={d.tipo}
+                    onClick={() => setTipoSelecionado((c) => (c === d.tipo ? null : d.tipo))}
+                    className={cn(
+                      "w-full text-left group",
+                      tipoSelecionado && !ativo && "opacity-50",
+                    )}
                   >
-                    {chartTipos.map((entry, i) => (
-                      <Cell
-                        key={i}
-                        fill={PIE_COLORS[i % PIE_COLORS.length]}
-                        stroke={tipoSelecionado === entry.tipo ? "#373C3C" : undefined}
-                        strokeWidth={tipoSelecionado === entry.tipo ? 2 : 0}
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className={cn("font-medium", ativo ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                        {d.tipo}
+                      </span>
+                      <span className="tabular-nums font-semibold text-foreground">{d.total}</span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${d.pct}%`, backgroundColor: d.cor }}
                       />
-                    ))}
-                  </Pie>
-                  <RTooltip />
-                  <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    wrapperStyle={{ fontSize: 12 }}
-                    formatter={(value, entry: any) => {
-                      const total = chartTipos.reduce((s, t) => s + t.total, 0);
-                      const pct = total ? Math.round((entry.payload.total / total) * 100) : 0;
-                      return `${value} (${pct}%)`;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                    </div>
+                  </button>
+                );
+              })}
             </CardContent>
           </Card>
 
+          {/* Bloco direito — por responsável */}
           <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Carga por responsável</CardTitle>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium">Por responsável</CardTitle>
+              {responsavelSelecionado && (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setResponsavelSelecionado(null)}>
+                  <X className="h-3 w-3 mr-1" /> Limpar
+                </Button>
+              )}
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={chartResponsaveis} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 11 }} />
-                  <RTooltip />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar
-                    dataKey="abertas"
-                    fill={COR_ABERTO}
-                    name="Em aberto"
-                    radius={[0, 4, 4, 0]}
-                    className="cursor-pointer"
-                    onClick={(d: any) =>
-                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
-                    }
-                  />
-                  <Bar
-                    dataKey="atrasadas"
-                    fill={COR_ATRASADA}
-                    name="Atrasadas"
-                    radius={[0, 4, 4, 0]}
-                    className="cursor-pointer"
-                    onClick={(d: any) =>
-                      setResponsavelSelecionado((c) => (c === d?.nome ? null : d?.nome ?? null))
-                    }
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {chartResponsaveis.map((r) => (
-                  <Button
-                    key={r.nome}
-                    variant={responsavelSelecionado === r.nome ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() =>
-                      setResponsavelSelecionado((c) => (c === r.nome ? null : r.nome))
-                    }
-                  >
-                    {r.nome} · {r.abertas}
-                  </Button>
-                ))}
+            <CardContent className="pt-2">
+              <div className="max-h-[320px] overflow-y-auto divide-y divide-border">
+                {porResponsavel.map((r, i) => {
+                  const ativo = responsavelSelecionado === r.nome;
+                  return (
+                    <button
+                      key={r.nome}
+                      onClick={() => setResponsavelSelecionado((c) => (c === r.nome ? null : r.nome))}
+                      className={cn(
+                        "w-full flex items-center gap-3 py-2 px-1 text-left hover:bg-muted/50 rounded-md transition-colors",
+                        ativo && "bg-muted",
+                        responsavelSelecionado && !ativo && "opacity-50",
+                      )}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                        style={{ backgroundColor: SOMMA[i % SOMMA.length] }}
+                      >
+                        {iniciais(r.nome)}
+                      </span>
+                      <span className="flex-1 truncate text-sm">{r.nome}</span>
+                      <Badge variant="secondary" className="tabular-nums">{r.abertas}</Badge>
+                      {r.atrasadas > 0 && (
+                        <Badge className="tabular-nums bg-red-600 text-white hover:bg-red-600">{r.atrasadas}</Badge>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -534,186 +462,118 @@ export default function OperacionalBitrix() {
       )}
 
       {/* Painel do responsável selecionado */}
-      {detalheResponsavel && (
-        <Card className="shadow-card mb-8 border-foreground/30">
+      {!loading && detalheResponsavel && (
+        <Card className="shadow-card mb-6">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold">{detalheResponsavel.nome}</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {detalheResponsavel.total} tarefa{detalheResponsavel.total !== 1 ? "s" : ""} em aberto
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setResponsavelSelecionado(null)}>
-              Fechar
+            <CardTitle className="text-sm font-medium">
+              {detalheResponsavel.nome} · {detalheResponsavel.total} tarefa{detalheResponsavel.total > 1 ? "s" : ""} em aberto
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setResponsavelSelecionado(null)}>
+              <X className="h-3 w-3 mr-1" /> Fechar
             </Button>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {detalheResponsavel.grupos.map((g, gi) => (
-              <div key={gi}>
-                {g.familia_bitrix_id != null ? (
-                  <button
-                    onClick={() => navigate(`/operacional/${g.familia_bitrix_id}`)}
-                    className="text-sm font-medium text-foreground hover:underline"
-                  >
-                    {g.nome} ({g.tarefas.length})
-                  </button>
-                ) : (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {g.nome} ({g.tarefas.length})
-                  </span>
-                )}
-                <div className="mt-1 divide-y divide-border">
-                  {g.tarefas.map((t, ti) => {
-                    const atrasada =
-                      t.prazo && isPast(parseISO(t.prazo)) && !isToday(parseISO(t.prazo));
-                    return (
-                      <div key={ti} className="flex items-center justify-between gap-3 py-2 text-sm">
-                        <span className="truncate flex-1">{t.titulo ?? "—"}</span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge
-                            variant={atrasada ? "destructive" : "secondary"}
-                            className="text-xs"
-                          >
-                            {atrasada ? "Atrasada" : "Em aberto"}
-                          </Badge>
-                          {t.prazo && (
-                            <span className="text-xs text-muted-foreground">
-                              {format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}
-                            </span>
-                          )}
-                          {t.link_bitrix && (
-                            <a
-                              href={t.link_bitrix}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                              title="Abrir no Bitrix"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+          <CardContent className="space-y-4 pt-2">
+            {detalheResponsavel.grupos.map((g) => (
+              <div key={g.nome}>
+                <button
+                  className="flex items-center gap-1 text-sm font-semibold text-foreground hover:underline disabled:no-underline"
+                  disabled={g.familia_bitrix_id == null}
+                  onClick={() => g.familia_bitrix_id != null && navigate(`/operacional/${g.familia_bitrix_id}`)}
+                >
+                  {g.nome} <span className="text-muted-foreground font-normal">({g.tarefas.length})</span>
+                  {g.familia_bitrix_id != null && <ChevronRight className="h-3.5 w-3.5" />}
+                </button>
+                <ul className="mt-1 ml-1 space-y-1">
+                  {g.tarefas.map((t) => (
+                    <li key={t.bitrix_id ?? t.titulo} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isAtrasada(t) ? "bg-red-500" : "bg-muted-foreground/40")} />
+                      <span className="truncate">{t.titulo}</span>
+                      {t.prazo && (
+                        <span className={cn("ml-auto shrink-0 tabular-nums", isAtrasada(t) && "text-red-500")}>
+                          {format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </CardContent>
         </Card>
       )}
 
-      {/* Lista de tarefas do tipo selecionado na pizza */}
-      {tipoSelecionado && (
-        <Card className="shadow-card mb-8 border-foreground/30">
+      {/* Linha 3 — Tabela de clientes */}
+      {!loading && (
+        <Card className="shadow-card">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">
-              Tarefas em aberto · {tipoSelecionado} ({tarefasDoTipo.length})
+              Clientes {filtroAtivo && <span className="text-muted-foreground font-normal">· filtrado</span>}
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setTipoSelecionado(null)}>
-              Fechar
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {tarefasDoTipo.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma tarefa.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {tarefasDoTipo.map((t, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="truncate">{t.familia_titulo ?? "—"}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {t.responsavel_nome ?? "Sem responsável"}
-                      {t.prazo ? ` · ${format(parseISO(t.prazo), "dd/MM", { locale: ptBR })}` : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            {filtroAtivo && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setTipoSelecionado(null);
+                  setResponsavelSelecionado(null);
+                }}
+              >
+                <X className="h-3 w-3 mr-1" /> Limpar filtros
+              </Button>
             )}
+          </CardHeader>
+          <CardContent className="pt-2 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <Th k="cliente">Cliente</Th>
+                  <Th k="abertas" className="text-right">Em aberto</Th>
+                  <Th k="atrasadas" className="text-right">Atrasadas</Th>
+                  <Th k="tipo">Tipo predominante</Th>
+                  <Th k="tempo" className="text-right">Tempo médio</Th>
+                  <Th k="atividade">Última atividade</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {clientesOrdenados.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                      Nenhum cliente encontrado.
+                    </td>
+                  </tr>
+                )}
+                {clientesOrdenados.map((c) => (
+                  <tr key={c.id != null ? `id:${c.id}` : `nome:${c.titulo}`} className="border-b border-border last:border-0 hover:bg-muted/40">
+                    <td className="px-3 py-2">
+                      {c.id != null ? (
+                        <button
+                          className="font-medium text-foreground hover:underline text-left"
+                          onClick={() => navigate(`/operacional/${c.id}`)}
+                        >
+                          {c.titulo}
+                        </button>
+                      ) : (
+                        <span className="font-medium text-foreground">{c.titulo}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{c.abertas}</td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", c.atrasadas > 0 && "text-red-600 font-semibold")}>
+                      {c.atrasadas}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">{c.tipoPredominante}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {c.tempoMedio != null ? `${c.tempoMedio} d` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground tabular-nums">
+                      {c.ultimaAtividade ? format(parseISO(c.ultimaAtividade), "dd/MM/yy", { locale: ptBR }) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
-      )}
-
-      {erro && (
-        <Card className="border-destructive/40 mb-4">
-          <CardContent className="p-4 flex items-start gap-3">
-            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
-            <p className="text-sm text-destructive">{erro}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-1 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
-          ))}
-        </div>
-      ) : familiasFiltradas.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-12 text-center">Nenhum cliente encontrado.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-3">
-          {familiasFiltradas.map((f) => (
-            <button key={f.id} onClick={() => navigate(`/operacional/${f.id}`)} className="w-full text-left">
-              <Card className="shadow-card border-border/70 hover:border-foreground/30 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
-                      {f.titulo.charAt(0).toUpperCase()}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground truncate">{f.titulo}</span>
-                        {f.atrasadas > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {f.atrasadas} atrasada{f.atrasadas > 1 ? "s" : ""}
-                          </Badge>
-                        )}
-                        {f.hoje > 0 && (
-                          <Badge className="text-xs bg-orange-500 text-white hover:bg-orange-500">
-                            {f.hoje} hoje
-                          </Badge>
-                        )}
-                        {f.alta_prioridade > 0 && (
-                          <Badge className="text-xs bg-amber-400 text-amber-950 hover:bg-amber-400">
-                            <Flame className="h-3 w-3 mr-1" />
-                            {f.alta_prioridade}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        {f.responsavel_nome && <span>{f.responsavel_nome}</span>}
-                        {f.ultima_atividade && (
-                          <span>Última atividade {format(new Date(f.ultima_atividade), "dd/MM", { locale: ptBR })}</span>
-                        )}
-                        {f.tempos_resolucao.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Timer className="h-3 w-3" />
-                            Tempo médio{" "}
-                            {Math.round(
-                              f.tempos_resolucao.reduce((s, d) => s + d, 0) / f.tempos_resolucao.length,
-                            )}{" "}
-                            d
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-lg font-semibold text-foreground">{f.total_abertas}</div>
-                        <div className="text-xs text-muted-foreground">em aberto</div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </button>
-          ))}
-        </div>
       )}
     </>
   );
