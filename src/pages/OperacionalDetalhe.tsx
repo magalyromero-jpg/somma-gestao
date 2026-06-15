@@ -100,12 +100,12 @@ function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
                 {tarefa.responsavel_nome}
               </span>
             )}
-            {tempoAberto && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Aberta {tempoAberto}
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {diasAberto != null
+                ? `Aberta há ${diasAberto} dia${diasAberto !== 1 ? "s" : ""}`
+                : "Data desconhecida"}
+            </span>
           </div>
         </div>
 
