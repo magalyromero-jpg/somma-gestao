@@ -11,6 +11,13 @@ import {
   AlertTriangle,
   User,
   Clock,
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  X,
+  Mail,
+  Phone,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -27,6 +34,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -142,7 +160,357 @@ function AbertaRow({ tarefa }: { tarefa: Tarefa }) {
   );
 }
 
-type AbaKey = "aberto" | "concluidas" | "mes" | "tipo";
+type AbaKey = "aberto" | "concluidas" | "mes" | "tipo" | "perfil";
+
+interface Integrante {
+  id: string;
+  familia_bitrix_id: number;
+  nome: string;
+  relacao: string | null;
+  email: string | null;
+  telefone: string | null;
+  observacao: string | null;
+}
+
+const RELACOES = [
+  "Titular",
+  "Cônjuge",
+  "Filho/a",
+  "Sócio/a",
+  "Assessor Jurídico",
+  "Contador",
+  "Outro",
+];
+
+const emptyIntegrante = () => ({
+  nome: "",
+  relacao: "Titular",
+  email: "",
+  telefone: "",
+  observacao: "",
+});
+
+function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
+  const { toast } = useToast();
+  const familiaId = parseInt(taskId);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [areas, setAreas] = useState({
+    area_planejamento: false,
+    area_gestao_contas: false,
+    area_investimentos: false,
+    area_imoveis: false,
+  });
+  const [observacaoGeral, setObservacaoGeral] = useState("");
+  const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
+  const [expandido, setExpandido] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyIntegrante());
+  const [adicionando, setAdicionando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    if (!Number.isFinite(familiaId)) return;
+    setLoading(true);
+    try {
+      const [{ data: perfil }, { data: ints }] = await Promise.all([
+        supabase
+          .from("clientes_perfil")
+          .select("*")
+          .eq("familia_bitrix_id", familiaId)
+          .maybeSingle(),
+        supabase
+          .from("clientes_integrantes")
+          .select("*")
+          .eq("familia_bitrix_id", familiaId)
+          .order("created_at", { ascending: true }),
+      ]);
+      if (perfil) {
+        setAreas({
+          area_planejamento: !!perfil.area_planejamento,
+          area_gestao_contas: !!perfil.area_gestao_contas,
+          area_investimentos: !!perfil.area_investimentos,
+          area_imoveis: !!perfil.area_imoveis,
+        });
+        setObservacaoGeral(perfil.observacao_geral ?? "");
+      }
+      setIntegrantes((ints ?? []) as Integrante[]);
+    } catch (err: any) {
+      toast({ title: "Erro ao carregar perfil", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [familiaId, toast]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  const salvarPerfil = useCallback(
+    async (next?: Partial<typeof areas>, obs?: string) => {
+      setSaving(true);
+      try {
+        const { error } = await supabase.from("clientes_perfil").upsert(
+          {
+            familia_bitrix_id: familiaId,
+            familia_titulo: titulo || taskId,
+            ...areas,
+            ...next,
+            observacao_geral: obs !== undefined ? obs : observacaoGeral,
+          },
+          { onConflict: "familia_bitrix_id" },
+        );
+        if (error) throw error;
+        toast({ title: "Perfil salvo" });
+      } catch (err: any) {
+        toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [familiaId, titulo, taskId, areas, observacaoGeral, toast],
+  );
+
+  const toggleArea = (key: keyof typeof areas) => {
+    const next = { ...areas, [key]: !areas[key] };
+    setAreas(next);
+    salvarPerfil(next);
+  };
+
+  const salvarIntegrante = useCallback(async () => {
+    if (!form.nome.trim()) {
+      toast({ title: "Nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        familia_bitrix_id: familiaId,
+        nome: form.nome.trim(),
+        relacao: form.relacao || null,
+        email: form.email.trim() || null,
+        telefone: form.telefone.trim() || null,
+        observacao: form.observacao.trim() || null,
+      };
+      if (editId) {
+        const { error } = await supabase.from("clientes_integrantes").update(payload).eq("id", editId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("clientes_integrantes").insert(payload);
+        if (error) throw error;
+      }
+      setForm(emptyIntegrante());
+      setEditId(null);
+      setAdicionando(false);
+      await carregar();
+      toast({ title: "Integrante salvo" });
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar integrante", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }, [form, editId, familiaId, carregar, toast]);
+
+  const editarIntegrante = (i: Integrante) => {
+    setEditId(i.id);
+    setAdicionando(true);
+    setForm({
+      nome: i.nome,
+      relacao: i.relacao ?? "Outro",
+      email: i.email ?? "",
+      telefone: i.telefone ?? "",
+      observacao: i.observacao ?? "",
+    });
+  };
+
+  const excluirIntegrante = async (id: string) => {
+    try {
+      const { error } = await supabase.from("clientes_integrantes").delete().eq("id", id);
+      if (error) throw error;
+      await carregar();
+      toast({ title: "Integrante removido" });
+    } catch (err: any) {
+      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Seção 1 — Áreas de serviço */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Áreas de serviço</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(
+            [
+              { key: "area_planejamento" as const, label: "Planejamento Patrimonial" },
+              { key: "area_gestao_contas" as const, label: "Gestão de Contas" },
+              { key: "area_investimentos" as const, label: "Gestão de Investimentos" },
+              { key: "area_imoveis" as const, label: "Gestão de Imóveis" },
+            ]
+          ).map((a) => (
+            <label key={a.key} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={areas[a.key]} onCheckedChange={() => toggleArea(a.key)} disabled={saving} />
+              {a.label}
+            </label>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Seção 2 — Observação geral */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Observação geral</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={observacaoGeral}
+            onChange={(e) => setObservacaoGeral(e.target.value)}
+            placeholder="Anotações gerais sobre o cliente..."
+            rows={4}
+          />
+          <Button size="sm" onClick={() => salvarPerfil(undefined, observacaoGeral)} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            Salvar
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Seção 3 — Integrantes da família */}
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium">Integrantes da família</CardTitle>
+          {!adicionando && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditId(null);
+                setForm(emptyIntegrante());
+                setAdicionando(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar integrante
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {integrantes.length === 0 && !adicionando && (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nenhum integrante cadastrado.</p>
+          )}
+
+          {integrantes.map((i) => (
+            <Card key={i.id} className="border-border/70">
+              <div className="p-3 flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-foreground truncate">{i.nome}</span>
+                    {i.relacao && <Badge variant="secondary" className="text-xs">{i.relacao}</Badge>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    {i.email && (
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {i.email}
+                      </span>
+                    )}
+                    {i.telefone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {i.telefone}
+                      </span>
+                    )}
+                  </div>
+                  {i.observacao && (
+                    <button
+                      onClick={() => setExpandido(expandido === i.id ? null : i.id)}
+                      className="mt-2 text-xs text-primary flex items-center gap-1"
+                    >
+                      {expandido === i.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      Observação
+                    </button>
+                  )}
+                  {expandido === i.id && i.observacao && (
+                    <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{i.observacao}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => editarIntegrante(i)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => excluirIntegrante(i.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+
+          {adicionando && (
+            <Card className="border-primary/40">
+              <CardContent className="p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome *</Label>
+                    <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Relação</Label>
+                    <Select value={form.relacao} onValueChange={(v) => setForm((f) => ({ ...f, relacao: v }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RELACOES.map((r) => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">E-mail</Label>
+                    <Input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Telefone</Label>
+                    <Input value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Observação</Label>
+                  <Textarea value={form.observacao} onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))} rows={3} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={salvarIntegrante} disabled={saving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {editId ? "Salvar alterações" : "Adicionar"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setAdicionando(false);
+                      setEditId(null);
+                      setForm(emptyIntegrante());
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function OperacionalDetalhe() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -347,6 +715,7 @@ export default function OperacionalDetalhe() {
               { key: "concluidas" as const, label: "Concluídas" },
               { key: "mes" as const, label: "Por mês" },
               { key: "tipo" as const, label: "Por tipo" },
+              { key: "perfil" as const, label: "Perfil" },
             ] as const
           ).map((t) => (
             <button
@@ -502,6 +871,10 @@ export default function OperacionalDetalhe() {
           </CardContent>
         </Card>
       )}
+
+      {/* Aba — Perfil */}
+      {aba === "perfil" && taskId && <PerfilTab taskId={taskId} titulo={titulo} />}
     </>
+
   );
 }
