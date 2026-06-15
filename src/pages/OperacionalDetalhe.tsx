@@ -715,6 +715,7 @@ export default function OperacionalDetalhe() {
               { key: "concluidas" as const, label: "Concluídas" },
               { key: "mes" as const, label: "Por mês" },
               { key: "tipo" as const, label: "Por tipo" },
+              { key: "perfil" as const, label: "Perfil" },
             ] as const
           ).map((t) => (
             <button
