@@ -549,16 +549,16 @@ export default function OperacionalBitrix() {
           <CardContent className="space-y-5">
             {detalheResponsavel.grupos.map((g, gi) => (
               <div key={gi}>
-                {g.familia_id != null ? (
+                {g.familia_bitrix_id != null ? (
                   <button
-                    onClick={() => navigate(`/operacional/${g.familia_id}`)}
+                    onClick={() => navigate(`/operacional/${g.familia_bitrix_id}`)}
                     className="text-sm font-medium text-foreground hover:underline"
                   >
-                    {g.titulo} ({g.tarefas.length})
+                    {g.nome} ({g.tarefas.length})
                   </button>
                 ) : (
                   <span className="text-sm font-medium text-muted-foreground">
-                    {g.titulo} ({g.tarefas.length})
+                    {g.nome} ({g.tarefas.length})
                   </span>
                 )}
                 <div className="mt-1 divide-y divide-border">
