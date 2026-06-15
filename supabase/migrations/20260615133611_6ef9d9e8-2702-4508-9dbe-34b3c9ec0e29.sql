@@ -1,0 +1,1 @@
+ALTER TABLE public.bitrix_tarefas ADD COLUMN IF NOT EXISTS grupo_bitrix integer DEFAULT 25;
