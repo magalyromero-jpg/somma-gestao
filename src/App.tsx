@@ -12,7 +12,6 @@ import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
-
 import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
 import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
@@ -22,11 +21,12 @@ import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
 import Atualizacoes from "./pages/Atualizacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Usuarios from "./pages/configuracoes/Usuarios";
-
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
 import OnboardingFamilia from "./pages/OnboardingFamilia";
+import OnboardingLista from "./pages/onboarding/OnboardingLista";
+import OnboardingWorkspace from "./pages/onboarding/OnboardingWorkspace";
 import MapaFamilia from "./pages/MapaFamilia";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import SetPassword from "./pages/auth/SetPassword";
@@ -52,7 +52,6 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
               <Route path="/operacional" element={<OperacionalBitrix />} />
-              
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/sync-bitrix" element={<SyncBitrix />} />
               <Route path="/imoveis" element={<Imoveis />} />
@@ -62,13 +61,17 @@ const App = () => (
               <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
               <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
               <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
-              <Route path="/onboarding" element={<OnboardingFamilia />} />
-              <Route path="/onboarding/:familiaId" element={<OnboardingFamilia />} />
+
+              {/* Onboarding */}
+              <Route path="/onboarding" element={<OnboardingLista />} />
+              <Route path="/onboarding/novo" element={<OnboardingFamilia />} />
+              <Route path="/onboarding/novo/:familiaId" element={<OnboardingFamilia />} />
+              <Route path="/onboarding/workspace/:id" element={<OnboardingWorkspace />} />
+
               <Route path="/familias-onboarding/:id" element={<MapaFamilia />} />
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes/usuarios" element={<ProtectedRoute requireRole="admin"><Usuarios /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Configuracoes /></ProtectedRoute>} />
-              
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
