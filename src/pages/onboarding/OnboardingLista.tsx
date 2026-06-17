@@ -191,7 +191,7 @@ function StatusPill({
 }: {
   color: 'teal' | 'gold' | 'gray'
   label: string
-  Icon: React.ComponentType<{ size?: number }>
+  Icon: React.ComponentType<{ size?: number | string }>
 }) {
   const styles = {
     teal: 'bg-[#E0F0F0] text-[#007374]',

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useOnboardingWorkspace } from '@/hooks/useOnboardingWorkspace'
 import { FASES_DEF, FaseKey } from '@/types/onboarding-workspace'
-import { ChecklistFase } from '@/components/onboarding/ChecklistFase'
+import { ChecklistFase } from '@/components/ChecklistFase'
 import { PainelBitrix } from '@/components/onboarding/PainelBitrix'
 import { cn } from '@/lib/utils'
 
