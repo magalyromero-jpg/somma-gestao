@@ -69,8 +69,13 @@ function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
-type SortKey = "cliente" | "abertas" | "atrasadas" | "tipo" | "tempo" | "atividade";
+type SortKey = "cliente" | "abertas" | "atrasadas" | "tipo" | "tempo" | "atividade" | "responsavel";
 type SortDir = "asc" | "desc";
+
+interface PerfilRow {
+  familia_bitrix_id: number;
+  responsavel_imoveis: string | null;
+}
 
 interface ClienteResumo {
   id: number | null;
@@ -80,6 +85,7 @@ interface ClienteResumo {
   tipoPredominante: string;
   tempoMedio: number | null;
   ultimaAtividade: string | null;
+  responsavelImoveis: string | null;
 }
 
 export default function OperacionalBitrix() {
