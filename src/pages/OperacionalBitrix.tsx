@@ -263,6 +263,9 @@ export default function OperacionalBitrix() {
         map.set(key, c);
       }
       c.abertas++;
+      if (c.id == null && t.familia_bitrix_id != null) {
+        c.id = t.familia_bitrix_id;
+      }
       if (isAtrasada(t)) c.atrasadas++;
       // tipo predominante: expande marcadores excluindo nome do cliente e não-operacionais
       for (const m of t.marcadores ?? []) {
