@@ -161,6 +161,16 @@ export default function OperacionalBitrix() {
     return { porCliente, global: media(global) };
   }, [concluidas]);
 
+  const perfilPorId = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const p of perfis) {
+      if (p.familia_bitrix_id && p.responsavel_imoveis) {
+        map.set(p.familia_bitrix_id, p.responsavel_imoveis);
+      }
+    }
+    return map;
+  }, [perfis]);
+
   // ---- KPIs ----
   const kpis = useMemo(() => {
     const totalAbertas = abertas.length;
@@ -239,6 +249,7 @@ export default function OperacionalBitrix() {
           tipoPredominante: "—",
           tempoMedio: t.familia_bitrix_id != null ? tempoPorCliente.porCliente.get(t.familia_bitrix_id) ?? null : null,
           ultimaAtividade: null,
+          responsavelImoveis: t.familia_bitrix_id != null ? (perfilPorId.get(t.familia_bitrix_id) ?? null) : null,
           tipoCount: {},
         };
         map.set(key, c);
