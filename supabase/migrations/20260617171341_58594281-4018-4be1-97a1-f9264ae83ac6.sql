@@ -1,0 +1,1 @@
+ALTER TABLE public.clientes_perfil ADD COLUMN IF NOT EXISTS responsavel_imoveis TEXT;
