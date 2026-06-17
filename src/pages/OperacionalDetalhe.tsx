@@ -190,6 +190,14 @@ const emptyIntegrante = () => ({
   observacao: "",
 });
 
+const RESPONSAVEIS_IMOVEIS = [
+  "João Moreira", "Ruan Fogagnolo", "Magály Romero", "Laís Boing",
+  "Sérgio Porto", "Leonel Silva", "Julian Paiva", "Rodrigo Costa",
+  "Caio Cezar de Carvalho", "Camila Vieira", "Gabriela Cordeiro",
+  "Erick Amaral", "Dienifer Araujo", "Luiz Mendes", "Ryan Visolli",
+  "Nicolas Pacheco", "Rebeca Pereira Elias"
+];
+
 function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
   const { toast } = useToast();
   const familiaId = parseInt(taskId);
