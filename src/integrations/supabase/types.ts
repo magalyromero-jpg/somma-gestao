@@ -1464,6 +1464,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consolidar_familia_ids: { Args: never; Returns: undefined }
       get_user_familia: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
