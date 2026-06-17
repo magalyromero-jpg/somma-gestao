@@ -59,8 +59,8 @@ export function useOnboardingWorkspace(familiaId: string): Return {
       ])
       if (fasesRes.error)  throw fasesRes.error
       if (checkRes.error)  throw checkRes.error
-      setFases(fasesRes.data ?? [])
-      setChecklist(checkRes.data ?? [])
+      setFases((fasesRes.data ?? []) as unknown as WsFase[])
+      setChecklist((checkRes.data ?? []) as unknown as WsChecklistItem[])
       setBitrix(bitrixRes.data ?? [])
     } catch (e: any) {
       setError(e.message ?? 'Erro ao carregar')
