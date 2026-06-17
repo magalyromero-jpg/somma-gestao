@@ -387,6 +387,7 @@ export type Database = {
           familia_titulo: string
           id: string
           observacao_geral: string | null
+          responsavel_imoveis: string | null
           status: string | null
           updated_at: string | null
         }
@@ -400,6 +401,7 @@ export type Database = {
           familia_titulo: string
           id?: string
           observacao_geral?: string | null
+          responsavel_imoveis?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -413,6 +415,7 @@ export type Database = {
           familia_titulo?: string
           id?: string
           observacao_geral?: string | null
+          responsavel_imoveis?: string | null
           status?: string | null
           updated_at?: string | null
         }
