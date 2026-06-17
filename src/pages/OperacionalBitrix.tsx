@@ -95,6 +95,7 @@ export default function OperacionalBitrix() {
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [perfis, setPerfis] = useState<PerfilRow[]>([]);
 
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
   const [responsavelSelecionado, setResponsavelSelecionado] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export default function OperacionalBitrix() {
     setLoading(true);
     setErro(null);
     try {
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         supabase.from("bitrix_tarefas").select("*").neq("status", "completed"),
         supabase
           .from("bitrix_tarefas")
@@ -113,11 +114,13 @@ export default function OperacionalBitrix() {
           .eq("status", "completed")
           .not("criado_em", "is", null)
           .not("concluido_em", "is", null),
+        supabase.from("clientes_perfil").select("familia_bitrix_id, responsavel_imoveis"),
       ]);
       if (r1.error) throw r1.error;
       if (r2.error) throw r2.error;
       setAbertas((r1.data ?? []) as TarefaRow[]);
       setConcluidas((r2.data ?? []) as ConcluidaRow[]);
+      setPerfis((r3.data ?? []) as PerfilRow[]);
       setLastSync(new Date());
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar dados do Bitrix");
