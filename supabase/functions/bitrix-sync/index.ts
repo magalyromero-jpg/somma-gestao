@@ -174,8 +174,13 @@ serve(async (req) => {
 
         // Upsert em lotes de 100
         for (let j = 0; j < registros.length; j += 100) {
-          const { error } = await supabase.from("bitrix_tarefas").upsert(registros.slice(j, j + 100), { onConflict: "bitrix_id" });
-          if (error) console.error(`Upsert error [Grupo ${grupo.id}] ${familia.title}:`, error);
+        const { data: upsertData, error } = await supabase.from("bitrix_tarefas").upsert(registros.slice(j, j + 100), { onConflict: "bitrix_id" });
+        if (error) {
+          console.error(`Upsert error [Grupo ${grupo.id}] ${familia.title}:`, JSON.stringify(error));
+          console.error(`Primeiro registro do lote:`, JSON.stringify(registros[j]));
+        } else {
+          console.log(`Upsert ok [Grupo ${grupo.id}] ${familia.title}: ${registros.slice(j, j + 100).length} registros`);
+        }
         }
 
         totalSincronizadas += registros.length;
