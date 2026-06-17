@@ -210,6 +210,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
     area_imoveis: false,
   });
   const [observacaoGeral, setObservacaoGeral] = useState("");
+  const [responsavelImoveis, setResponsavelImoveis] = useState("");
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
