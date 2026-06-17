@@ -61,6 +61,8 @@ interface Tarefa {
   concluido_em: string | null;
   marcadores: string[] | null;
   link_bitrix: string | null;
+  familia_titulo: string | null;
+  familia_bitrix_id: number | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
