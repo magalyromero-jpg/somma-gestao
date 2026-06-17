@@ -73,7 +73,7 @@ export function PainelBitrix({ tarefas }: Props) {
                   {formatPrazo(t.prazo)}
                 </span>
                 {t.link_bitrix && (
-                  
+                  <a
                     href={t.link_bitrix}
                     target="_blank"
                     rel="noopener noreferrer"
