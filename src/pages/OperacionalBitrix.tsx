@@ -327,6 +327,9 @@ export default function OperacionalBitrix() {
         case "atividade":
           cmp = (a.ultimaAtividade ?? "").localeCompare(b.ultimaAtividade ?? "");
           break;
+        case "responsavel":
+          cmp = a.responsavelImoveis?.localeCompare(b.responsavelImoveis ?? "") ?? 0;
+          break;
       }
       return cmp * dir;
     });
