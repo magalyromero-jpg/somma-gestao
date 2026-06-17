@@ -52,7 +52,7 @@ export function useOnboardingWorkspace(familiaId: string): Return {
         supabase
           .from('bitrix_tarefas')
           .select('id, titulo, status, prioridade, responsavel_nome, prazo, link_bitrix')
-          .eq('familia_id', familiaId)
+          .eq('familia_id' as never, familiaId)
           .neq('status', 'completed')
           .order('prazo', { ascending: true })
           .limit(20),
@@ -125,7 +125,7 @@ export function useOnboardingWorkspace(familiaId: string): Return {
         status:      'concluido',
         perpetuo_id: perpetuoId,
         updated_at:  new Date().toISOString(),
-      })
+      } as never)
       .eq('id', familiaId)
     return !err
   }, [familiaId])
