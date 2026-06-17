@@ -280,7 +280,10 @@ export default function OperacionalBitrix() {
     }
     return Array.from(map.values()).map((c) => {
       const entries = Object.entries(c.tipoCount).sort((a, b) => b[1] - a[1]);
-      return { ...c, tipoPredominante: entries.length ? entries[0][0] : "—" };
+      // Re-deriva valores que dependem do id (pode ter sido preenchido depois da criação)
+      const responsavelImoveis = c.id != null ? (perfilPorId.get(c.id) ?? null) : null;
+      const tempoMedio = c.id != null ? (tempoPorCliente.porCliente.get(c.id) ?? null) : null;
+      return { ...c, tipoPredominante: entries.length ? entries[0][0] : "—", responsavelImoveis, tempoMedio };
     });
   }, [abertas, tempoPorCliente, perfilPorId]);
 
