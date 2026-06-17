@@ -558,43 +558,37 @@ export default function OperacionalDetalhe() {
     setErro(null);
     try {
       const familiaId = parseInt(taskId);
-      // Busca primeiro pelo ID numérico, depois pelo título como fallback
-      const { data: dadosById, error } = await supabase
-        .from("bitrix_tarefas")
-        .select("*")
-        .eq("familia_bitrix_id", familiaId);
-      if (error) throw error;
 
-      // Se encontrou pelo ID, usa. Senão, busca pelo titulo
-      let data = dadosById ?? [];
-      if (data.length === 0) {
-        // Descobre o titulo a partir do taskId navegando pelas tarefas do dashboard
-        const { data: byTitle } = await supabase
+      // Descobre o titulo da família pelo ID numérico
+      const { data: sample } = await supabase
+        .from("bitrix_tarefas")
+        .select("familia_titulo")
+        .eq("familia_bitrix_id", familiaId)
+        .limit(1);
+
+      const familiaTitulo = sample?.[0]?.familia_titulo ?? null;
+
+      // Busca TODAS as tarefas pelo titulo — inclui registros com familia_bitrix_id nulo
+      let data: any[] = [];
+      if (familiaTitulo) {
+        const { data: byTitle, error: errTitle } = await supabase
           .from("bitrix_tarefas")
           .select("*")
-          .eq("familia_titulo", taskId);
+          .eq("familia_titulo", familiaTitulo);
+        if (errTitle) throw errTitle;
         data = byTitle ?? [];
-      }
-
-      // Se ainda não achou, tenta buscar o titulo via uma tarefa com esse familia_bitrix_id
-      if (data.length === 0) {
-        const { data: sample } = await supabase
+      } else {
+        const { data: byId, error: errId } = await supabase
           .from("bitrix_tarefas")
-          .select("familia_titulo")
-          .eq("familia_bitrix_id", familiaId)
-          .limit(1);
-        if (sample?.[0]?.familia_titulo) {
-          const { data: byTitle2 } = await supabase
-            .from("bitrix_tarefas")
-            .select("*")
-            .eq("familia_titulo", sample[0].familia_titulo);
-          data = byTitle2 ?? [];
-        }
+          .select("*")
+          .eq("familia_bitrix_id", familiaId);
+        if (errId) throw errId;
+        data = byId ?? [];
       }
 
-      const lista = (data ?? []) as unknown as Tarefa[];
+      const lista = data as unknown as Tarefa[];
       setTarefas(lista);
-      setTitulo((lista[0] as any)?.familia_titulo ?? taskId);
+      setTitulo(familiaTitulo ?? lista[0]?.familia_titulo ?? taskId ?? "");
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar tarefas");
     } finally {
