@@ -553,6 +553,7 @@ export default function OperacionalBitrix() {
                   <Th k="abertas" className="text-right">Em aberto</Th>
                   <Th k="atrasadas" className="text-right">Atrasadas</Th>
                   <Th k="tipo">Tipo predominante</Th>
+                  <Th k="responsavel">Resp. Imóveis</Th>
                   <Th k="tempo" className="text-right">Tempo médio</Th>
                   <Th k="atividade">Última atividade</Th>
                 </tr>
@@ -560,7 +561,7 @@ export default function OperacionalBitrix() {
               <tbody>
                 {clientesOrdenados.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
@@ -584,6 +585,9 @@ export default function OperacionalBitrix() {
                       {c.atrasadas}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{c.tipoPredominante}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {c.responsavelImoveis ?? "—"}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
                       {c.tempoMedio != null ? `${c.tempoMedio} d` : "—"}
                     </td>
