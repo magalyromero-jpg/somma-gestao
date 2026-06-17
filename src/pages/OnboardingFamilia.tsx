@@ -29,12 +29,6 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-interface OnboardingResumo {
-  id: string;
-  nome: string;
-  patrimonio_data: any;
-  updated_at: string;
-}
 
 export default function OnboardingFamilia() {
   const navigate = useNavigate();
@@ -49,20 +43,7 @@ export default function OnboardingFamilia() {
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [resultado, setResultado] = useState<PatrimonialData | null>(null);
   const [hydrating, setHydrating] = useState<boolean>(!!familiaIdParam);
-  const [emAndamento, setEmAndamento] = useState<OnboardingResumo[]>([]);
-  const [novo, setNovo] = useState(false);
 
-  // Lista onboardings em andamento quando não há :familiaId e o usuário não pediu "Novo"
-  useEffect(() => {
-    if (familiaIdParam || !user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("familias_onboarding")
-        .select("id, nome, patrimonio_data, updated_at")
-        .order("updated_at", { ascending: false });
-      setEmAndamento((data ?? []) as OnboardingResumo[]);
-    })();
-  }, [familiaIdParam, user]);
 
   // Hidrata estado a partir do Supabase quando vier com :familiaId na URL
   useEffect(() => {
@@ -227,67 +208,6 @@ export default function OnboardingFamilia() {
     );
   }
 
-  // Lista de onboardings existentes (só na rota base, sem ":familiaId" e sem clicar em "Novo")
-  if (!familiaIdParam && !novo && emAndamento.length > 0) {
-    return (
-      <>
-        <PageHeader
-          title="Onboarding de cliente"
-          subtitle="Continue um onboarding em andamento ou inicie um novo"
-        />
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => setNovo(true)}>+ Novo onboarding</Button>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          {emAndamento.map((o) => {
-            const concluido = !!o.patrimonio_data;
-            return (
-              <Card key={o.id} className="hover:shadow-elevated transition-shadow">
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-semibold">{o.nome}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Atualizado em {new Date(o.updated_at).toLocaleDateString("pt-BR")}
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider",
-                        concluido
-                          ? "bg-success/10 text-success border-success/30"
-                          : "bg-warning/10 text-warning border-warning/30",
-                      )}
-                    >
-                      {concluido ? "Concluído" : "Em progresso"}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {concluido ? (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => navigate(`/familias-onboarding/${o.id}`)}
-                      >
-                        Abrir mapa
-                      </Button>
-                    ) : (
-                      <Button
-                        className="flex-1"
-                        onClick={() => navigate(`/onboarding/novo/${o.id}`)}
-                      >
-                        Continuar onboarding <ArrowRight />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
