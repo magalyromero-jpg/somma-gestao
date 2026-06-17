@@ -246,7 +246,7 @@ export default function OperacionalBitrix() {
     for (const t of abertas) {
       const chaveTitulo = t.familia_titulo ?? "Sem cliente";
       if (TAGS_EXCLUIR.has(chaveTitulo)) continue;
-      const key = t.familia_bitrix_id != null ? `id:${t.familia_bitrix_id}` : `nome:${chaveTitulo}`;
+      const key = `nome:${chaveTitulo}`;
       let c = map.get(key);
       if (!c) {
         c = {
@@ -263,6 +263,9 @@ export default function OperacionalBitrix() {
         map.set(key, c);
       }
       c.abertas++;
+      if (c.id == null && t.familia_bitrix_id != null) {
+        c.id = t.familia_bitrix_id;
+      }
       if (isAtrasada(t)) c.atrasadas++;
       // tipo predominante: expande marcadores excluindo nome do cliente e não-operacionais
       for (const m of t.marcadores ?? []) {
