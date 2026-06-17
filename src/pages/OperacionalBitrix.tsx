@@ -57,6 +57,13 @@ const TIPOS_DEMANDA = [
 ];
 const TIPOS_SET = new Set(TIPOS_DEMANDA);
 
+const TAGS_EXCLUIR = new Set([
+  "Operacional", "Analítico", "Acompanhamento", "Gestão Patrimonial",
+  "Planejamento Patrimonial", "Gestão de Contas", "Due Diligence Prévio",
+  "Negócios", "Análise/Proposta", "Gestão de Patrimônio",
+]);
+
+
 function isAtrasada(t: { prazo: string | null; status: string }): boolean {
   if (t.status === "completed" || !t.prazo) return false;
   const p = parseISO(t.prazo);
@@ -238,6 +245,7 @@ export default function OperacionalBitrix() {
     const map = new Map<string, ClienteResumo & { tipoCount: Record<string, number> }>();
     for (const t of abertas) {
       const chaveTitulo = t.familia_titulo ?? "Sem cliente";
+      if (TAGS_EXCLUIR.has(chaveTitulo)) continue;
       const key = t.familia_bitrix_id != null ? `id:${t.familia_bitrix_id}` : `nome:${chaveTitulo}`;
       let c = map.get(key);
       if (!c) {
@@ -569,16 +577,19 @@ export default function OperacionalBitrix() {
                 {clientesOrdenados.map((c) => (
                   <tr key={c.id != null ? `id:${c.id}` : `nome:${c.titulo}`} className="border-b border-border last:border-0 hover:bg-muted/40">
                     <td className="px-3 py-2">
-                      {c.id != null ? (
-                        <button
-                          className="font-medium text-foreground hover:underline text-left"
-                          onClick={() => navigate(`/operacional/${c.id}`)}
-                        >
-                          {c.titulo}
-                        </button>
-                      ) : (
-                        <span className="font-medium text-foreground">{c.titulo}</span>
-                      )}
+                      <button
+                        className="font-medium text-foreground hover:underline text-left"
+                        onClick={() => {
+                          if (c.id != null) {
+                            navigate(`/operacional/${c.id}`);
+                          } else {
+                            const found = abertas.find(t => t.familia_titulo === c.titulo && t.familia_bitrix_id != null);
+                            if (found?.familia_bitrix_id) navigate(`/operacional/${found.familia_bitrix_id}`);
+                          }
+                        }}
+                      >
+                        {c.titulo}
+                      </button>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{c.abertas}</td>
                     <td className={cn("px-3 py-2 text-right tabular-nums", c.atrasadas > 0 && "text-red-600 font-semibold")}>
