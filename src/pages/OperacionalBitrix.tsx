@@ -69,8 +69,13 @@ function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
-type SortKey = "cliente" | "abertas" | "atrasadas" | "tipo" | "tempo" | "atividade";
+type SortKey = "cliente" | "abertas" | "atrasadas" | "tipo" | "tempo" | "atividade" | "responsavel";
 type SortDir = "asc" | "desc";
+
+interface PerfilRow {
+  familia_bitrix_id: number;
+  responsavel_imoveis: string | null;
+}
 
 interface ClienteResumo {
   id: number | null;
@@ -80,6 +85,7 @@ interface ClienteResumo {
   tipoPredominante: string;
   tempoMedio: number | null;
   ultimaAtividade: string | null;
+  responsavelImoveis: string | null;
 }
 
 export default function OperacionalBitrix() {
@@ -89,6 +95,7 @@ export default function OperacionalBitrix() {
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [perfis, setPerfis] = useState<PerfilRow[]>([]);
 
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
   const [responsavelSelecionado, setResponsavelSelecionado] = useState<string | null>(null);
@@ -99,7 +106,7 @@ export default function OperacionalBitrix() {
     setLoading(true);
     setErro(null);
     try {
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         supabase.from("bitrix_tarefas").select("*").neq("status", "completed"),
         supabase
           .from("bitrix_tarefas")
@@ -107,11 +114,13 @@ export default function OperacionalBitrix() {
           .eq("status", "completed")
           .not("criado_em", "is", null)
           .not("concluido_em", "is", null),
+        supabase.from("clientes_perfil").select("familia_bitrix_id, responsavel_imoveis"),
       ]);
       if (r1.error) throw r1.error;
       if (r2.error) throw r2.error;
       setAbertas((r1.data ?? []) as TarefaRow[]);
       setConcluidas((r2.data ?? []) as ConcluidaRow[]);
+      setPerfis((r3.data ?? []) as PerfilRow[]);
       setLastSync(new Date());
     } catch (err: any) {
       setErro(err.message ?? "Erro ao buscar dados do Bitrix");
@@ -151,6 +160,16 @@ export default function OperacionalBitrix() {
     for (const [id, arr] of map) porCliente.set(id, media(arr));
     return { porCliente, global: media(global) };
   }, [concluidas]);
+
+  const perfilPorId = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const p of perfis) {
+      if (p.familia_bitrix_id && p.responsavel_imoveis) {
+        map.set(p.familia_bitrix_id, p.responsavel_imoveis);
+      }
+    }
+    return map;
+  }, [perfis]);
 
   // ---- KPIs ----
   const kpis = useMemo(() => {
@@ -230,6 +249,7 @@ export default function OperacionalBitrix() {
           tipoPredominante: "—",
           tempoMedio: t.familia_bitrix_id != null ? tempoPorCliente.porCliente.get(t.familia_bitrix_id) ?? null : null,
           ultimaAtividade: null,
+          responsavelImoveis: t.familia_bitrix_id != null ? (perfilPorId.get(t.familia_bitrix_id) ?? null) : null,
           tipoCount: {},
         };
         map.set(key, c);
@@ -251,7 +271,7 @@ export default function OperacionalBitrix() {
       const entries = Object.entries(c.tipoCount).sort((a, b) => b[1] - a[1]);
       return { ...c, tipoPredominante: entries.length ? entries[0][0] : "—" };
     });
-  }, [abertas, tempoPorCliente]);
+  }, [abertas, tempoPorCliente, perfilPorId]);
 
   // ---- Filtragem da tabela ----
   const clientesFiltrados = useMemo(() => {
@@ -306,6 +326,9 @@ export default function OperacionalBitrix() {
           break;
         case "atividade":
           cmp = (a.ultimaAtividade ?? "").localeCompare(b.ultimaAtividade ?? "");
+          break;
+        case "responsavel":
+          cmp = a.responsavelImoveis?.localeCompare(b.responsavelImoveis ?? "") ?? 0;
           break;
       }
       return cmp * dir;
@@ -530,6 +553,7 @@ export default function OperacionalBitrix() {
                   <Th k="abertas" className="text-right">Em aberto</Th>
                   <Th k="atrasadas" className="text-right">Atrasadas</Th>
                   <Th k="tipo">Tipo predominante</Th>
+                  <Th k="responsavel">Resp. Imóveis</Th>
                   <Th k="tempo" className="text-right">Tempo médio</Th>
                   <Th k="atividade">Última atividade</Th>
                 </tr>
@@ -537,7 +561,7 @@ export default function OperacionalBitrix() {
               <tbody>
                 {clientesOrdenados.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
@@ -561,6 +585,9 @@ export default function OperacionalBitrix() {
                       {c.atrasadas}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{c.tipoPredominante}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {c.responsavelImoveis ?? "—"}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
                       {c.tempoMedio != null ? `${c.tempoMedio} d` : "—"}
                     </td>
