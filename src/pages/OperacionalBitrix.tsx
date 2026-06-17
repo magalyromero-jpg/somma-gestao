@@ -271,7 +271,7 @@ export default function OperacionalBitrix() {
       const entries = Object.entries(c.tipoCount).sort((a, b) => b[1] - a[1]);
       return { ...c, tipoPredominante: entries.length ? entries[0][0] : "—" };
     });
-  }, [abertas, tempoPorCliente]);
+  }, [abertas, tempoPorCliente, perfilPorId]);
 
   // ---- Filtragem da tabela ----
   const clientesFiltrados = useMemo(() => {
