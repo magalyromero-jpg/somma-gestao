@@ -52,15 +52,15 @@ export function useOnboardingWorkspace(familiaId: string): Return {
         supabase
           .from('bitrix_tarefas')
           .select('id, titulo, status, prioridade, responsavel_nome, prazo, link_bitrix')
-          .eq('familia_id', familiaId)
+          .eq('familia_id' as never, familiaId)
           .neq('status', 'completed')
           .order('prazo', { ascending: true })
           .limit(20),
       ])
       if (fasesRes.error)  throw fasesRes.error
       if (checkRes.error)  throw checkRes.error
-      setFases(fasesRes.data ?? [])
-      setChecklist(checkRes.data ?? [])
+      setFases((fasesRes.data ?? []) as unknown as WsFase[])
+      setChecklist((checkRes.data ?? []) as unknown as WsChecklistItem[])
       setBitrix(bitrixRes.data ?? [])
     } catch (e: any) {
       setError(e.message ?? 'Erro ao carregar')
@@ -125,7 +125,7 @@ export function useOnboardingWorkspace(familiaId: string): Return {
         status:      'concluido',
         perpetuo_id: perpetuoId,
         updated_at:  new Date().toISOString(),
-      })
+      } as never)
       .eq('id', familiaId)
     return !err
   }, [familiaId])

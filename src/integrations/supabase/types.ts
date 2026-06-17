@@ -1211,6 +1211,72 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_checklist: {
+        Row: {
+          concluido: boolean
+          concluido_em: string | null
+          created_at: string
+          familia_id: string
+          fase: string
+          id: string
+          item_key: string
+          observacao: string | null
+          updated_at: string
+        }
+        Insert: {
+          concluido?: boolean
+          concluido_em?: string | null
+          created_at?: string
+          familia_id: string
+          fase: string
+          id?: string
+          item_key: string
+          observacao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          concluido?: boolean
+          concluido_em?: string | null
+          created_at?: string
+          familia_id?: string
+          fase?: string
+          id?: string
+          item_key?: string
+          observacao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      onboarding_fases: {
+        Row: {
+          created_at: string
+          familia_id: string
+          fase: string
+          id: string
+          progresso: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          familia_id: string
+          fase: string
+          id?: string
+          progresso?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          familia_id?: string
+          fase?: string
+          id?: string
+          progresso?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pesquisas_mercado: {
         Row: {
           area_m2: number | null
