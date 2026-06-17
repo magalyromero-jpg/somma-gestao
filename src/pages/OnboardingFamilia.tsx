@@ -145,7 +145,7 @@ export default function OnboardingFamilia() {
       return;
     }
     setFamiliaId(data.id);
-    navigate(`/onboarding/${data.id}`, { replace: true });
+    navigate(`/onboarding/novo/${data.id}`, { replace: true });
     setStep(2);
   }
 
@@ -274,7 +274,7 @@ export default function OnboardingFamilia() {
                     ) : (
                       <Button
                         className="flex-1"
-                        onClick={() => navigate(`/onboarding/${o.id}`)}
+                        onClick={() => navigate(`/onboarding/novo/${o.id}`)}
                       >
                         Continuar onboarding <ArrowRight />
                       </Button>
