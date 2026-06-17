@@ -558,11 +558,40 @@ export default function OperacionalDetalhe() {
     setErro(null);
     try {
       const familiaId = parseInt(taskId);
-      const { data, error } = await supabase
+      // Busca primeiro pelo ID numérico, depois pelo título como fallback
+      const { data: dadosById, error } = await supabase
         .from("bitrix_tarefas")
         .select("*")
         .eq("familia_bitrix_id", familiaId);
       if (error) throw error;
+
+      // Se encontrou pelo ID, usa. Senão, busca pelo titulo
+      let data = dadosById ?? [];
+      if (data.length === 0) {
+        // Descobre o titulo a partir do taskId navegando pelas tarefas do dashboard
+        const { data: byTitle } = await supabase
+          .from("bitrix_tarefas")
+          .select("*")
+          .eq("familia_titulo", taskId);
+        data = byTitle ?? [];
+      }
+
+      // Se ainda não achou, tenta buscar o titulo via uma tarefa com esse familia_bitrix_id
+      if (data.length === 0) {
+        const { data: sample } = await supabase
+          .from("bitrix_tarefas")
+          .select("familia_titulo")
+          .eq("familia_bitrix_id", familiaId)
+          .limit(1);
+        if (sample?.[0]?.familia_titulo) {
+          const { data: byTitle2 } = await supabase
+            .from("bitrix_tarefas")
+            .select("*")
+            .eq("familia_titulo", sample[0].familia_titulo);
+          data = byTitle2 ?? [];
+        }
+      }
+
       const lista = (data ?? []) as unknown as Tarefa[];
       setTarefas(lista);
       setTitulo((lista[0] as any)?.familia_titulo ?? taskId);
