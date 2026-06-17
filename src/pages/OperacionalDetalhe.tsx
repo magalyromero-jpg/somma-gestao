@@ -241,6 +241,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
           area_imoveis: !!perfil.area_imoveis,
         });
         setObservacaoGeral(perfil.observacao_geral ?? "");
+        setResponsavelImoveis(perfil.responsavel_imoveis ?? "");
       }
       setIntegrantes((ints ?? []) as Integrante[]);
     } catch (err: any) {
@@ -255,7 +256,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
   }, [carregar]);
 
   const salvarPerfil = useCallback(
-    async (next?: Partial<typeof areas>, obs?: string) => {
+    async (next?: Partial<typeof areas>, obs?: string, resp?: string) => {
       setSaving(true);
       try {
         const { error } = await supabase.from("clientes_perfil").upsert(
@@ -265,6 +266,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
             ...areas,
             ...next,
             observacao_geral: obs !== undefined ? obs : observacaoGeral,
+            responsavel_imoveis: resp !== undefined ? resp : responsavelImoveis,
           },
           { onConflict: "familia_bitrix_id" },
         );
@@ -276,7 +278,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
         setSaving(false);
       }
     },
-    [familiaId, titulo, taskId, areas, observacaoGeral, toast],
+    [familiaId, titulo, taskId, areas, observacaoGeral, responsavelImoveis, toast],
   );
 
   const toggleArea = (key: keyof typeof areas) => {
@@ -367,6 +369,24 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
               {a.label}
             </label>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Responsável — Gestão de Imóveis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select value={responsavelImoveis} onValueChange={(v) => { setResponsavelImoveis(v); salvarPerfil(undefined, undefined, v); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecionar responsável..." />
+            </SelectTrigger>
+            <SelectContent>
+              {RESPONSAVEIS_IMOVEIS.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
