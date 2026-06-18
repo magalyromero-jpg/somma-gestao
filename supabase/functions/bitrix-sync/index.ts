@@ -194,6 +194,7 @@ serve(async (req) => {
 
     // Consolida familia_bitrix_id nulo usando tarefas da mesma família que já têm ID
     await supabase.rpc('consolidar_familia_ids');
+    await supabase.rpc('atribuir_ids_sinteticos');
 
     return new Response(
       JSON.stringify({ sucesso: true, familias: totalFamilias, tarefas_sincronizadas: totalSincronizadas }),
