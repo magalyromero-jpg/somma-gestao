@@ -13,6 +13,11 @@ function mapStatus(s: string): string {
 function mapPrioridade(p: string): string {
   return ({ "2": "high", "1": "average", "0": "low" } as any)[p] ?? "average";
 }
+function familiaRealDaTarefa(tags: Record<string, {id: number; title: string}>, familiaAtual: string, tiposOperacionais: Set<string>): string {
+  const tagTitles = Object.values(tags).map(t => t.title);
+  const familiaDaTarefa = tagTitles.find(t => !tiposOperacionais.has(t));
+  return familiaDaTarefa ?? familiaAtual;
+}
 
 // Tags que NÃO são famílias e devem ser excluídas em ambos os grupos
 const TAGS_OPERACIONAIS = new Set([
@@ -155,7 +160,7 @@ serve(async (req) => {
             bitrix_parent_id: parseInt(t.parentId) || null,
             familia_bitrix_id: (grupo.id === 29 && familia.title === "Família Brandão") ? 83232 : null,
             familia_tag: familia.title,
-            familia_titulo: familia.title,
+            familia_titulo: familiaRealDaTarefa(t.tags ?? {}, familia.title, tiposOperacionais),
             grupo_bitrix: grupo.id,
             titulo: t.title,
             descricao: t.description ?? null,
