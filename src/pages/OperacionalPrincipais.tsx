@@ -7,7 +7,6 @@ import {
   Clock,
   ExternalLink,
   Hourglass,
-  ListTodo,
   RefreshCw,
   Search,
   TrendingUp,
