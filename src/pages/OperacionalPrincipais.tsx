@@ -37,6 +37,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, fetchAll, isAtrasada, media } from "@/lib/tarefas";
+import { FiltroPeriodo } from "@/components/FiltroPeriodo";
+import {
+  type PeriodoPreset,
+  type PeriodoRange,
+  concluidaNoPeriodo,
+  rangeDoPreset,
+} from "@/lib/periodo";
 
 const SOMMA = { escuro: "#2E3E44", medio: "#4D6571", ouro: "#CC8B15", vermelho: "#DC2626" };
 
@@ -73,6 +80,7 @@ interface Principal {
   aguardando: number;
   adiadas: number;
   concluidas: number;
+  concluidasLista: Row[];
   atrasadas: number;
   progresso: number;
   tempoMedio: number | null;
@@ -86,7 +94,7 @@ type SortKey =
   | "abertas"
   | "atrasadas"
   | "aguardando"
-  | "concluidas"
+  | "concluidasPeriodo"
   | "progresso"
   | "tempo"
   | "atividade";
@@ -158,8 +166,12 @@ export default function OperacionalPrincipais() {
   const [soAtrasadas, setSoAtrasadas] = useState(false);
   const [principalSel, setPrincipalSel] = useState<number | null>(null);
   const [expandida, setExpandida] = useState<number | null>(null);
+  const [periodo, setPeriodo] = useState<PeriodoPreset>("mes");
+  const [custom, setCustom] = useState<PeriodoRange | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("atrasadas");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const range = useMemo(() => rangeDoPreset(periodo, custom), [periodo, custom]);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -225,16 +237,21 @@ export default function OperacionalPrincipais() {
         nome = top ? top[0] : `Principal #${id}`;
       }
 
-      const visiveis = subs.filter((s) => s.status === "completed" || statusSel.includes(s.status));
-      const abertas = visiveis.filter((s) => s.status === "pending" || s.status === "in_progress").length;
-      const aguardando = visiveis.filter((s) => s.status === "awaiting_control").length;
-      const adiadas = visiveis.filter((s) => s.status === "deferred").length;
-      const concluidas = visiveis.filter((s) => s.status === "completed").length;
-      const listaAtrasadas = visiveis.filter(isAtrasada);
+      // Situação ATUAL (não depende do período)
+      const atuais = subs.filter((s) => s.status !== "completed" && statusSel.includes(s.status));
+      // Concluídas dentro do período escolhido
+      const concluidasLista = subs.filter((s) => concluidaNoPeriodo(s, range));
+
+      const visiveis = [...atuais, ...concluidasLista];
+      const abertas = atuais.filter((s) => s.status === "pending" || s.status === "in_progress").length;
+      const aguardando = atuais.filter((s) => s.status === "awaiting_control").length;
+      const adiadas = atuais.filter((s) => s.status === "deferred").length;
+      const concluidas = concluidasLista.length;
+      const listaAtrasadas = atuais.filter(isAtrasada);
       const base = abertas + aguardando + adiadas + concluidas;
 
-      const tempos = visiveis
-        .filter((s) => s.status === "completed" && s.criado_em && s.concluido_em)
+      const tempos = concluidasLista
+        .filter((s) => s.criado_em && s.concluido_em)
         .map((s) => differenceInDays(parseISO(s.concluido_em!), parseISO(s.criado_em!)))
         .filter((n) => n >= 0);
 
@@ -258,6 +275,7 @@ export default function OperacionalPrincipais() {
         aguardando,
         adiadas,
         concluidas,
+        concluidasLista,
         atrasadas: listaAtrasadas.length,
         progresso: base ? Math.round((concluidas / base) * 100) : 0,
         tempoMedio: media(tempos),
@@ -266,8 +284,9 @@ export default function OperacionalPrincipais() {
       });
     });
 
-    return out.filter((p) => p.total > 0);
-  }, [rows, pessoas, statusSel, titulosPorId]);
+    // Principais sem tarefas em aberto (atuais) e sem concluídas no período saem da visão
+    return out.filter((p) => p.abertas + p.aguardando + p.adiadas + p.concluidas > 0);
+  }, [rows, pessoas, statusSel, titulosPorId, range]);
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -277,12 +296,18 @@ export default function OperacionalPrincipais() {
   }, [principais, busca, soAtrasadas]);
 
   const kpis = useMemo(() => {
-    const comAbertas = filtradas.filter((p) => p.abertas > 0).length;
     const subAbertas = filtradas.reduce((s, p) => s + p.abertas, 0);
     const atrasadas = filtradas.reduce((s, p) => s + p.atrasadas, 0);
     const concl = filtradas.reduce((s, p) => s + p.concluidas, 0);
-    const base = filtradas.reduce((s, p) => s + p.abertas + p.aguardando + p.adiadas + p.concluidas, 0);
-    return { comAbertas, subAbertas, atrasadas, progresso: base ? Math.round((concl / base) * 100) : 0 };
+    const tempos: number[] = [];
+    filtradas.forEach((p) =>
+      p.concluidasLista.forEach((s) => {
+        if (!s.criado_em || !s.concluido_em) return;
+        const d = differenceInDays(parseISO(s.concluido_em), parseISO(s.criado_em));
+        if (d >= 0) tempos.push(d);
+      }),
+    );
+    return { subAbertas, atrasadas, concl, tempoMedio: media(tempos) };
   }, [filtradas]);
 
   const dadosGrafico = useMemo(
@@ -293,7 +318,7 @@ export default function OperacionalPrincipais() {
         .map((p) => ({
           id: p.id,
           nome: p.nome.length > 32 ? `${p.nome.slice(0, 32)}…` : p.nome,
-          Concluídas: p.concluidas,
+          "Concluídas no período": p.concluidas,
           "Em aberto": Math.max(0, p.abertas - p.atrasadas),
           "Aguard. controle": p.aguardando,
           Atrasadas: p.atrasadas,
@@ -310,7 +335,7 @@ export default function OperacionalPrincipais() {
         case "abertas": return p.abertas;
         case "atrasadas": return p.atrasadas;
         case "aguardando": return p.aguardando;
-        case "concluidas": return p.concluidas;
+        case "concluidasPeriodo": return p.concluidas;
         case "progresso": return p.progresso;
         case "tempo": return p.tempoMedio ?? -1;
         case "atividade": return p.ultimaAtividade ?? "";
@@ -368,6 +393,15 @@ export default function OperacionalPrincipais() {
 
       {/* Filtros */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FiltroPeriodo
+          preset={periodo}
+          custom={custom}
+          range={range}
+          onChange={(p, c) => {
+            setPeriodo(p);
+            setCustom(c);
+          }}
+        />
         <FiltroPessoas opcoes={opcoesPessoas} selecionados={pessoas} onChange={setPessoas} />
         <div className="flex flex-wrap items-center gap-1">
           {STATUS_FILTRO.map((s) => (
@@ -416,10 +450,15 @@ export default function OperacionalPrincipais() {
         <>
           {/* KPIs */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Principais com tarefas em aberto" value={String(kpis.comAbertas)} icon={<ListTodo className="h-4 w-4" />} />
+            <KpiCard label="Concluídas no período" value={String(kpis.concl)} icon={<TrendingUp className="h-4 w-4" />} />
+            <KpiCard
+              label="Tempo médio de finalização"
+              value={fmtDias(kpis.tempoMedio)}
+              icon={<Clock className="h-4 w-4" />}
+              hint="Criação → conclusão, no período"
+            />
             <KpiCard label="Subtarefas em aberto" value={String(kpis.subAbertas)} icon={<Hourglass className="h-4 w-4" />} />
             <KpiCard label="Atrasadas" value={String(kpis.atrasadas)} icon={<CalendarClock className="h-4 w-4" />} />
-            <KpiCard label="Progresso geral" value={`${kpis.progresso}%`} icon={<TrendingUp className="h-4 w-4" />} />
           </div>
 
           {/* Gráfico */}
@@ -438,7 +477,7 @@ export default function OperacionalPrincipais() {
                     <YAxis type="category" dataKey="nome" width={220} tick={{ fontSize: 11 }} />
                     <RTooltip />
                     {[
-                      { k: "Concluídas", c: SOMMA.medio },
+                      { k: "Concluídas no período", c: SOMMA.medio },
                       { k: "Em aberto", c: SOMMA.escuro },
                       { k: "Aguard. controle", c: SOMMA.ouro },
                       { k: "Atrasadas", c: SOMMA.vermelho },
@@ -471,8 +510,8 @@ export default function OperacionalPrincipais() {
                     <Th k="abertas">Abertas</Th>
                     <Th k="atrasadas">Atrasadas</Th>
                     <Th k="aguardando">Aguard. controle</Th>
-                    <Th k="concluidas">Concluídas</Th>
-                    <Th k="progresso">Progresso</Th>
+                    <Th k="concluidasPeriodo">Concluídas no período</Th>
+                    <Th k="progresso">Entrega no período</Th>
                     <Th k="tempo">Tempo médio</Th>
                     <Th k="atividade">Última atividade</Th>
                   </tr>
@@ -524,6 +563,7 @@ export default function OperacionalPrincipais() {
                             )}
                             <div className="space-y-1">
                               {[...p.subs]
+                                .sort((a, b) => Number(a.status === "completed") - Number(b.status === "completed"))
                                 .sort((a, b) => Number(isAtrasada(b)) - Number(isAtrasada(a)))
                                 .map((s) => (
                                   <div
@@ -534,11 +574,17 @@ export default function OperacionalPrincipais() {
                                       <Badge className="bg-red-600 text-white hover:bg-red-600">Atrasada</Badge>
                                     )}
                                     <span className="flex-1 truncate">{s.titulo ?? "Sem título"}</span>
-                                    <Badge variant="outline">{STATUS_LABEL[s.status] ?? s.status}</Badge>
+                                                    <Badge variant="outline">
+                                      {s.status === "completed" ? "Concluída" : STATUS_LABEL[s.status] ?? s.status}
+                                    </Badge>
                                     <span className="text-muted-foreground">
-                                      {s.prazo
-                                        ? format(parseISO(s.prazo), "dd/MM/yy", { locale: ptBR })
-                                        : "sem prazo"}
+                                      {s.status === "completed"
+                                        ? s.concluido_em
+                                          ? `Concluída ${format(parseISO(s.concluido_em), "dd/MM/yy", { locale: ptBR })}`
+                                          : "Concluída"
+                                        : s.prazo
+                                          ? format(parseISO(s.prazo), "dd/MM/yy", { locale: ptBR })
+                                          : "sem prazo"}
                                     </span>
                                     <span className="text-muted-foreground">{s.responsavel_nome ?? SEM_RESP}</span>
                                     {s.link_bitrix && (
