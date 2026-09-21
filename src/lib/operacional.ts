@@ -141,9 +141,12 @@ export const serieFilaDiaria = (tarefas: TarefaOperacional[], mes: string) => {
 };
 
 export const semanasCompletas = () => {
-  const primeiraSegunda = inicioSemana(INICIO_HISTORICO) < INICIO_HISTORICO ? addDias(inicioSemana(INICIO_HISTORICO), 7) : inicioSemana(INICIO_HISTORICO);
   const ultimaCompleta = addDias(inicioSemana(hojeSP()), -7);
-  const out: { inicio: string; fim: string; label: string }[] = [];
+  const primeiroFim = addDias(inicioSemana(INICIO_HISTORICO), 6);
+  const out: { inicio: string; fim: string; label: string }[] = [
+    { inicio: INICIO_HISTORICO, fim: primeiroFim, label: `01/09 – ${primeiroFim.slice(8, 10)}/${primeiroFim.slice(5, 7)}` },
+  ];
+  const primeiraSegunda = addDias(primeiroFim, 1);
   for (let d = primeiraSegunda; d <= ultimaCompleta; d = addDias(d, 7)) {
     const fim = addDias(d, 6);
     out.push({ inicio: d, fim, label: `${d.slice(8, 10)}/${d.slice(5, 7)} – ${fim.slice(8, 10)}/${fim.slice(5, 7)}` });

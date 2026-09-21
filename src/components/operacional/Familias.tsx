@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, fmtNumero, tableClasses } from "./Shared";
-import { ResumoFamilia, TarefaOperacional, emAndamento, faixaPrazo, familiaDaTarefa, media, resumirFamilias, serieFilaDiaria, tarefasDoMes, tempoAtendimento } from "@/lib/operacional";
+import { ResumoFamilia, TarefaOperacional, resumirFamilias, serieFilaDiaria, tarefasDoMes, tempoAtendimento } from "@/lib/operacional";
+import { media } from "@/lib/tarefas";
 import { cn } from "@/lib/utils";
 
 export function Familias({ tarefas, mes, onFamilia }: { tarefas: TarefaOperacional[]; mes: string; onFamilia: (nome: string) => void }) {

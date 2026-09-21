@@ -4,7 +4,8 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieCh
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { addDias } from "@/lib/periodo";
-import { FAIXAS_PRAZO, TarefaOperacional, emAndamento, faixaPrazo, familiaDaTarefa, fmtMes, idadeDias, media, prioridade, responsavelDaTarefa, resumirFamilias, serieFilaDiaria, tarefasDoMes, tempoAtendimento, tipoDaTarefa } from "@/lib/operacional";
+import { FAIXAS_PRAZO, TarefaOperacional, emAndamento, faixaPrazo, familiaDaTarefa, fmtMes, idadeDias, prioridade, responsavelDaTarefa, resumirFamilias, serieFilaDiaria, tarefasDoMes, tempoAtendimento, tipoDaTarefa } from "@/lib/operacional";
+import { media } from "@/lib/tarefas";
 import { cn } from "@/lib/utils";
 import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, fmtNumero, tableClasses } from "./Shared";
 import { Nivel } from "./Familias";
