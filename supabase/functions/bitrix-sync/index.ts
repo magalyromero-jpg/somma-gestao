@@ -130,6 +130,10 @@ serve(async (req) => {
           if (!res.ok) break;
           const data = await res.json();
           const tasks = data?.result?.tasks ?? [];
+          if (!logPrimeiraTarefaFeito && tasks.length > 0) {
+            logPrimeiraTarefaFeito = true;
+            console.log("Campos da primeira tarefa (tasks.task.list):", JSON.stringify(Object.keys(tasks[0])));
+          }
           todasTarefas.push(...tasks);
           next = data?.result?.next ?? null;
         }
@@ -196,7 +200,12 @@ serve(async (req) => {
           }
         }
 
+        const comPrincipal = registros.filter((r: any) => r.bitrix_parent_id != null).length;
+        const semPrincipal = registros.length - comPrincipal;
         totalSincronizadas += registros.length;
+        totalComPrincipal += comPrincipal;
+        totalSemPrincipal += semPrincipal;
+        console.log(`[Grupo ${grupo.id}] ${familia.title}: ${comPrincipal} com tarefa principal, ${semPrincipal} sem tarefa principal`);
       }
 
       // 4. RECONCILIAÇÃO — tarefas que o banco ainda tem como abertas, mas que não vieram nesta sincronização.
@@ -268,7 +277,13 @@ serve(async (req) => {
     await supabase.rpc('atribuir_ids_sinteticos');
 
     return new Response(
-      JSON.stringify({ sucesso: true, familias: totalFamilias, tarefas_sincronizadas: totalSincronizadas }),
+      JSON.stringify({
+        sucesso: true,
+        familias: totalFamilias,
+        tarefas_sincronizadas: totalSincronizadas,
+        com_principal: totalComPrincipal,
+        sem_principal: totalSemPrincipal,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
