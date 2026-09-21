@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,8 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
-import OperacionalBitrix from "./pages/OperacionalBitrix";
-import OperacionalPrincipais from "./pages/OperacionalPrincipais";
+import Operacional from "./pages/Operacional";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
 import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
@@ -52,8 +51,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
-              <Route path="/operacional" element={<OperacionalBitrix />} />
-              <Route path="/operacional/principais" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><OperacionalPrincipais /></ProtectedRoute>} />
+              <Route path="/operacional" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Operacional /></ProtectedRoute>} />
+              <Route path="/operacional/principais" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Navigate to="/operacional" replace /></ProtectedRoute>} />
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/sync-bitrix" element={<SyncBitrix />} />
               <Route path="/imoveis" element={<Imoveis />} />

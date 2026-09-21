@@ -1,5 +1,7 @@
 import { isPast, isToday, parseISO } from "date-fns";
 
+export const INICIO_HISTORICO = "2026-09-01";
+
 /**
  * Status Bitrix (após mapStatus no bitrix-sync):
  *  pending · in_progress · awaiting_control · deferred · completed · declined · deleted · unknown
