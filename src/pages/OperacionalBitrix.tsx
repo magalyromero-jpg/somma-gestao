@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { OperacionalTabs } from "@/components/OperacionalTabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -522,6 +523,8 @@ export default function OperacionalBitrix() {
           </div>
         }
       />
+
+      <OperacionalTabs />
 
       {erro && <p className="mb-4 text-sm text-red-500">{erro}</p>}
 

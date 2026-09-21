@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
+import OperacionalPrincipais from "./pages/OperacionalPrincipais";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
 import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
