@@ -65,7 +65,7 @@ export default function SyncBitrix() {
             <div className="flex items-center gap-2 rounded-md border border-green-500/30 bg-green-500/10 p-4 text-green-700">
               <CheckCircle className="h-5 w-5 shrink-0" />
               <div className="space-y-1">
-                <p className="font-medium">Sincronização concluída!</p>
+                <p className="font-medium">{resultado.parcial ? "Sincronização parcial, rode novamente" : "Sincronização concluída!"}</p>
                 <p className="text-sm">
                   Famílias: <strong>{resultado.familias}</strong> — Tarefas sincronizadas:{" "}
                   <strong>{resultado.tarefas_sincronizadas}</strong>
@@ -74,6 +74,7 @@ export default function SyncBitrix() {
                   Com tarefa principal: <strong>{resultado.com_principal ?? 0}</strong> — Sem tarefa principal:{" "}
                   <strong>{resultado.sem_principal ?? 0}</strong>
                 </p>
+                {resultado.segundos != null && <p className="text-sm">Duração: <strong>{resultado.segundos} segundos</strong></p>}
               </div>
             </div>
           )}
