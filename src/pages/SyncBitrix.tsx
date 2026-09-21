@@ -70,6 +70,10 @@ export default function SyncBitrix() {
                   Famílias: <strong>{resultado.familias}</strong> — Tarefas sincronizadas:{" "}
                   <strong>{resultado.tarefas_sincronizadas}</strong>
                 </p>
+                <p className="text-sm">
+                  Com tarefa principal: <strong>{resultado.com_principal ?? 0}</strong> — Sem tarefa principal:{" "}
+                  <strong>{resultado.sem_principal ?? 0}</strong>
+                </p>
               </div>
             </div>
           )}
