@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { differenceInDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -416,10 +416,10 @@ export default function OperacionalPrincipais() {
         <>
           {/* KPIs */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard title="Principais com tarefas em aberto" value={kpis.comAbertas} icon={ListTodo} />
-            <KpiCard title="Subtarefas em aberto" value={kpis.subAbertas} icon={Hourglass} />
-            <KpiCard title="Atrasadas" value={kpis.atrasadas} icon={CalendarClock} />
-            <KpiCard title="Progresso geral" value={`${kpis.progresso}%`} icon={TrendingUp} />
+            <KpiCard label="Principais com tarefas em aberto" value={String(kpis.comAbertas)} icon={<ListTodo className="h-4 w-4" />} />
+            <KpiCard label="Subtarefas em aberto" value={String(kpis.subAbertas)} icon={<Hourglass className="h-4 w-4" />} />
+            <KpiCard label="Atrasadas" value={String(kpis.atrasadas)} icon={<CalendarClock className="h-4 w-4" />} />
+            <KpiCard label="Progresso geral" value={`${kpis.progresso}%`} icon={<TrendingUp className="h-4 w-4" />} />
           </div>
 
           {/* Gráfico */}
@@ -479,9 +479,8 @@ export default function OperacionalPrincipais() {
                 </thead>
                 <tbody>
                   {ordenadas.map((p) => (
-                    <>
+                    <Fragment key={p.id}>
                       <tr
-                        key={p.id}
                         className="cursor-pointer border-b last:border-0 hover:bg-muted/50"
                         onClick={() => setExpandida((cur) => (cur === p.id ? null : p.id))}
                       >
@@ -516,7 +515,7 @@ export default function OperacionalPrincipais() {
                         </td>
                       </tr>
                       {expandida === p.id && (
-                        <tr key={`${p.id}-exp`} className="border-b bg-muted/30">
+                        <tr className="border-b bg-muted/30">
                           <td colSpan={9} className="px-3 py-3">
                             {p.idadeMediaAtrasadas != null && (
                               <p className="mb-2 text-xs text-muted-foreground">
@@ -559,7 +558,7 @@ export default function OperacionalPrincipais() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                   {ordenadas.length === 0 && (
                     <tr>
