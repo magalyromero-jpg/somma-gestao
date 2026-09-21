@@ -1,4 +1,4 @@
-// v3 - sincroniza grupos 25 e 29
+// v4 - sincroniza grupos 25 e 29 + reconcilia tarefas desatualizadas
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,7 +8,9 @@ const corsHeaders = {
 };
 
 function mapStatus(s: string): string {
-  return ({ "2": "pending", "3": "in_progress", "4": "awaiting_control", "5": "completed", "6": "deferred" } as any)[s] ?? "pending";
+  // Bitrix: 1 nova · 2 pendente · 3 em andamento · 4 aguardando controle · 5 concluída · 6 adiada · 7 recusada
+  // Status desconhecido NÃO vira "pending" (isso fazia tarefas recusadas aparecerem como abertas).
+  return ({ "1": "pending", "2": "pending", "3": "in_progress", "4": "awaiting_control", "5": "completed", "6": "deferred", "7": "declined" } as any)[String(s)] ?? "unknown";
 }
 function mapPrioridade(p: string): string {
   return ({ "2": "high", "1": "average", "0": "low" } as any)[p] ?? "average";
@@ -52,6 +54,7 @@ serve(async (req) => {
     // Processa cada grupo Bitrix configurado
     for (const grupo of GRUPOS) {
       const tiposOperacionais = TAGS_OPERACIONAIS;
+      const idsDoGrupo = new Set<number>(); // ids vistos nesta sincronização (usado na reconciliação)
 
       // 1. Busca TODAS as tarefas do grupo para coletar tags
       const tagsSet = new Set<string>();
@@ -177,6 +180,8 @@ serve(async (req) => {
             synced_at: new Date().toISOString(),
           }));
 
+        for (const r of registros) idsDoGrupo.add(r.bitrix_id);
+
         // Upsert em lotes de 100
         for (let j = 0; j < registros.length; j += 100) {
           const { data: upsertData, error } = await supabase.from("bitrix_tarefas").upsert(registros.slice(j, j + 100), { onConflict: "bitrix_id" });
@@ -189,6 +194,68 @@ serve(async (req) => {
         }
 
         totalSincronizadas += registros.length;
+      }
+
+      // 4. RECONCILIAÇÃO — tarefas que o banco ainda tem como abertas, mas que não vieram nesta sincronização.
+      // No grupo 29 buscamos só !STATUS=5, então uma tarefa concluída depois da 1ª sync nunca era atualizada
+      // e ficava "aberta" para sempre. Aqui consultamos o Bitrix por ID e atualizamos o status real.
+      try {
+        const MAX_RECONCILIAR = 300; // limite por execução (evita timeout); o backlog zera em algumas syncs
+        const staleIds: number[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from("bitrix_tarefas")
+            .select("bitrix_id")
+            .eq("grupo_bitrix", grupo.id)
+            .in("status", ["pending", "in_progress", "awaiting_control", "deferred", "unknown"])
+            .order("bitrix_id")
+            .range(from, from + 999);
+          if (error || !data) break;
+          for (const r of data) if (!idsDoGrupo.has(Number(r.bitrix_id))) staleIds.push(Number(r.bitrix_id));
+          if (data.length < 1000) break;
+        }
+
+        const alvo = staleIds.slice(0, MAX_RECONCILIAR);
+        let atualizadas = 0;
+        let naoEncontradas = 0;
+        for (let i = 0; i < alvo.length; i += 50) {
+          const lote = alvo.slice(i, i + 50);
+          const res = await fetch(`${BITRIX_URL}/tasks.task.list.json`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filter: { ID: lote },
+              select: ["ID", "STATUS", "PRIORITY", "DEADLINE", "CLOSED_DATE", "CHANGED_DATE"],
+            }),
+          });
+          if (!res.ok) continue; // falha de API: não altera nada
+          const data = await res.json();
+          const tasks: any[] = data?.result?.tasks ?? [];
+          const achadas = new Set<number>(tasks.map((t: any) => parseInt(t.id)));
+          naoEncontradas += lote.filter((id) => !achadas.has(id)).length;
+
+          await Promise.all(
+            tasks.map((t: any) =>
+              supabase
+                .from("bitrix_tarefas")
+                .update({
+                  status: mapStatus(t.status),
+                  prioridade: mapPrioridade(t.priority),
+                  prazo: t.deadline ?? null,
+                  concluido_em: t.closedDate ?? null,
+                  alterado_em: t.changedDate ?? null,
+                  synced_at: new Date().toISOString(),
+                })
+                .eq("bitrix_id", parseInt(t.id)),
+            ),
+          );
+          atualizadas += tasks.length;
+        }
+        console.log(
+          `[Grupo ${grupo.id}] Reconciliação: ${staleIds.length} desatualizadas, ${atualizadas} atualizadas, ${naoEncontradas} não encontradas no Bitrix (mantidas como estão)`,
+        );
+      } catch (e) {
+        console.error(`Reconciliação falhou [Grupo ${grupo.id}]:`, e);
       }
     }
 
