@@ -35,6 +35,13 @@ import {
   media,
   fetchAll,
 } from "@/lib/tarefas";
+import { FiltroPeriodo } from "@/components/FiltroPeriodo";
+import {
+  type PeriodoPreset,
+  type PeriodoRange,
+  concluidaNoPeriodo,
+  rangeDoPreset,
+} from "@/lib/periodo";
 
 interface TarefaRow {
   bitrix_id: number | null;
@@ -187,6 +194,9 @@ export default function OperacionalBitrix() {
   const [responsaveisSel, setResponsaveisSel] = useState<string[]>([]);
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
   const [verTodasAtrasadas, setVerTodasAtrasadas] = useState(false);
+  const [periodo, setPeriodo] = useState<PeriodoPreset>("mes");
+  const [customPeriodo, setCustomPeriodo] = useState<PeriodoRange | null>(null);
+  const rangePeriodo = useMemo(() => rangeDoPreset(periodo, customPeriodo), [periodo, customPeriodo]);
 
   const [sortKey, setSortKey] = useState<SortKey>("atrasadas");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -257,10 +267,11 @@ export default function OperacionalBitrix() {
     [baseSemResp, responsaveisSel],
   );
 
-  const concluidasF = useMemo(
-    () => (responsaveisSel.length ? concluidas.filter((c) => responsaveisSel.includes(nomeResp(c))) : concluidas),
-    [concluidas, responsaveisSel],
-  );
+  // Concluídas no período (fuso America/Sao_Paulo) + filtro de responsável
+  const concluidasF = useMemo(() => {
+    const noPeriodo = concluidas.filter((c) => concluidaNoPeriodo({ concluido_em: c.concluido_em }, rangePeriodo));
+    return responsaveisSel.length ? noPeriodo.filter((c) => responsaveisSel.includes(nomeResp(c))) : noPeriodo;
+  }, [concluidas, responsaveisSel, rangePeriodo]);
 
   // ---- Tempo de finalização (criação → conclusão) das concluídas ----
   const tempoConcluidas = useMemo(() => {
@@ -530,6 +541,15 @@ export default function OperacionalBitrix() {
 
       {/* Barra de filtros */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FiltroPeriodo
+          preset={periodo}
+          custom={customPeriodo}
+          range={rangePeriodo}
+          onChange={(p, c) => {
+            setPeriodo(p);
+            setCustomPeriodo(c);
+          }}
+        />
         <FiltroResponsaveis
           opcoes={opcoesResponsaveis}
           selecionados={responsaveisSel}
