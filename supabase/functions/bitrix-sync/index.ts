@@ -50,6 +50,9 @@ serve(async (req) => {
 
     let totalSincronizadas = 0;
     let totalFamilias = 0;
+    let totalComPrincipal = 0;
+    let totalSemPrincipal = 0;
+    let logPrimeiraTarefaFeito = false;
 
     // Processa cada grupo Bitrix configurado
     for (const grupo of GRUPOS) {
