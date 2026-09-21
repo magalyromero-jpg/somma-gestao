@@ -29,5 +29,6 @@ describe("regras operacionais", () => {
     expect(emAndamentoNoDia({ ...tarefa, concluido_em: "2026-09-10T12:00:00Z", status: "completed" }, "2026-09-09")).toBe(true);
     expect(emAndamentoNoDia({ ...tarefa, concluido_em: "2026-09-10T12:00:00Z", status: "completed" }, "2026-09-10")).toBe(false);
   });
-  it("classifica idade", () => expect([faixaIdade(30), faixaIdade(31), faixaIdade(366)])).toEqual(["0-30", "31-90", "mais_de_1_ano"]));
+  it("classifica idade", () =>
+    expect([faixaIdade(30), faixaIdade(31), faixaIdade(366)]).toEqual(["0-30", "31-90", "mais_de_1_ano"]));
 });
