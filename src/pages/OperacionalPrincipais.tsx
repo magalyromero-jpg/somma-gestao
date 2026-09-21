@@ -182,6 +182,7 @@ export default function OperacionalPrincipais() {
           .select(COLS)
           .not("bitrix_parent_id", "is", null)
           .in("status", STATUS_QUERY)
+          .order("bitrix_id")
           .range(from, to),
       );
       setRows(data);
