@@ -119,7 +119,7 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               filter: filtroTarefas,
-              select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
+              select: ["ID", "TITLE", "DESCRIPTION", "STATUS", "PRIORITY", "PARENT_ID", "DEADLINE", "RESPONSIBLE_ID", "CREATED_DATE", "CLOSED_DATE", "CHANGED_DATE", "TAGS"],
               order: { "ID": "ASC" },
               params: { START: next },
             }),
@@ -225,7 +225,7 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               filter: { ID: lote },
-              select: ["ID", "STATUS", "PRIORITY", "DEADLINE", "CLOSED_DATE", "CHANGED_DATE"],
+              select: ["ID", "STATUS", "PRIORITY", "PARENT_ID", "DEADLINE", "CLOSED_DATE", "CHANGED_DATE"],
             }),
           });
           if (!res.ok) continue; // falha de API: não altera nada
@@ -241,6 +241,7 @@ serve(async (req) => {
                 .update({
                   status: mapStatus(t.status),
                   prioridade: mapPrioridade(t.priority),
+                  bitrix_parent_id: parseInt(t.parentId) || null,
                   prazo: t.deadline ?? null,
                   concluido_em: t.closedDate ?? null,
                   alterado_em: t.changedDate ?? null,
