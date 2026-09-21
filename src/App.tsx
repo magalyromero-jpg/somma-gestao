@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Familias from "./pages/Familias";
 import OperacionalBitrix from "./pages/OperacionalBitrix";
+import OperacionalPrincipais from "./pages/OperacionalPrincipais";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
 import SyncBitrix from "./pages/SyncBitrix";
 import Imoveis from "./pages/Imoveis";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/familias" element={<Familias />} />
               <Route path="/operacional" element={<OperacionalBitrix />} />
+              <Route path="/operacional/principais" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><OperacionalPrincipais /></ProtectedRoute>} />
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/sync-bitrix" element={<SyncBitrix />} />
               <Route path="/imoveis" element={<Imoveis />} />
