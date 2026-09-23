@@ -1295,6 +1295,51 @@ export type Database = {
         }
         Relationships: []
       }
+      operacional_snapshot_diario: {
+        Row: {
+          atrasadas: number
+          criadas_dia: number
+          criado_em: string
+          data: string
+          em_andamento: number
+          encerradas_dia: number
+          familia_titulo: string
+          prioridade: number
+          responsavel_nome: string
+          tipo: string
+          vencem_hoje: number
+          vencem_semana: number
+        }
+        Insert: {
+          atrasadas?: number
+          criadas_dia?: number
+          criado_em?: string
+          data: string
+          em_andamento?: number
+          encerradas_dia?: number
+          familia_titulo: string
+          prioridade?: number
+          responsavel_nome: string
+          tipo: string
+          vencem_hoje?: number
+          vencem_semana?: number
+        }
+        Update: {
+          atrasadas?: number
+          criadas_dia?: number
+          criado_em?: string
+          data?: string
+          em_andamento?: number
+          encerradas_dia?: number
+          familia_titulo?: string
+          prioridade?: number
+          responsavel_nome?: string
+          tipo?: string
+          vencem_hoje?: number
+          vencem_semana?: number
+        }
+        Relationships: []
+      }
       pesquisas_mercado: {
         Row: {
           area_m2: number | null
@@ -1488,6 +1533,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      registrar_snapshot_operacional: {
+        Args: { p_data?: string }
+        Returns: number
       }
     }
     Enums: {

@@ -140,6 +140,59 @@ export const serieFilaDiaria = (tarefas: TarefaOperacional[], mes: string) => {
   return serie;
 };
 
+export interface SnapshotDia {
+  data: string;
+  familia_titulo: string;
+  em_andamento: number;
+  atrasadas: number;
+}
+
+/** Soma o snapshot por dia, opcionalmente só de uma família. */
+export const snapshotPorDia = (linhas: SnapshotDia[], familia?: string) => {
+  const mapa = new Map<string, { emAndamento: number; atrasadas: number }>();
+  linhas
+    .filter((l) => !familia || l.familia_titulo === familia)
+    .forEach((l) => {
+      const atual = mapa.get(l.data) ?? { emAndamento: 0, atrasadas: 0 };
+      mapa.set(l.data, { emAndamento: atual.emAndamento + (l.em_andamento ?? 0), atrasadas: atual.atrasadas + (l.atrasadas ?? 0) });
+    });
+  return mapa;
+};
+
+export interface PontoFila {
+  dia: string;
+  valor: number;
+  atrasadas: number | null;
+  registrado: boolean;
+}
+
+/**
+ * Série diária de fila: usa o snapshot nos dias já registrados e reconstrói
+ * pelas datas das tarefas nos dias anteriores ao primeiro registro.
+ */
+export const serieFilaHibrida = (
+  tarefas: TarefaOperacional[],
+  mes: string,
+  linhas: SnapshotDia[],
+  familia?: string,
+): PontoFila[] => {
+  const mapa = snapshotPorDia(linhas, familia);
+  const dias = [...mapa.keys()].sort();
+  const primeiro = dias[0];
+  return serieFilaDiaria(tarefas, mes).map(({ dia, valor }) => {
+    const registro = primeiro && dia >= primeiro ? mapa.get(dia) : undefined;
+    return registro
+      ? { dia, valor: registro.emAndamento, atrasadas: registro.atrasadas, registrado: true }
+      : { dia, valor, atrasadas: null, registrado: false };
+  });
+};
+
+/** Quantos dias do mês já têm snapshot registrado. */
+export const diasComSnapshot = (linhas: SnapshotDia[], mes: string, familia?: string) => {
+  const { inicio, fim } = intervaloMes(mes);
+  return [...snapshotPorDia(linhas, familia).keys()].filter((d) => d >= inicio && d <= fim).length;
+};
+
 export const semanasCompletas = () => {
   const ultimaCompleta = addDias(inicioSemana(hojeSP()), -7);
   const primeiroFim = addDias(inicioSemana(INICIO_HISTORICO), 6);

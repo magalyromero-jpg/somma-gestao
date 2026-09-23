@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/tarefas";
-import { TarefaOperacional, fmtMes, mesesHistorico } from "@/lib/operacional";
+import { SnapshotDia, TarefaOperacional, fmtMes, mesesHistorico } from "@/lib/operacional";
 import { AvisoHistorico } from "@/components/operacional/Shared";
 import { Espelho, FiltrosEspelho } from "@/components/operacional/Espelho";
 import { Familias } from "@/components/operacional/Familias";
@@ -27,6 +27,12 @@ async function buscarTarefas() {
   );
 }
 
+async function buscarSnapshots() {
+  return fetchAll<SnapshotDia>((from, to) =>
+    supabase.from("operacional_snapshot_diario").select("data,familia_titulo,em_andamento,atrasadas").order("data").range(from, to) as unknown as PromiseLike<{ data: SnapshotDia[] | null; error: unknown }>,
+  );
+}
+
 export default function Operacional() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
@@ -35,6 +41,7 @@ export default function Operacional() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [sincronizando, setSincronizando] = useState(false);
   const { data = [], isLoading, error } = useQuery({ queryKey: ["operacional-tarefas"], queryFn: buscarTarefas, staleTime: 5 * 60 * 1000 });
+  const { data: snapshots = [] } = useQuery({ queryKey: ["operacional-snapshots"], queryFn: buscarSnapshots, staleTime: 5 * 60 * 1000 });
   const semPrazo = data.filter((t) => !t.prazo).length;
   const tarefas = useMemo(() => data.filter((t) => !!t.prazo), [data]);
   const ultimaSync = useMemo(() => data.map((t) => t.synced_at).filter(Boolean).sort().pop() ?? null, [data]);
@@ -45,6 +52,7 @@ export default function Operacional() {
       const { data: resposta, error: syncError } = await supabase.functions.invoke("bitrix-sync", { body: { modo: "completo" } });
       if (syncError) throw syncError;
       await queryClient.invalidateQueries({ queryKey: ["operacional-tarefas"] });
+      await queryClient.invalidateQueries({ queryKey: ["operacional-snapshots"] });
       toast({ title: resposta?.parcial ? "Sincronização parcial, rode novamente" : "Sincronização concluída", description: resposta?.segundos != null ? `Duração: ${resposta.segundos} segundos.` : undefined });
     } catch (e) {
       toast({ title: "Não foi possível sincronizar", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
@@ -55,7 +63,7 @@ export default function Operacional() {
   return <div className="space-y-4">
     <PageHeader title="Operacional" subtitle={ultimaSync ? `Última sincronização: ${fmtSync(ultimaSync)}` : "Dados operacionais do Bitrix"} actions={<Button size="sm" onClick={sincronizar} disabled={sincronizando}><RefreshCw className={sincronizando ? "animate-spin" : ""}/>{sincronizando ? "Sincronizando…" : "Sincronizar agora"}</Button>} />
     {error && <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"><AlertTriangle className="h-4 w-4"/>Não foi possível carregar os dados.</div>}
-    {isLoading ? <div className="space-y-3"><Skeleton className="h-12 w-full"/><Skeleton className="h-20 w-full"/><Skeleton className="h-72 w-full"/></div> : familia ? <><AvisoHistorico/><PainelFamilia nome={familia} tarefas={tarefas} mes={mes} onVoltar={()=>setParams({})}/></> : <Tabs defaultValue="espelho" className="space-y-4">
+    {isLoading ? <div className="space-y-3"><Skeleton className="h-12 w-full"/><Skeleton className="h-20 w-full"/><Skeleton className="h-72 w-full"/></div> : familia ? <><AvisoHistorico/><PainelFamilia nome={familia} tarefas={tarefas} mes={mes} snapshots={snapshots} onVoltar={()=>setParams({})}/></> : <Tabs defaultValue="espelho" className="space-y-4">
       <div className="flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
         <TabsList className="h-auto w-full justify-start overflow-x-auto bg-transparent p-0 lg:w-auto">
           <TabsTrigger value="espelho" className="rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none">Espelho das demandas</TabsTrigger>
@@ -67,7 +75,7 @@ export default function Operacional() {
       </div>
       <AvisoHistorico/>
       <TabsContent value="espelho"><Espelho tarefas={tarefas} semPrazo={semPrazo} filtros={filtros} onFiltros={setFiltros} onFamilia={abrirFamilia}/></TabsContent>
-      <TabsContent value="familias"><Familias tarefas={tarefas} mes={mes} onFamilia={abrirFamilia}/></TabsContent>
+      <TabsContent value="familias"><Familias tarefas={tarefas} mes={mes} snapshots={snapshots} onFamilia={abrirFamilia}/></TabsContent>
       <TabsContent value="tempo"><TempoCarga tarefas={tarefas} mes={mes} semPrazo={semPrazo}/></TabsContent>
       <TabsContent value="relatorios"><RelatoriosSemanais tarefas={tarefas} mes={mes}/></TabsContent>
     </Tabs>}
