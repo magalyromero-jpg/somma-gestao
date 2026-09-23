@@ -211,6 +211,16 @@ serve(async (req) => {
     await supabase.rpc("consolidar_familia_ids");
     await supabase.rpc("atribuir_ids_sinteticos");
 
+    let snapshot = false;
+    try {
+      const { error: snapErro } = await supabase.rpc("registrar_snapshot_operacional");
+      if (snapErro) throw snapErro;
+      snapshot = true;
+    } catch (e) {
+      console.error("registrar_snapshot_operacional falhou:", e);
+    }
+
+
     return new Response(
       JSON.stringify({
         sucesso: true,
