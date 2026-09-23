@@ -63,7 +63,7 @@ export default function Operacional() {
   return <div className="space-y-4">
     <PageHeader title="Operacional" subtitle={ultimaSync ? `Última sincronização: ${fmtSync(ultimaSync)}` : "Dados operacionais do Bitrix"} actions={<Button size="sm" onClick={sincronizar} disabled={sincronizando}><RefreshCw className={sincronizando ? "animate-spin" : ""}/>{sincronizando ? "Sincronizando…" : "Sincronizar agora"}</Button>} />
     {error && <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"><AlertTriangle className="h-4 w-4"/>Não foi possível carregar os dados.</div>}
-    {isLoading ? <div className="space-y-3"><Skeleton className="h-12 w-full"/><Skeleton className="h-20 w-full"/><Skeleton className="h-72 w-full"/></div> : familia ? <><AvisoHistorico/><PainelFamilia nome={familia} tarefas={tarefas} mes={mes} onVoltar={()=>setParams({})}/></> : <Tabs defaultValue="espelho" className="space-y-4">
+    {isLoading ? <div className="space-y-3"><Skeleton className="h-12 w-full"/><Skeleton className="h-20 w-full"/><Skeleton className="h-72 w-full"/></div> : familia ? <><AvisoHistorico/><PainelFamilia nome={familia} tarefas={tarefas} mes={mes} snapshots={snapshots} onVoltar={()=>setParams({})}/></> : <Tabs defaultValue="espelho" className="space-y-4">
       <div className="flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
         <TabsList className="h-auto w-full justify-start overflow-x-auto bg-transparent p-0 lg:w-auto">
           <TabsTrigger value="espelho" className="rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none">Espelho das demandas</TabsTrigger>
@@ -75,7 +75,7 @@ export default function Operacional() {
       </div>
       <AvisoHistorico/>
       <TabsContent value="espelho"><Espelho tarefas={tarefas} semPrazo={semPrazo} filtros={filtros} onFiltros={setFiltros} onFamilia={abrirFamilia}/></TabsContent>
-      <TabsContent value="familias"><Familias tarefas={tarefas} mes={mes} onFamilia={abrirFamilia}/></TabsContent>
+      <TabsContent value="familias"><Familias tarefas={tarefas} mes={mes} snapshots={snapshots} onFamilia={abrirFamilia}/></TabsContent>
       <TabsContent value="tempo"><TempoCarga tarefas={tarefas} mes={mes} semPrazo={semPrazo}/></TabsContent>
       <TabsContent value="relatorios"><RelatoriosSemanais tarefas={tarefas} mes={mes}/></TabsContent>
     </Tabs>}
