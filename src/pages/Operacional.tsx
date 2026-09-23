@@ -41,6 +41,7 @@ export default function Operacional() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [sincronizando, setSincronizando] = useState(false);
   const { data = [], isLoading, error } = useQuery({ queryKey: ["operacional-tarefas"], queryFn: buscarTarefas, staleTime: 5 * 60 * 1000 });
+  const { data: snapshots = [] } = useQuery({ queryKey: ["operacional-snapshots"], queryFn: buscarSnapshots, staleTime: 5 * 60 * 1000 });
   const semPrazo = data.filter((t) => !t.prazo).length;
   const tarefas = useMemo(() => data.filter((t) => !!t.prazo), [data]);
   const ultimaSync = useMemo(() => data.map((t) => t.synced_at).filter(Boolean).sort().pop() ?? null, [data]);
