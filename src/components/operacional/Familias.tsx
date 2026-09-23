@@ -2,14 +2,16 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, fmtNumero, tableClasses } from "./Shared";
-import { ResumoFamilia, TarefaOperacional, resumirFamilias, serieFilaDiaria, tarefasDoMes, tempoAtendimento } from "@/lib/operacional";
+import { ResumoFamilia, SnapshotDia, TarefaOperacional, diasComSnapshot, resumirFamilias, serieFilaHibrida, tarefasDoMes, tempoAtendimento } from "@/lib/operacional";
 import { media } from "@/lib/tarefas";
 import { cn } from "@/lib/utils";
 
-export function Familias({ tarefas, mes, onFamilia }: { tarefas: TarefaOperacional[]; mes: string; onFamilia: (nome: string) => void }) {
+export function Familias({ tarefas, mes, snapshots = [], onFamilia }: { tarefas: TarefaOperacional[]; mes: string; snapshots?: SnapshotDia[]; onFamilia: (nome: string) => void }) {
   const resumo = useMemo(() => resumirFamilias(tarefas, mes), [tarefas, mes]);
   const fluxo = useMemo(() => tarefasDoMes(tarefas, mes), [tarefas, mes]);
-  const serie = useMemo(() => serieFilaDiaria(tarefas, mes), [tarefas, mes]);
+  const serie = useMemo(() => serieFilaHibrida(tarefas, mes, snapshots), [tarefas, mes, snapshots]);
+  const registrados = useMemo(() => diasComSnapshot(snapshots, mes), [snapshots, mes]);
+  const serieAtrasadas = useMemo(() => serie.filter((p) => p.registrado), [serie]);
   const movimento = resumo.filter((f) => f.criadas + f.encerradas > 0).length;
   const tempos = fluxo.encerradas.map(tempoAtendimento).filter((n): n is number => n != null);
   const participacao = participacaoMes(resumo);
