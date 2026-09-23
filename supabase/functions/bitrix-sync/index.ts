@@ -229,6 +229,7 @@ serve(async (req) => {
         tarefas_sincronizadas: totalSincronizadas,
         com_principal: totalComPrincipal,
         sem_principal: totalSemPrincipal,
+        snapshot,
         segundos: Math.round((Date.now() - inicio) / 1000),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
