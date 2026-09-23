@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, fmtNumero, tableClasses } from "./Shared";
 import { Nivel } from "./Familias";
 
-export function PainelFamilia({ nome, tarefas, mes, onVoltar }: { nome: string; tarefas: TarefaOperacional[]; mes: string; onVoltar: () => void }) {
+export function PainelFamilia({ nome, tarefas, mes, snapshots = [], onVoltar }: { nome: string; tarefas: TarefaOperacional[]; mes: string; snapshots?: SnapshotDia[]; onVoltar: () => void }) {
   const [limite, setLimite] = useState(40);
   const escopo = tarefas.filter((t) => familiaDaTarefa(t) === nome);
   const fila = escopo.filter(emAndamento);
@@ -22,6 +22,8 @@ export function PainelFamilia({ nome, tarefas, mes, onVoltar }: { nome: string; 
   const antiga = [...fila].sort((a,b)=>(idadeDias(b)??-1)-(idadeDias(a)??-1))[0];
   const tipo = conta(fila, tipoDaTarefa); const responsavel=conta(fila,responsavelDaTarefa);
   const semanas = useMemo(() => semanasMes(mes, fluxo.criadas, fluxo.encerradas), [mes, fluxo.criadas, fluxo.encerradas]);
+  const serie = useMemo(() => serieFilaHibrida(escopo, mes, snapshots, nome), [escopo, mes, snapshots, nome]);
+  const registrados = useMemo(() => diasComSnapshot(snapshots, mes, nome), [snapshots, mes, nome]);
   const ordenadas = [...fila].sort((a,b)=>Number(prioridade(b))-Number(prioridade(a)) || ordemPrazo(faixaPrazo(a))-ordemPrazo(faixaPrazo(b)) || (idadeDias(b)??0)-(idadeDias(a)??0));
   return <div className="space-y-4">
     <Button variant="ghost" size="sm" className="-ml-2" onClick={onVoltar}>← Voltar</Button>
