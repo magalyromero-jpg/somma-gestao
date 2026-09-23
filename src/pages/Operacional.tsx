@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/tarefas";
-import { TarefaOperacional, fmtMes, mesesHistorico } from "@/lib/operacional";
+import { SnapshotDia, TarefaOperacional, fmtMes, mesesHistorico } from "@/lib/operacional";
 import { AvisoHistorico } from "@/components/operacional/Shared";
 import { Espelho, FiltrosEspelho } from "@/components/operacional/Espelho";
 import { Familias } from "@/components/operacional/Familias";
@@ -24,6 +24,12 @@ const FILTROS_INICIAIS: FiltrosEspelho = { busca: "", soPrioridade: false, prazo
 async function buscarTarefas() {
   return fetchAll<TarefaOperacional>((from, to) =>
     supabase.from("bitrix_tarefas").select(COLUNAS).in("status", ["pending", "in_progress", "completed"]).order("bitrix_id").range(from, to) as unknown as PromiseLike<{ data: TarefaOperacional[] | null; error: unknown }>,
+  );
+}
+
+async function buscarSnapshots() {
+  return fetchAll<SnapshotDia>((from, to) =>
+    supabase.from("operacional_snapshot_diario").select("data,familia_titulo,em_andamento,atrasadas").order("data").range(from, to) as unknown as PromiseLike<{ data: SnapshotDia[] | null; error: unknown }>,
   );
 }
 
