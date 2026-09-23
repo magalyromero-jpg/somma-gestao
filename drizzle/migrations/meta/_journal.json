@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790183926112,
+      "tag": "0000_create_operacional_snapshot_diario",
+      "breakpoints": true
+    }
+  ]
+}
