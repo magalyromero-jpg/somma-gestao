@@ -52,6 +52,7 @@ export default function Operacional() {
       const { data: resposta, error: syncError } = await supabase.functions.invoke("bitrix-sync", { body: { modo: "completo" } });
       if (syncError) throw syncError;
       await queryClient.invalidateQueries({ queryKey: ["operacional-tarefas"] });
+      await queryClient.invalidateQueries({ queryKey: ["operacional-snapshots"] });
       toast({ title: resposta?.parcial ? "Sincronização parcial, rode novamente" : "Sincronização concluída", description: resposta?.segundos != null ? `Duração: ${resposta.segundos} segundos.` : undefined });
     } catch (e) {
       toast({ title: "Não foi possível sincronizar", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
