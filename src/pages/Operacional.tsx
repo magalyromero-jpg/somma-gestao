@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/tarefas";
-import { SnapshotDia, TarefaOperacional, fmtMes, mesesHistorico } from "@/lib/operacional";
+import { SnapshotDia, TarefaOperacional, emAndamento, familiaDaTarefa, fmtMes, mesesHistorico, responsavelDaTarefa } from "@/lib/operacional";
 import { AvisoHistorico } from "@/components/operacional/Shared";
 import { Espelho, FiltrosEspelho } from "@/components/operacional/Espelho";
 import { Familias } from "@/components/operacional/Familias";
