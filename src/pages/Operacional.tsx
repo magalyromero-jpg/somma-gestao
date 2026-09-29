@@ -69,7 +69,7 @@ export default function Operacional() {
   };
   const abrirFamilia = (nome: string) => setParams({ familia: nome });
 
-  return <div className="space-y-4">
+  return <div className="op-theme space-y-4">
     <PageHeader title="Operacional" subtitle={ultimaSync ? `Última sincronização: ${fmtSync(ultimaSync)}` : "Dados operacionais do Bitrix"} actions={<Button size="sm" onClick={sincronizar} disabled={sincronizando}><RefreshCw className={sincronizando ? "animate-spin" : ""}/>{sincronizando ? "Sincronizando…" : "Sincronizar agora"}</Button>} />
     {error && <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"><AlertTriangle className="h-4 w-4"/>Não foi possível carregar os dados.</div>}
     {!isLoading && <div className="flex flex-wrap items-center gap-2">

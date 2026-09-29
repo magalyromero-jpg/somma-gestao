@@ -4,14 +4,27 @@ import { AVISO_HISTORICO } from "@/lib/operacional";
 import { cn } from "@/lib/utils";
 
 export const CORES = {
-  marca: "hsl(var(--primary))",
-  secundaria: "hsl(var(--secondary))",
+  marca: "hsl(197 19% 22%)",
+  secundaria: "hsl(var(--op-mid))",
   ouro: "hsl(var(--gold))",
-  atraso: "hsl(var(--destructive))",
+  ambar: "hsl(var(--amber-bar))",
+  cinza: "hsl(var(--gray) / 0.6)",
+  atraso: "hsl(var(--red))",
+  verde: "hsl(var(--green))",
   fundo: "hsl(var(--muted))",
   texto: "hsl(var(--muted-foreground))",
-  borda: "hsl(var(--border))",
+  borda: "hsl(var(--line2))",
 };
+export const PALETA_NEUTRA = ["hsl(197 19% 22%)", "hsl(var(--op-mid))", "hsl(var(--gold))", "hsl(180 25% 40%)", "hsl(197 15% 60%)", "hsl(180 20% 62%)", "hsl(var(--gray))", "hsl(var(--line))"];
+
+export function TagPrazo({ faixa, children }: { faixa: string | null; children: ReactNode }) {
+  const cls = faixa === "atrasadas" ? "op-tag-red" : faixa === "hoje" || faixa === "esta_semana" ? "op-tag-amber" : faixa === "proxima_semana" ? "op-tag-blue" : faixa === "concluida" ? "op-tag-green" : "op-tag-gray";
+  return <span className={cn("op-tag", cls)}>{children}</span>;
+}
+
+export function LegendaTexto({ itens }: { itens: { cor: string; label: string }[] }) {
+  return <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">{itens.map((i) => <span key={i.label} className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: i.cor }} />{i.label}</span>)}</div>;
+}
 
 export function AvisoHistorico() {
   return (
@@ -46,7 +59,7 @@ export function FaixaNumeros({ itens }: { itens: { label: string; valor: string 
           className={cn(
             "min-h-20 border-b px-4 py-3 text-left transition-colors sm:border-r lg:border-b-0 disabled:cursor-default",
             item.onClick && "hover:bg-muted/60",
-            item.ativo && "bg-gold/10 ring-1 ring-inset ring-gold",
+            item.ativo && "bg-[hsl(var(--goldbg))] shadow-[inset_0_-2px_0_hsl(var(--gold))]",
           )}
         >
           <div className="text-[11px] font-medium uppercase text-muted-foreground">{item.label}</div>
