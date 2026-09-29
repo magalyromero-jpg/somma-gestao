@@ -133,3 +133,36 @@
   .num-negative { color: hsl(var(--destructive)); font-weight: 500; }
   .leaflet-container { border-radius: var(--radius); }
 }
+
+/* Operacional — sistema visual denso */
+.op-theme {
+  --op-bg: 200 11% 95%; --surface2: 180 17% 98%; --line: 200 15% 88%; --line2: 200 15% 93%;
+  --ink: 199 24% 14%; --faint: 199 10% 62%; --op-mid: 200 19% 37%;
+  --red: 358 66% 45%; --redbg: 357 69% 95%; --amber: 36 100% 30%; --amberbg: 40 100% 92%;
+  --amber-bar: 38 67% 55%; --blue: 197 33% 37%; --bluebg: 195 29% 93%;
+  --gray: 204 10% 58%; --graybg: 204 13% 94%; --green: 154 46% 34%; --greenbg: 151 44% 92%;
+  --flame: 18 77% 50%; --goldbg: 38 80% 93%;
+  --card: 0 0% 100%; --border: var(--line); --foreground: var(--ink); --card-foreground: var(--ink);
+  --muted: var(--surface2); --muted-foreground: 199 12% 44%; --destructive: var(--red);
+  font-size: 13px; color: hsl(var(--ink));
+}
+.dark .op-theme {
+  --op-bg: 199 20% 9%; --surface2: 199 18% 15%; --line: 199 15% 24%; --line2: 199 15% 19%;
+  --ink: 200 15% 92%; --faint: 199 10% 55%; --op-mid: 200 18% 58%;
+  --red: 358 81% 70%; --redbg: 358 40% 18%; --amber: 36 83% 65%; --amberbg: 36 50% 16%;
+  --blue: 197 35% 65%; --bluebg: 197 30% 17%; --gray: 204 10% 60%; --graybg: 204 12% 18%;
+  --green: 154 40% 58%; --greenbg: 154 35% 15%; --goldbg: 38 50% 16%;
+  --card: 199 19% 12%; --muted-foreground: 199 12% 65%;
+}
+.op-theme h1, .op-theme h2 { color: hsl(var(--ink)); }
+.op-theme section.rounded-md, .op-theme .op-card { border-color: hsl(var(--line)); border-radius: 8px; box-shadow: 0 1px 2px rgba(20,35,42,.06); }
+.op-theme table thead tr { background: hsl(var(--surface2)); color: hsl(var(--muted-foreground)); font-size: 12px; }
+.op-theme table td { height: 37px; border-color: hsl(var(--line2)); }
+.op-theme table tbody tr:hover { background: hsl(var(--surface2)); }
+.op-theme .tabular-nums, .op-theme td { font-variant-numeric: tabular-nums; }
+.op-tag { display:inline-flex; align-items:center; gap:4px; border-radius:4px; padding:1px 6px; font-size:11px; font-weight:500; }
+.op-tag-red { background:hsl(var(--redbg)); color:hsl(var(--red)); }
+.op-tag-amber { background:hsl(var(--amberbg)); color:hsl(var(--amber)); }
+.op-tag-blue { background:hsl(var(--bluebg)); color:hsl(var(--blue)); }
+.op-tag-gray { background:hsl(var(--graybg)); color:hsl(var(--muted-foreground)); }
+.op-tag-green { background:hsl(var(--greenbg)); color:hsl(var(--green)); }

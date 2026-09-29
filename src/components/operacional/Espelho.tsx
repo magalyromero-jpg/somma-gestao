@@ -3,7 +3,7 @@ import { ExternalLink, Flame, X } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, tableClasses } from "./Shared";
+import { Bloco, CORES, FaixaNumeros, LegendaTexto, PALETA_NEUTRA, chartTooltipStyle, fmtDias, tableClasses } from "./Shared";
 import { FAIXAS_IDADE, FAIXAS_PRAZO, FaixaPrazo, TarefaOperacional, emAndamento, faixaIdade, faixaPrazo, familiaDaTarefa, idadeDias, normalizarTexto, prioridade, responsavelDaTarefa, tipoDaTarefa } from "@/lib/operacional";
 import { cn } from "@/lib/utils";
 
@@ -74,9 +74,9 @@ export function Espelho({ tarefas, semPrazo, filtros, onFiltros, onFamilia, onLi
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Bloco titulo="Demandas por família"><StackedHorizontal data={porFamilia} onClick={(nome) => onFamilia(nome)} /></Bloco>
-        <Bloco titulo="Por tipo"><Donut data={porTipo} onClick={(nome) => onFiltros({ ...filtros, tipo: filtros.tipo === nome ? null : nome })} /></Bloco>
-        <Bloco titulo="Por responsável"><StackedHorizontal data={porResponsavel} onClick={(nome) => onFiltros({ ...filtros, responsavel: filtros.responsavel === nome ? null : nome })} /></Bloco>
-        <Bloco titulo="Por prazo"><SimpleBars data={porPrazo} onClick={(key) => onFiltros({ ...filtros, prazo: filtros.prazo === key ? null : key })} /></Bloco>
+        <Bloco titulo="Por tipo"><Donut data={porTipo} ativo={filtros.tipo} onClick={(nome) => onFiltros({ ...filtros, tipo: filtros.tipo === nome ? null : nome })} /></Bloco>
+        <Bloco titulo="Por responsável"><StackedHorizontal data={porResponsavel} ativo={filtros.responsavel} onClick={(nome) => onFiltros({ ...filtros, responsavel: filtros.responsavel === nome ? null : nome })} /></Bloco>
+        <Bloco titulo="Por prazo"><SimpleBars data={porPrazo} ativo={filtros.prazo} onClick={(key) => onFiltros({ ...filtros, prazo: filtros.prazo === key ? null : key })} /></Bloco>
         <Bloco titulo="Idade das demandas"><SimpleBars data={porIdade} /></Bloco>
         <Bloco titulo="Mais antigas em andamento">
           <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}><th className={tableClasses.th}>Demanda</th><th className={tableClasses.th}>Família</th><th className={tableClasses.th}>Responsável</th><th className={cn(tableClasses.th, "text-right")}>Idade</th></tr></thead><tbody>{antigas.map((t) => <tr key={t.bitrix_id}><td className={tableClasses.td}><a href={t.link_bitrix ?? undefined} target="_blank" rel="noreferrer" className="font-medium hover:underline">{t.titulo ?? "Sem título"}</a></td><td className={tableClasses.td}>{familiaDaTarefa(t)}</td><td className={tableClasses.td}>{responsavelDaTarefa(t)}</td><td className={cn(tableClasses.num, (idadeDias(t) ?? 0) > 365 && "font-semibold text-destructive")}>{fmtDias(idadeDias(t))}</td></tr>)}</tbody></table></div>
@@ -97,14 +97,25 @@ function agrega(tarefas: TarefaOperacional[], chave: (t: TarefaOperacional) => s
   tarefas.forEach((t) => { const nome = chave(t); const x = map.get(nome) ?? { nome, atrasadas: 0, hojeSemana: 0, proximas: 0 }; const f = faixaPrazo(t); if (f === "atrasadas") x.atrasadas++; else if (f === "hoje" || f === "esta_semana") x.hojeSemana++; else x.proximas++; map.set(nome, x); });
   return [...map.values()].sort((a, b) => (b.atrasadas + b.hojeSemana + b.proximas) - (a.atrasadas + a.hojeSemana + a.proximas));
 }
-function StackedHorizontal({ data, onClick }: { data: { nome: string; atrasadas: number; hojeSemana: number; proximas: number }[]; onClick: (nome: string) => void }) {
-  return <ResponsiveContainer width="100%" height={Math.max(240, data.length * 29)}><BarChart data={data} layout="vertical" margin={{ left: 16 }}><CartesianGrid horizontal={false} stroke={CORES.borda} /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} /><YAxis dataKey="nome" type="category" width={120} tick={{ fontSize: 10 }} /><Tooltip contentStyle={chartTooltipStyle} /><Legend wrapperStyle={{ fontSize: 11 }} /><Bar dataKey="atrasadas" name="Atrasadas" stackId="a" fill={CORES.atraso} onClick={(d) => onClick(d.nome)} cursor="pointer" /><Bar dataKey="hojeSemana" name="Hoje/semana" stackId="a" fill={CORES.ouro} onClick={(d) => onClick(d.nome)} cursor="pointer" /><Bar dataKey="proximas" name="Próximas" stackId="a" fill={CORES.secundaria} onClick={(d) => onClick(d.nome)} cursor="pointer" /></BarChart></ResponsiveContainer>;
+const op = (ativo: string | null | undefined, nome: string) => (ativo && ativo !== nome ? 0.45 : 1);
+function StackedHorizontal({ data, onClick, ativo }: { data: { nome: string; atrasadas: number; hojeSemana: number; proximas: number }[]; onClick: (nome: string) => void; ativo?: string | null }) {
+  const segs = [{ k: "atrasadas", n: "Atrasadas", c: CORES.atraso }, { k: "hojeSemana", n: "Hoje/esta semana", c: CORES.ambar }, { k: "proximas", n: "Próximas", c: CORES.secundaria }] as const;
+  return <>
+    <LegendaTexto itens={segs.map((s) => ({ cor: s.c, label: s.n }))} />
+    <ResponsiveContainer width="100%" height={Math.max(240, data.length * 29)}><BarChart data={data} layout="vertical" margin={{ left: 16 }} barCategoryGap={6}><CartesianGrid horizontal={false} stroke={CORES.borda} /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} /><YAxis dataKey="nome" type="category" width={120} tick={{ fontSize: 11, fill: CORES.texto }} axisLine={false} tickLine={false} /><Tooltip contentStyle={chartTooltipStyle} cursor={{ fill: "hsl(var(--surface2))" }} />
+      {segs.map((s) => <Bar key={s.k} dataKey={s.k} name={s.n} stackId="a" fill={s.c} onClick={(d) => onClick(d.nome)} cursor="pointer">{data.map((d) => <Cell key={d.nome} fillOpacity={op(ativo, d.nome)} stroke={ativo === d.nome ? "hsl(var(--gold))" : undefined} strokeWidth={ativo === d.nome ? 1 : 0} aria-pressed={ativo === d.nome} />)}</Bar>)}
+    </BarChart></ResponsiveContainer></>;
 }
-function Donut({ data, onClick }: { data: { nome: string; total: number }[]; onClick: (nome: string) => void }) {
-  const cores = [CORES.marca, CORES.ouro, CORES.secundaria, "hsl(var(--info))", "hsl(var(--success))", CORES.texto, CORES.borda];
-  return <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={data} dataKey="total" nameKey="nome" innerRadius={58} outerRadius={88} paddingAngle={2} onClick={(d) => onClick(d.nome)}>{data.map((d, i) => <Cell key={d.nome} fill={cores[i % cores.length]} cursor="pointer" />)}</Pie><Tooltip contentStyle={chartTooltipStyle} /><Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer>;
+function Donut({ data, onClick, ativo }: { data: { nome: string; total: number }[]; onClick: (nome: string) => void; ativo?: string | null }) {
+  const total = data.reduce((s, d) => s + d.total, 0);
+  return <div className="grid items-center gap-4 sm:grid-cols-[220px_1fr]">
+    <div className="relative h-[220px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="total" nameKey="nome" innerRadius={70} outerRadius={96} paddingAngle={1} stroke="none" onClick={(d) => onClick(d.nome)}>{data.map((d, i) => <Cell key={d.nome} fill={PALETA_NEUTRA[i % PALETA_NEUTRA.length]} fillOpacity={op(ativo, d.nome)} cursor="pointer" aria-pressed={ativo === d.nome} />)}</Pie><Tooltip contentStyle={chartTooltipStyle} /></PieChart></ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-semibold tabular-nums">{total}</span><span className="text-[11px] text-muted-foreground">demandas</span></div></div>
+    <ul className="space-y-1">{data.map((d, i) => <li key={d.nome}><button type="button" aria-pressed={ativo === d.nome} onClick={() => onClick(d.nome)} className={cn("flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-muted", ativo === d.nome && "bg-[hsl(var(--goldbg))] shadow-[inset_0_-2px_0_hsl(var(--gold))]", ativo && ativo !== d.nome && "opacity-45")}><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-sm" style={{ background: PALETA_NEUTRA[i % PALETA_NEUTRA.length] }} />{d.nome}</span><span className="tabular-nums text-muted-foreground">{d.total}</span></button></li>)}</ul>
+  </div>;
 }
-function SimpleBars({ data, onClick }: { data: { nome: string; total: number; key?: FaixaPrazo }[]; onClick?: (key: FaixaPrazo) => void }) {
-  return <ResponsiveContainer width="100%" height={240}><BarChart data={data}><CartesianGrid vertical={false} stroke={CORES.borda} /><XAxis dataKey="nome" tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tick={{ fontSize: 10 }} /><Tooltip contentStyle={chartTooltipStyle} /><Bar dataKey="total" name="Demandas" fill={CORES.marca}>{data.map((d) => <Cell key={d.nome} fill={d.key === "atrasadas" ? CORES.atraso : d.key === "esta_semana" || d.key === "hoje" ? CORES.ouro : CORES.marca} cursor={onClick ? "pointer" : undefined} onClick={() => d.key && onClick?.(d.key)} />)}</Bar></BarChart></ResponsiveContainer>;
+function SimpleBars({ data, onClick, ativo }: { data: { nome: string; total: number; key?: FaixaPrazo }[]; onClick?: (key: FaixaPrazo) => void; ativo?: string | null }) {
+  const cor = (k?: FaixaPrazo) => k === "atrasadas" ? CORES.atraso : k === "esta_semana" || k === "hoje" ? CORES.ambar : k === "proxima_semana" ? CORES.secundaria : k === "depois" ? CORES.cinza : CORES.secundaria;
+  return <ResponsiveContainer width="100%" height={240}><BarChart data={data}><CartesianGrid vertical={false} stroke={CORES.borda} /><XAxis dataKey="nome" tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} /><Tooltip contentStyle={chartTooltipStyle} cursor={{ fill: "hsl(var(--surface2))" }} /><Bar dataKey="total" name="Demandas" radius={[3, 3, 0, 0]}>{data.map((d, i) => <Cell key={d.nome} fill={d.key ? cor(d.key) : i === data.length - 1 ? CORES.atraso : CORES.secundaria} fillOpacity={op(ativo, d.key ?? "")} stroke={ativo && ativo === d.key ? "hsl(var(--gold))" : undefined} cursor={onClick ? "pointer" : undefined} aria-pressed={!!ativo && ativo === d.key} onClick={() => d.key && onClick?.(d.key)} />)}</Bar></BarChart></ResponsiveContainer>;
 }
 const fmtData = (iso: string | null) => iso ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(iso)) : "—";
