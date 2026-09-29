@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Bloco, FaixaNumeros, tableClasses } from "./Shared";
+import { Bloco, FaixaNumeros, TagPrazo, tableClasses } from "./Shared";
 import { TarefaOperacional, emAndamento, faixaPrazo, familiaDaTarefa, noIntervalo, prioridade, responsavelDaTarefa, semanasCompletas, tarefasDoMes, tipoDaTarefa } from "@/lib/operacional";
 import { cn } from "@/lib/utils";
 
