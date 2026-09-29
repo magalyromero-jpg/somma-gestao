@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MultiFiltro } from "@/components/operacional/MultiFiltro";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,7 +89,7 @@ export default function Operacional() {
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mês de referência</span><Select value={mes} onValueChange={setMes}><SelectTrigger className="h-8 w-44"><SelectValue/></SelectTrigger><SelectContent>{mesesHistorico().map(m=><SelectItem key={m} value={m}>{fmtMes(m)}</SelectItem>)}</SelectContent></Select></div>
       </div>
       <AvisoHistorico/>
-      <TabsContent value="espelho"><Espelho tarefas={tarefas} semPrazo={semPrazo} filtros={filtros} onFiltros={setFiltros} onFamilia={abrirFamilia}/></TabsContent>
+      <TabsContent value="espelho"><Espelho tarefas={tarefas} semPrazo={semPrazo} filtros={filtros} onFiltros={setFiltros} onFamilia={abrirFamilia} onLimparTudo={limparTudo}/></TabsContent>
       <TabsContent value="familias"><Familias tarefas={tarefas} mes={mes} snapshots={snapshots} onFamilia={abrirFamilia}/></TabsContent>
       <TabsContent value="tempo"><TempoCarga tarefas={tarefas} mes={mes} semPrazo={semPrazo}/></TabsContent>
       <TabsContent value="relatorios"><RelatoriosSemanais tarefas={tarefas} mes={mes}/></TabsContent>
