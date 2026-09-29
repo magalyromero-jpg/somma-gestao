@@ -55,6 +55,7 @@ export function FaixaNumeros({ itens }: { itens: { label: string; valor: string 
           key={item.label}
           type="button"
           disabled={!item.onClick}
+          aria-pressed={item.onClick ? !!item.ativo : undefined}
           onClick={item.onClick}
           className={cn(
             "min-h-20 border-b px-4 py-3 text-left transition-colors sm:border-r lg:border-b-0 disabled:cursor-default",
