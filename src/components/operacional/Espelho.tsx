@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { ExternalLink, Flame, Search, X } from "lucide-react";
+import { ExternalLink, Flame, X } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Bloco, CORES, FaixaNumeros, chartTooltipStyle, fmtDias, tableClasses } from "./Shared";
-import { FAIXAS_IDADE, FAIXAS_PRAZO, FaixaPrazo, TarefaOperacional, emAndamento, faixaIdade, faixaPrazo, familiaDaTarefa, idadeDias, prioridade, responsavelDaTarefa, tipoDaTarefa } from "@/lib/operacional";
+import { FAIXAS_IDADE, FAIXAS_PRAZO, FaixaPrazo, TarefaOperacional, emAndamento, faixaIdade, faixaPrazo, familiaDaTarefa, idadeDias, normalizarTexto, prioridade, responsavelDaTarefa, tipoDaTarefa } from "@/lib/operacional";
 import { cn } from "@/lib/utils";
 
 export interface FiltrosEspelho {
@@ -16,24 +15,29 @@ export interface FiltrosEspelho {
   responsavel: string | null;
 }
 
-export function Espelho({ tarefas, semPrazo, filtros, onFiltros, onFamilia }: { tarefas: TarefaOperacional[]; semPrazo: number; filtros: FiltrosEspelho; onFiltros: (f: FiltrosEspelho) => void; onFamilia: (nome: string) => void }) {
+export function Espelho({ tarefas, semPrazo, filtros, onFiltros, onFamilia, onLimparTudo }: { tarefas: TarefaOperacional[]; semPrazo: number; filtros: FiltrosEspelho; onFiltros: (f: FiltrosEspelho) => void; onFamilia: (nome: string) => void; onLimparTudo?: () => void }) {
   const fila = useMemo(() => tarefas.filter(emAndamento), [tarefas]);
   const filtradas = useMemo(() => {
-    const q = filtros.busca.trim().toLocaleLowerCase("pt-BR");
+    const q = normalizarTexto(filtros.busca);
     return fila.filter((t) => {
       if (filtros.soPrioridade && !prioridade(t)) return false;
       if (filtros.prazo && faixaPrazo(t) !== filtros.prazo) return false;
       if (filtros.tipo && tipoDaTarefa(t) !== filtros.tipo) return false;
       if (filtros.responsavel && responsavelDaTarefa(t) !== filtros.responsavel) return false;
-      return !q || [t.titulo, familiaDaTarefa(t), tipoDaTarefa(t), responsavelDaTarefa(t)].some((v) => v?.toLocaleLowerCase("pt-BR").includes(q));
+      return !q || [t.titulo, familiaDaTarefa(t), tipoDaTarefa(t), responsavelDaTarefa(t)].some((v) => normalizarTexto(v).includes(q));
     });
   }, [fila, filtros]);
 
   const contPrazo = (p: FaixaPrazo) => filtradas.filter((t) => faixaPrazo(t) === p).length;
   const atrasadas = contPrazo("atrasadas");
   const antiga = [...filtradas].filter((t) => idadeDias(t) != null).sort((a, b) => (idadeDias(b) ?? 0) - (idadeDias(a) ?? 0))[0];
-  const filtrosAtivos = [filtros.prazo && FAIXAS_PRAZO.find((f) => f.key === filtros.prazo)?.label, filtros.tipo, filtros.responsavel, filtros.soPrioridade && "Prioridade"].filter(Boolean) as string[];
-  const reset = () => onFiltros({ busca: "", soPrioridade: false, prazo: null, tipo: null, responsavel: null });
+  const chips: { label: string; remover: () => void }[] = [
+    filtros.prazo && { label: FAIXAS_PRAZO.find((f) => f.key === filtros.prazo)?.label ?? "", remover: () => onFiltros({ ...filtros, prazo: null }) },
+    filtros.tipo && { label: filtros.tipo, remover: () => onFiltros({ ...filtros, tipo: null }) },
+    filtros.responsavel && { label: filtros.responsavel, remover: () => onFiltros({ ...filtros, responsavel: null }) },
+    filtros.soPrioridade && { label: "Prioridade", remover: () => onFiltros({ ...filtros, soPrioridade: false }) },
+  ].filter(Boolean) as { label: string; remover: () => void }[];
+  const reset = () => { onFiltros({ busca: "", soPrioridade: false, prazo: null, tipo: null, responsavel: null }); onLimparTudo?.(); };
 
   const porFamilia = agrega(filtradas, familiaDaTarefa).slice(0, 14);
   const porResponsavel = agrega(filtradas, responsavelDaTarefa).slice(0, 10);
@@ -45,15 +49,11 @@ export function Espelho({ tarefas, semPrazo, filtros, onFiltros, onFamilia }: { 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={filtros.busca} onChange={(e) => onFiltros({ ...filtros, busca: e.target.value })} placeholder="Buscar demanda, família, tipo ou responsável" className="h-9 pl-9" />
-        </div>
         <Button size="sm" variant={filtros.soPrioridade ? "default" : "outline"} onClick={() => onFiltros({ ...filtros, soPrioridade: !filtros.soPrioridade })}>
           <Flame className="h-4 w-4" /> Só prioridade
         </Button>
-        {filtrosAtivos.map((f) => <Badge key={f} variant="outline" className="h-7 bg-card">{f}</Badge>)}
-        {(filtrosAtivos.length > 0 || filtros.busca) && <Button size="sm" variant="ghost" onClick={reset}><X className="h-4 w-4" />Limpar filtros</Button>}
+        {chips.map((c) => <Badge key={c.label} variant="outline" className="h-7 gap-1 bg-card">{c.label}<button type="button" aria-label={`Remover ${c.label}`} onClick={c.remover}><X className="h-3 w-3" /></button></Badge>)}
+        {chips.length > 0 && <Button size="sm" variant="ghost" onClick={reset}><X className="h-4 w-4" />Limpar filtros</Button>}
       </div>
 
       <FaixaNumeros itens={[
