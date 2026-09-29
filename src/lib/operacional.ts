@@ -272,3 +272,6 @@ export const fmtMes = (mes: string) => {
   const [ano, numero] = mes.split("-");
   return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${ano}-${numero}-01T12:00:00Z`));
 };
+/** Normaliza texto para comparação sem acentos e sem diferenciar maiúsculas/minúsculas. */
+export const normalizarTexto = (s: string | null | undefined) =>
+  (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim();
