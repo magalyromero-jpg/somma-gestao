@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 import { imoveis as mockImoveis } from "@/data/mock";
 import { formatBRL, formatPct, pctClass } from "@/lib/format";
 import { toast } from "sonner";
@@ -17,7 +18,7 @@ import { Plus } from "lucide-react";
 
 export default function Mercado() {
   const { role, user } = useAuth();
-  const isGestor = role === "gestor";
+  const isGestor = podeEditar(role);
   const qc = useQueryClient();
 
   const [estado, setEstado] = useState<string>("all");

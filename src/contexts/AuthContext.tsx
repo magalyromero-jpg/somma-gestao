@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "gestor" | "analista" | "familia";
+export type AppRole = "admin" | "gestor" | "consulta" | "familia";
 
 interface Profile {
   id: string;
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile(p as Profile | null);
     // gestor tem precedência
     const roles = (r ?? []).map((x) => x.role as AppRole);
-    const order: AppRole[] = ["admin", "gestor", "analista", "familia"];
+    const order: AppRole[] = ["admin", "gestor", "consulta", "familia"];
     const found = order.find((o) => roles.includes(o)) ?? null;
     setRole(found);
   };

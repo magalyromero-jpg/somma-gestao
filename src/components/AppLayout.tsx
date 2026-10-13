@@ -4,22 +4,19 @@ import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-branco.png";
 import { Button } from "@/components/ui/button";
+import { useEdificios } from "@/hooks/useEdificios";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
-  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"], grupo: "Visão geral" },
-  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "analista"], grupo: "Visão geral" },
-
-
-  { to: "/admin/zen-tower",      label: "Zen Tower",           icon: Landmark,        allowed: ["admin", "gestor"], grupo: "Carteira" },
-  { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "analista"], grupo: "Inteligência de mercado" },
-  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "analista"], grupo: "Inteligência de mercado" },
-  { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor"], grupo: "Inteligência de mercado" },
-
-  { to: "/area-cliente",         label: "Área do Cliente",     icon: Landmark,        allowed: ["familia"] },
-  { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"], grupo: "Administração" },
+  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor", "consulta"], grupo: "Visão geral" },
+  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "consulta"], grupo: "Visão geral" },
+  { to: "@carteira", label: "", icon: Landmark, grupo: "Carteira" },
+  { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "consulta"], grupo: "Inteligência de mercado" },
+  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "consulta"], grupo: "Inteligência de mercado" },
+  { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor", "consulta"], grupo: "Inteligência de mercado" },
+  { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor", "consulta"], grupo: "Administração" },
   { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"], grupo: "Administração" },
   
-  { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"], grupo: "Administração" },
+  { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin"], grupo: "Administração" },
 ];
 
 export default function AppLayout() {
@@ -33,7 +30,10 @@ export default function AppLayout() {
       .slice(0, 2)
       .toUpperCase();
 
-  const items = nav.filter((n) => !n.allowed || (role && n.allowed.includes(role)));
+  const { data: edificios = [] } = useEdificios();
+  const items = nav
+    .filter((n) => role === "familia" ? n.to === "@carteira" : (!n.allowed || (role && n.allowed.includes(role))))
+    .flatMap((n) => n.to === "@carteira" ? edificios.map((e) => ({ ...n, to: `/carteira/${e.slug}`, label: e.nome })) : [n]);
 
   const handleLogout = async () => {
     await signOut();

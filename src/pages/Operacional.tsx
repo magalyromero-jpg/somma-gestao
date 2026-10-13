@@ -1,3 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -36,6 +38,7 @@ async function buscarSnapshots() {
 }
 
 export default function Operacional() {
+  const { role } = useAuth();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const familia = params.get("familia");
@@ -70,7 +73,7 @@ export default function Operacional() {
   const abrirFamilia = (nome: string) => setParams({ familia: nome });
 
   return <div className="op-theme space-y-4">
-    <PageHeader title="Operacional" subtitle={ultimaSync ? `Última sincronização: ${fmtSync(ultimaSync)}` : "Dados operacionais do Bitrix"} actions={<Button size="sm" onClick={sincronizar} disabled={sincronizando}><RefreshCw className={sincronizando ? "animate-spin" : ""}/>{sincronizando ? "Sincronizando…" : "Sincronizar agora"}</Button>} />
+    <PageHeader title="Operacional" subtitle={ultimaSync ? `Última sincronização: ${fmtSync(ultimaSync)}` : "Dados operacionais do Bitrix"} actions={podeEditar(role) && <Button size="sm" onClick={sincronizar} disabled={sincronizando}><RefreshCw className={sincronizando ? "animate-spin" : ""}/>{sincronizando ? "Sincronizando…" : "Sincronizar agora"}</Button>} />
     {error && <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"><AlertTriangle className="h-4 w-4"/>Não foi possível carregar os dados.</div>}
     {!isLoading && <div className="flex flex-wrap items-center gap-2">
       <MultiFiltro id="pessoas" opcoes={opcoesPessoas} selecionados={pessoas} onChange={setPessoas} todos="Todas as pessoas" plural="pessoas"/>

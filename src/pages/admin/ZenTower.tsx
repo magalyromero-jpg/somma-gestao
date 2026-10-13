@@ -72,8 +72,9 @@ export default function ZenTower() {
   return <PortalEdificio modo="admin" />;
 }
 
-export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo: "admin" | "cliente" }) {
+export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo: "admin" | "consulta" | "cliente" }) {
   const admin = modo === "admin";
+  const equipe = modo !== "cliente";
   const { data, isLoading, error } = useQuery({ queryKey: ["loc-edificio", edificioId ?? "zen", modo], queryFn: () => carregar(edificioId, admin) });
   const [soDivergentes, setSoDivergentes] = useState(true);
 
@@ -115,7 +116,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do aluguel</TabsTrigger>
-          {admin && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
+          {equipe && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
           {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
         </TabsList></div>
 
@@ -152,7 +153,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
 
-        {admin && <TabsContent value="conferencia" className="space-y-4">
+        {equipe && <TabsContent value="conferencia" className="space-y-4">
           <Bloco titulo="Metragem: contrato × matrícula" acao={<label className="flex items-center gap-2 text-xs text-muted-foreground"><Switch checked={soDivergentes} onCheckedChange={setSoDivergentes} />Só divergentes</label>}>
             <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
               <th className={tableClasses.th}>Unidades</th><th className={tableClasses.th}>Matrículas</th><th className={cn(tableClasses.th, "text-right")}>m² contrato</th><th className={cn(tableClasses.th, "text-right")}>m² matrícula</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
