@@ -85,6 +85,13 @@
       "when": 1791926205541,
       "tag": "0011_perfis_acesso_consulta",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791927664202,
+      "tag": "0012_loc_locatario_atividade_views",
+      "breakpoints": true
     }
   ]
 }
