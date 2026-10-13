@@ -2,7 +2,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, ListTodo, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserCog, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
-import logoWhite from "@/assets/somma-logo-white.png";
+import logoAsset from "@/assets/somma-logo-branco.png.asset.json";
+const logoWhite = logoAsset.url;
 import { Button } from "@/components/ui/button";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
