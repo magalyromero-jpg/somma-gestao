@@ -17,7 +17,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
 
   return <>
     <Bloco titulo={`Orçado × realizado em caixa, ${ano} (R$ mil)`}>
-      <LegendaTexto itens={[{ cor: CORES.primaria, label: "Realizado" }, { cor: CORES.secundaria, label: "Projetado" }, { cor: CORES.ouro, label: "Orçado dos contratos" }]} />
+      <LegendaTexto itens={[{ cor: CORES.marca, label: "Realizado" }, { cor: CORES.secundaria, label: "Projetado" }, { cor: CORES.ouro, label: "Orçado dos contratos" }]} />
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={chart} margin={{ top: 20 }}>
           <defs>
@@ -30,7 +30,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
           <XAxis dataKey="mes" tick={{ fontSize: 11, fill: CORES.texto }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} tickFormatter={(v) => mil(v)} width={44} />
           <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => brl(v)} cursor={{ fill: "hsl(var(--muted))" }} />
-          <Bar dataKey="realizado" name="Realizado" stackId="c" fill={CORES.primaria} radius={[2, 2, 0, 0]}>
+          <Bar dataKey="realizado" name="Realizado" stackId="c" fill={CORES.marca} radius={[2, 2, 0, 0]}>
             <LabelList dataKey="realizado" position="top" formatter={(v: number) => (v ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
           <Bar dataKey="projetado" name="Projetado" stackId="c" fill={`url(#${HATCH})`} radius={[2, 2, 0, 0]}>
