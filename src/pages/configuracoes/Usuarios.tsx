@@ -129,6 +129,14 @@ export default function Usuarios() {
     carregar();
   }
 
+  async function excluir(u: UsuarioRow) {
+    if (!window.confirm(`Excluir definitivamente ${u.nome ?? u.email}? Esta ação não pode ser desfeita.`)) return;
+    const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: u.user_id } });
+    if (error || (data as any)?.error) return toast.error((data as any)?.error ?? error?.message ?? "Falha ao excluir");
+    toast.success("Usuário excluído");
+    carregar();
+  }
+
   async function alterarPerfil(user_id: string, novo: Perfil) {
     await supabase.from("user_roles").delete().eq("user_id", user_id);
     const { error } = await supabase.from("user_roles").insert({ user_id, role: novo });
@@ -349,6 +357,11 @@ export default function Usuarios() {
                     {isAdmin && u.status === "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "ativo")}>
                         Reativar
+                      </Button>
+                    )}
+                    {isAdmin && u.user_id !== user?.id && (
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => excluir(u)}>
+                        Excluir
                       </Button>
                     )}
                   </td>
