@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import logoWhite from "@/assets/somma-logo-white.png";
+import logoDark from "@/assets/somma-logo-dark.png";
 
 interface Props {
   mode: "set" | "reset";
@@ -56,7 +56,7 @@ export default function SetPassword({ mode }: Props) {
     <div className="min-h-screen grid place-items-center bg-card p-8">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex justify-center">
-          <img src={logoWhite} alt="Somma" className="w-40" />
+          <img src={logoDark} alt="Somma Multi-Family Office" className="w-40" />
         </div>
         <div>
           <h1 className="text-2xl font-extralight text-foreground">{titulo}</h1>
