@@ -197,33 +197,8 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title="Dashboard" subtitle="Visão consolidada do portfólio Somma" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Link to="/familias" className="block"><KpiCard label="Famílias" value={String(kpis.familiasTotal)} icon={<Users className="h-4 w-4" />} hint={`${kpis.familiasOnboarding} em onboarding · ${kpis.familiasConcluidas} concluídos`} /></Link>
-        <Link to="/imoveis" className="block"><KpiCard label="Imóveis" value={String(kpis.imoveisTotal)} icon={<Building2 className="h-4 w-4" />} hint={`${formatBRL(kpis.patrimonioTotal, { compact: true })} patrimônio total`} /></Link>
-        <Link to="/imoveis?status=pendentes" className="block"><KpiCard label="Documentos pendentes" value={String(kpis.docsPendentes)} icon={<FileWarning className="h-4 w-4" />} hint={`${kpis.imoveisCompletos} imóveis com checklist completo`} /></Link>
-        <Link to="/familias" className="block"><KpiCard label="Alertas" value={String(kpis.alertasCriticos + kpis.alertasAtencao)} icon={<AlertTriangle className="h-4 w-4" />} hint={`${kpis.alertasCriticos} críticos · ${kpis.alertasAtencao} atenção`} /></Link>
-      </div>
+      {/* Famílias e Imóveis ocultos por decisão do produto */}
       <BitrixSection />
-      <Card className="shadow-card">
-        <CardHeader className="pb-2"><CardTitle className="text-base">Top 5 famílias por patrimônio declarado</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground border-b">
-              <tr><th className="text-left px-5 py-3">Família</th><th className="text-right px-5 py-3">Imóveis</th><th className="text-right px-5 py-3">Patrimônio declarado</th></tr>
-            </thead>
-            <tbody>
-              {kpis.topFamilias.length === 0 && <tr><td colSpan={3} className="text-center px-5 py-8 text-muted-foreground">Nenhuma família cadastrada.</td></tr>}
-              {kpis.topFamilias.map(f => (
-                <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-5 py-3"><Link to={`/familias-onboarding/${f.id}`} className="font-medium hover:text-gold">{f.nome}</Link></td>
-                  <td className="text-right px-5 py-3">{f.imoveis}</td>
-                  <td className="text-right px-5 py-3 font-medium">{formatBRL(f.valor)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
     </>
   );
 }

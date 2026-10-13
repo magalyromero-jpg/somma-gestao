@@ -36,6 +36,13 @@
       "when": 1791918551010,
       "tag": "0004_loc_schema_v2_vigencias_matriculas",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791918725710,
+      "tag": "0005_loc_acesso_equipe_somma",
+      "breakpoints": true
     }
   ]
 }

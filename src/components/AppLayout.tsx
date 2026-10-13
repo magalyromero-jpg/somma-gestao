@@ -1,19 +1,20 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ListTodo, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog } from "lucide-react";
+import { LayoutDashboard, ListTodo, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
 import { Button } from "@/components/ui/button";
 
-const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[] }> = [
+const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
   { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"] },
   { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "analista"] },
-  { to: "/familias",             label: "Famílias",            icon: Users },
-  { to: "/imoveis",              label: "Imóveis",             icon: Building2 },
+
+
   { to: "/mercado",              label: "Mercado",             icon: LineChart },
   { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search },
   { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor"] },
-  { to: "/onboarding",           label: "Onboarding",          icon: UserPlus },
+
+  { to: "/admin/zen-tower",      label: "Zen Tower",           icon: Landmark,        allowed: ["admin", "gestor"], grupo: "Administração" },
   { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"] },
   { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"] },
   
@@ -52,8 +53,9 @@ export default function AppLayout() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {items.map((item) => (
+            <div key={item.to}>
+            {item.grupo && <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-[0.15em] text-white/40">{item.grupo}</div>}
             <NavLink
-              key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 cn(
@@ -73,6 +75,7 @@ export default function AppLayout() {
                 </>
               )}
             </NavLink>
+            </div>
           ))}
         </nav>
         <div className="px-3 py-3 border-t border-sidebar-border">

@@ -43,7 +43,7 @@ export default function SetPassword({ mode }: Props) {
       return;
     }
     toast.success(mode === "set" ? "Senha definida com sucesso" : "Senha redefinida com sucesso");
-    navigate("/familias", { replace: true });
+    navigate("/", { replace: true });
   };
 
   const titulo = mode === "set" ? "Definir senha de acesso" : "Redefinir senha";

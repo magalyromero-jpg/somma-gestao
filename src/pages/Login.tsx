@@ -18,7 +18,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   if (!authLoading && user) {
-    const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/familias";
+    const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/";
     return <Navigate to={from} replace />;
   }
 
@@ -36,7 +36,7 @@ export default function Login() {
       toast.success("Conta criada! Verifique seu e-mail e faça login.");
       setMode("signin");
     } else {
-      navigate("/familias", { replace: true });
+      navigate("/", { replace: true });
     }
   };
 
