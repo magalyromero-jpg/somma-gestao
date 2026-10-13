@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const db = supabase as any;
 const brl = (n: number | null | undefined) => n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
+const brlK = (n: number) => n >= 1e6 ? `R$ ${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mi` : `R$ ${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
 const dt = (s: string | null | undefined) => s ? s.slice(0, 10).split("-").reverse().join("/") : "—";
 const m2 = (n: number | null | undefined) => n == null ? "—" : `${Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²`;
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -100,9 +101,9 @@ export default function ZenTower() {
             { label: "Unidades", valor: data.ocup.length, detalhe: `${d.ocupadas} locadas · ${data.ocup.length - d.ocupadas} vagas` },
             { label: "Ocupação", valor: `${data.ocup.length ? Math.round(d.ocupadas / data.ocup.length * 100) : 0}%` },
             { label: "Contratos ativos", valor: d.linhas.length },
-            { label: "Aluguel vigente / mês", valor: brl(d.totalVigente) },
-            { label: `Orçado ${data.ano} até hoje`, valor: brl(d.orcadoYtd) },
-            { label: `Realizado ${data.ano} até hoje`, valor: brl(d.realizadoYtd), detalhe: d.orcadoYtd ? `${Math.round(d.realizadoYtd / d.orcadoYtd * 100)}% do orçado` : undefined },
+            { label: "Aluguel vigente / mês", valor: brlK(d.totalVigente) },
+            { label: `Orçado ${data.ano} até hoje`, valor: brlK(d.orcadoYtd) },
+            { label: `Realizado ${data.ano} até hoje`, valor: brlK(d.realizadoYtd), detalhe: d.orcadoYtd ? `${Math.round(d.realizadoYtd / d.orcadoYtd * 100)}% do orçado` : undefined },
             { label: "Vencidos ou a vencer (120 d)", valor: d.aVencer, danger: d.aVencer > 0 },
           ]} />
           <Bloco titulo={`Orçado × realizado em caixa — ${data.ano}`}><CaixaChart meses={d.meses} /></Bloco>
@@ -147,7 +148,7 @@ export default function ZenTower() {
           <FaixaNumeros itens={[
             { label: "Pagamentos registrados", valor: data.pags.length },
             { label: "Sem contrato", valor: d.semContrato.length, detalhe: "auditório, heliponto, rooftop, estacionamento" },
-            { label: "Total recebido", valor: brl(data.pags.reduce((s: number, p: any) => s + Number(p.valor_liquido), 0)) },
+            { label: "Total recebido", valor: brlK(data.pags.reduce((s: number, p: any) => s + Number(p.valor_liquido), 0)) },
           ]} />
           <Bloco titulo="Pagamentos recebidos">
             <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
