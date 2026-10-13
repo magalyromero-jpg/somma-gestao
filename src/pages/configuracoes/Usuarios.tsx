@@ -13,6 +13,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { AcessoEdificios } from "@/components/locacoes/AcessosCliente";
 
 type Perfil = "admin" | "gestor" | "analista" | "familia";
 type Status = "ativo" | "pendente" | "inativo";
@@ -35,6 +36,7 @@ const perfilLabel: Record<Perfil, string> = {
 export default function Usuarios() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  const [acessoUser, setAcessoUser] = useState<UsuarioRow | null>(null);
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -309,6 +311,11 @@ export default function Usuarios() {
                       </>
                     )}
                     {isAdmin && (
+                      <Button size="sm" variant="ghost" onClick={() => setAcessoUser(u)}>
+                        Edifícios
+                      </Button>
+                    )}
+                    {isAdmin && (
                       <Button size="sm" variant="ghost" onClick={() => { setPwdUser(u); setPwdNova(""); setPwdOpen(true); }}>
                         Definir senha
                       </Button>
@@ -330,6 +337,13 @@ export default function Usuarios() {
           </table>
         </div>
       </Card>
+
+      <Dialog open={!!acessoUser} onOpenChange={(o) => !o && setAcessoUser(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{acessoUser?.nome ?? acessoUser?.email}</DialogTitle></DialogHeader>
+          {acessoUser && <AcessoEdificios userId={acessoUser.user_id} />}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
         <DialogContent>

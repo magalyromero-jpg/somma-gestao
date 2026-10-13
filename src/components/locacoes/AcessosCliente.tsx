@@ -6,6 +6,7 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const db = supabase as any;
 
