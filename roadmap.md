@@ -6,4 +6,4 @@
 # Zen Tower sem documentos
 - [x] Retirar aba, exibição e upload de documentos sem alterar o banco.
 - [x] Manter conferência de metragem e importação de pagamentos, rejeitando PDF/ZIP.
-- [ ] Conferir o portal com dados reais e executar os testes de pagamentos.
+- [x] Conferir o portal com dados reais e executar os testes de pagamentos.
