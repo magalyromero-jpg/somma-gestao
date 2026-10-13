@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +9,7 @@ import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
-import { Documentos, ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
+import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { MESES, MESES_LONGOS, addMes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
 
 const db = supabase as any;
@@ -41,17 +40,16 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_pagamentos").select("id,codigo,imovel_nome,data_vencimento,data_pagamento,valor_liquido,contrato_id,dias_atraso").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(5000),
     db.rpc("loc_orcado_caixa", { p_edificio: id, p_ano: ano }),
     db.from("loc_v_metragem").select("*").eq("edificio_id", id),
-    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,documento_id").eq("edificio_id", id),
+    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim").eq("edificio_id", id),
     db.from("loc_v_alerta_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_auditoria_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_evolucao").select("*").eq("edificio_id", id),
-    db.from("loc_documentos").select("id,contrato_id,titulo,tipo,storage_path,revisado,visivel_cliente,created_at").eq("edificio_id", id),
     db.from("loc_indices").select("indice,mes,fonte").order("mes", { ascending: false }).limit(60),
     db.from("loc_projecao_indices").select("*"),
     db.from("loc_projecao_regras").select("*").eq("edificio_id", id),
   ]);
   for (const r of rs) if (r.error) throw r.error;
-  const [vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, documentos, indices, focus, regras] = rs.map((r) => r.data ?? []);
+  const [vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras] = rs.map((r) => r.data ?? []);
   const vigIds = vigencias.map((v: any) => v.id);
   const deg = vigIds.length ? await db.from("loc_vigencia_degraus").select("*").in("vigencia_id", vigIds) : { data: [] };
   if (deg.error) throw deg.error;
@@ -63,7 +61,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
-  return { edificio: ed, ano, vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, documentos, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin };
+  return { edificio: ed, ano, vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin };
 }
 
 export type DadosZen = NonNullable<Awaited<ReturnType<typeof carregar>>>;
@@ -94,28 +92,12 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
       const realizado = data.pags.filter((p: any) => p.data_pagamento.startsWith(key)).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
       return { mes: m, key, i, orcado, realizado, fechado: key <= ultimoMes };
     });
-    // documentos por contrato
-    const docs = new Map<string, any>(data.documentos.map((x: any) => [x.id, x]));
-    const docContrato = (contratoId: string) => {
-      const vs = data.vigencias.filter((v: any) => v.contrato_id === contratoId).sort((a: any, b: any) => b.seq - a.seq);
-      const ultimo = vs[0];
-      const doc = ultimo?.documento_id ? docs.get(ultimo.documento_id) : null;
-      const extra = data.documentos.filter((x: any) => x.contrato_id === contratoId).sort((a: any, b: any) => b.created_at.localeCompare(a.created_at))[0];
-      const arquivo = doc ?? extra ?? null;
-      const situacao = !arquivo ? "nao_recebido" : vs.some((v: any) => !v.documento_id) ? "incompleto" : "completo";
-      return { arquivo, situacao };
-    };
-    return { linhas, porContrato, meses, ultimaData, ultimoMes, docContrato };
+    return { linhas, porContrato, meses, ultimaData, ultimoMes };
   }, [data]);
 
   if (isLoading) return <div className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-72 w-full" /></div>;
   if (error) return <p className="text-sm text-destructive">Não foi possível carregar o edifício: {(error as Error).message}</p>;
   if (!data || !d) return <p className="text-sm text-muted-foreground">Edifício não encontrado.</p>;
-
-  const abrirPdf = async (path: string) => {
-    const { data: s } = await supabase.storage.from("loc-docs").createSignedUrl(path, 300);
-    if (s?.signedUrl) window.open(s.signedUrl, "_blank", "noopener");
-  };
 
   return (
     <div className="op-theme zen-portal space-y-6">
@@ -131,7 +113,6 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do aluguel</TabsTrigger>
-          <TabsTrigger value="documentos">Documentos</TabsTrigger>
           {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
           {admin && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
         </TabsList></div>
@@ -143,10 +124,9 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="contratos">
           <Bloco titulo="Contratos vigentes" acao={<span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>}>
             <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-              {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", "Contrato"].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right", i === 11 && "text-center")}>{h}</th>)}
+              {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²"].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{d.linhas.map((l: any) => {
               const c = CICLO[l.ciclo?.ciclo];
-              const doc = d.docContrato(l.contrato_id);
               return <tr key={l.contrato_id}>
                 <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
@@ -159,18 +139,13 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.fim)}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{c ? <span className={cn("op-tag", c.cls)}>{c.label}</span> : "—"}</td>
                 <td className={tableClasses.num}>{l.rs_m2_matricula == null ? "—" : num2(l.rs_m2_matricula)}</td>
-                <td className={cn(tableClasses.td, "text-center")}>{doc.arquivo?.storage_path
-                  ? <button type="button" onClick={() => abrirPdf(doc.arquivo.storage_path)} aria-label={`Abrir contrato de ${l.unidades}`} className={cn("inline-flex text-secondary hover:text-foreground", doc.situacao === "incompleto" && "opacity-40")}><FileText className="h-4 w-4" strokeWidth={1.5} /></button>
-                  : "—"}</td>
               </tr>;
             })}</tbody></table></div>
-            <p className="mt-3 text-xs text-muted-foreground">R$/m² pela área da matrícula. Contrato: ícone = último contrato ou aditivo vigente; esmaecido = arquivo incompleto; — = ainda não recebido.</p>
           </Bloco>
         </TabsContent>
 
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
-        <TabsContent value="documentos"><Documentos data={data} linhas={d.linhas} docContrato={d.docContrato} admin={admin} abrirPdf={abrirPdf} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
 
         {admin && <TabsContent value="conferencia" className="space-y-4">
