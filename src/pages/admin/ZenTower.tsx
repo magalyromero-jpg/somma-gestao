@@ -153,7 +153,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
                 <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
                 <td className={cn(tableClasses.td, "zen-un")}>{l.matriculas ?? "—"}</td>
-                <td className={tableClasses.td}>{indiceLabel(l.indice)}</td>
+                <td className={cn(tableClasses.td, "zen-un")}>{indiceLabel(l.indice)}</td>
                 <td className={tableClasses.num}>{brl(l.valor_vigente)}</td>
                 <td className={tableClasses.num}>{m2(l.area_contrato_m2)}</td>
                 <td className={tableClasses.num}>{m2(l.area_matricula_m2)}</td>
@@ -341,7 +341,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
         <td className={tableClasses.num}>{num2(e.aluguel_atual)}</td>
         <td className={cn(tableClasses.num, Number(e.variacao_pct) < 0 && "text-destructive")}>{pct(e.variacao_pct)}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.fim_vigente)}</td>
-        <td className={tableClasses.td}>{STATUS[e.status] ?? e.status ?? "—"}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{STATUS[e.status] ?? e.status ?? "—"}</td>
       </tr>)}</tbody></table></div>
     </Bloco>
   </div>;
