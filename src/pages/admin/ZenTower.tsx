@@ -236,7 +236,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
     const l = d.porContrato.get(cid);
     const k = g.a_partir.slice(0, 7);
     if (!l || vigAtual.get(cid)?.id !== g.vigencia_id || k <= hojeKey || k > limiteKey) continue;
-    proximos.push({ unidade: l.unidades, regra: g.origem === "reajuste" ? indiceLabel(l.indice) : "Degrau", boleto: addMes(k, 1), valor: Number(g.valor_mensal), key: cid + k });
+    proximos.push({ unidade: l.unidades, regra: g.origem === "reajuste" && ["IPCA", "IGPM", "MEDIA"].includes(l.indice) ? indiceLabel(l.indice) : "Degrau", boleto: addMes(k, 1), valor: Number(g.valor_mensal), key: cid + k });
   }
   for (const a of data.reajustesCalc) {
     const l = d.porContrato.get(a.contrato_id);
