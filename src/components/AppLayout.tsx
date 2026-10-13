@@ -2,7 +2,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, ListTodo, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserCog, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
-import logoWhite from "@/assets/somma-logo-white.png";
+import logoAsset from "@/assets/somma-logo-branco.png.asset.json";
+const logoWhite = logoAsset.url;
 import { Button } from "@/components/ui/button";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
@@ -43,19 +44,16 @@ export default function AppLayout() {
   return (
     <div className="portal-shell flex min-h-screen w-full bg-background">
       <aside className="hidden md:flex w-[232px] shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="flex items-center gap-3 px-6 py-7">
-          <img src={logoWhite} alt="Somma" className="h-9 w-auto brightness-0 invert" />
-          <div className="min-w-0">
-            <div className="text-[22px] font-light leading-tight text-sidebar-foreground truncate">Somma MFO</div>
-            <div className="text-xs font-light text-sidebar-foreground/65">
-              Gestão de Ativos
-            </div>
+        <div className="px-6 py-7">
+          <img src={logoWhite} alt="Somma Multi-Family Office" className="h-9 w-auto" />
+          <div className="mt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-gold">
+            Gestão de Ativos
           </div>
         </div>
         <nav className="flex-1 py-2 space-y-0.5">
           {items.map((item, index) => (
             <div key={item.to}>
-            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-6 pb-2 pt-5 text-[10px] uppercase tracking-wider text-sidebar-foreground/55">{item.grupo}</div>}
+            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-6 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.1em] text-sidebar-foreground/55">{item.grupo}</div>}
             <NavLink
               to={item.to}
               end={item.to === "/configuracoes"}

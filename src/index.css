@@ -37,7 +37,7 @@
 
     /* Muted / subtle */
     --muted: 195 13% 94%;
-    --muted-foreground: 200 19% 37%;    /* #6F8E9A */
+    --muted-foreground: 200 19% 37%;
 
     /* Somma gold #CC8B15 — accent */
     --accent: 38 80% 44%;
@@ -47,17 +47,17 @@
     --gold-light: 39 73% 58%;           /* #E2A849 */
 
     /* Status — semânticos do Brand Book */
-    --destructive: 3 71% 41%;           /* #C0392B */
+    --destructive: 4 71% 41%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-bg: 6 67% 92%;        /* #FEECEC */
+    --destructive-bg: 6 69% 91%;
 
-    --success: 137 56% 27%;             /* #2D7A4F */
+    --success: 137 56% 27%;
     --success-foreground: 0 0% 100%;
-    --success-bg: 133 33% 92%;          /* #E8F5ED */
+    --success-bg: 129 35% 92%;
 
     --warning: 39 100% 27%;              /* #9A6B0A */
     --warning-foreground: 0 0% 100%;
-    --warning-bg: 43 83% 91%;           /* #FEF6E4 */
+    --warning-bg: 42 85% 90%;
 
     --info: 197 33% 37%;                /* #185FA5 */
     --info-foreground: 0 0% 100%;
@@ -69,17 +69,17 @@
 
     /* Bordas / inputs */
     --border: 200 10% 88%;               /* #C3C4C6 */
-    --input: 199 13% 76%;
+    --input: 199 12% 76%;
     --ring: 38 80% 44%;
 
-    --radius: 0.375rem;                   /* 8px brand */
+    --radius: 0.375rem;
 
     /* Sidebar — escura Somma */
     --sidebar-background: 197 19% 22%;  /* #2E3E44 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 38 80% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 196 18% 28%;
+    --sidebar-accent: 197 18% 28%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 197 19% 32%;
     --sidebar-ring: 38 80% 44%;
@@ -152,7 +152,7 @@
   --gray: 204 10% 58%; --graybg: 204 13% 94%; --green: 137 56% 27%; --greenbg: 133 33% 92%;
   --flame: 18 77% 50%; --goldbg: 38 80% 93%;
   --card: 0 0% 100%; --border: var(--line); --foreground: var(--ink); --card-foreground: var(--ink);
-  --muted: var(--surface2); --muted-foreground: 200 19% 37%; --destructive: var(--red);
+  --muted: var(--surface2); --muted-foreground: 200 19% 37%;
   font-size: 13px; color: hsl(var(--ink));
 }
 .dark, .dark .op-theme {
