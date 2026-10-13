@@ -155,8 +155,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
                 <td className={cn(tableClasses.td, "zen-un")}>{l.matriculas ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-un")}>{indiceLabel(l.indice)}</td>
                 <td className={tableClasses.num}>{brl(l.valor_vigente)}</td>
-                <td className={tableClasses.num}>{m2(l.area_contrato_m2)}</td>
-                <td className={tableClasses.num}>{m2(l.area_matricula_m2)}</td>
+                <td className={tableClasses.num}>{num2(l.area_contrato_m2)}</td>
+                <td className={tableClasses.num}>{num2(l.area_matricula_m2)}</td>
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.inicio)}</td>
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.fim)}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{c ? <span className={cn("op-tag", c.cls)}>{c.label}</span> : "—"}</td>
