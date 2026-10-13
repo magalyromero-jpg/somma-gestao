@@ -268,10 +268,10 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
 
 function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   const resultado = (a: any) => {
-    if (a.valor_aplicado == null || a.valor_calculado == null) return { label: "Reajuste pendente", cls: "op-tag-amber" };
-    const dif = Number(a.valor_aplicado) - Number(a.valor_calculado);
-    if (Math.abs(dif) <= 2) return { label: "Conforme", cls: "op-tag-green" };
-    return dif < 0 ? { label: "Aplicado a menor", cls: "op-tag-red" } : { label: "Aplicado a maior", cls: "op-tag-red" };
+    const p = String(a.parecer ?? "").toLowerCase();
+    if (p === "ok") return { label: "Conforme", cls: "op-tag-green" };
+    if (p === "divergente") return Number(a.diferenca) < 0 ? { label: "Aplicado a menor", cls: "op-tag-red" } : { label: "Aplicado a maior", cls: "op-tag-red" };
+    return { label: "Reajuste pendente", cls: "op-tag-amber" };
   };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
