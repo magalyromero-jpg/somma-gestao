@@ -15,6 +15,27 @@
       "when": 1790183954839,
       "tag": "0001_enable_pg_cron_pg_net",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791918491544,
+      "tag": "0002_loc_schema_zen_locacoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791918516635,
+      "tag": "0003_loc_schema_ciclo_locacao",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791918551010,
+      "tag": "0004_loc_schema_v2_vigencias_matriculas",
+      "breakpoints": true
     }
   ]
 }
