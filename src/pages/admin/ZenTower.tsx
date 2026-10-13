@@ -145,7 +145,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
               </tr>;
             })}</tbody></table></div>
           </Bloco>
-          <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados} admin={admin} /></div>
+          <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>
         </TabsContent>
 
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
@@ -198,7 +198,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
     const r = data.pags.filter((p: any) => p.contrato_id === l.contrato_id && p.data_pagamento.startsWith(String(data.ano)) && p.data_pagamento.slice(0, 7) <= d.ultimoMes).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
     if (o - r > 1) vencido += o - r;
   }
-  for (const e of data.encerrados) vencido += Number(e.alugueis_em_aberto ?? 0) + Number(e.debito_condominio ?? 0);
+  for (const e of data.encerrados ?? []) vencido += Number(e.alugueis_em_aberto ?? 0) + Number(e.debito_condominio ?? 0);
   const hojeKey = new Date().toISOString().slice(0, 7);
   const limiteKey = addMes(hojeKey, 4);
   const [la, lm] = limiteKey.split("-").map(Number);
