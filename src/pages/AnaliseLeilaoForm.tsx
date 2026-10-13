@@ -1,3 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, RotateCcw, Trash2, FileText, ArrowRight, Upload, Loader2 } from "lucide-react";
@@ -65,6 +67,8 @@ const TextField = ({
 );
 
 export default function AnaliseLeilaoForm() {
+  const { role } = useAuth();
+  const editavel = podeEditar(role);
   const nav = useNavigate();
   const [dados, setDados] = useState<DadosImovel>(() => getAtual() || DEFAULT_DADOS);
   const [openMacro, setOpenMacro] = useState(false);
@@ -237,6 +241,7 @@ export default function AnaliseLeilaoForm() {
           </p>
         </header>
 
+        <fieldset disabled={!editavel} className="contents">
         {/* Upload PDF */}
         <div className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-primary transition-colors">
           {uploading ? (
@@ -435,6 +440,7 @@ export default function AnaliseLeilaoForm() {
           </div>
         </div>
 
+        </fieldset>
         {/* Histórico */}
         {historico.length > 0 && (
           <section>
@@ -458,9 +464,9 @@ export default function AnaliseLeilaoForm() {
                     <Button size="sm" variant="default" onClick={() => abrir(h.id)} className="flex-1">
                       Abrir análise
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => excluir(h.id)}>
+                    {editavel && <Button size="sm" variant="outline" onClick={() => excluir(h.id)}>
                       <Trash2 size={14} />
-                    </Button>
+                    </Button>}
                   </div>
                 </div>
               ))}

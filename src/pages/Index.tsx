@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEdificios } from "@/hooks/useEdificios";
+import { rotaInicial } from "@/lib/perfis";
 
 const Index = () => {
   const { role } = useAuth();
-  if (role === "admin" || role === "gestor") return <Navigate to="/dashboard" replace />;
-  if (role === "analista") return <Navigate to="/operacional" replace />;
-  if (role === "familia") return <Navigate to="/area-cliente" replace />;
-  return <Navigate to="/mercado" replace />;
+  const { data = [], isLoading } = useEdificios();
+  if (role === "familia" && isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
+  return <Navigate to={rotaInicial(role, data)} replace />;
 };
 export default Index;

@@ -6,10 +6,11 @@ import MarketSearchForm from "@/components/market/MarketSearchForm";
 import { type MarketSearchParams } from "@/data/marketSearchMock";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 
 export default function PesquisaMercado() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (params: MarketSearchParams) => {
@@ -71,7 +72,7 @@ export default function PesquisaMercado() {
         title="Pesquisa de Mercado"
         subtitle="Mapeie a oferta regional de imóveis e estime o valor de um ativo-alvo a partir de portais."
       />
-      <MarketSearchForm onSubmit={handleSubmit} loading={loading} />
+      {podeEditar(role) ? <MarketSearchForm onSubmit={handleSubmit} loading={loading} /> : <p className="text-sm text-muted-foreground">Perfil de consulta: somente leitura.</p>}
     </>
   );
 }

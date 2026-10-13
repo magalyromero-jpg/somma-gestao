@@ -712,10 +712,10 @@ export default function OperacionalDetalhe() {
               <ArrowLeft className="h-4 w-4 mr-1" />
               Voltar
             </Button>
-            <Button variant="outline" size="sm" onClick={atualizarSync} disabled={syncing || loading}>
+            {podeEditar(role) && <Button variant="outline" size="sm" onClick={atualizarSync} disabled={syncing || loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
               Atualizar sync
-            </Button>
+            </Button>}
           </div>
         }
       />
