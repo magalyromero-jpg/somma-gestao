@@ -53,7 +53,7 @@ export default function AppLayout() {
         <nav className="flex-1 py-2 space-y-0.5">
           {items.map((item, index) => (
             <div key={item.to}>
-            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-6 pb-2 pt-5 text-[10px] uppercase tracking-wider text-sidebar-foreground/55">{item.grupo}</div>}
+            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-6 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.1em] text-sidebar-foreground/55">{item.grupo}</div>}
             <NavLink
               to={item.to}
               end={item.to === "/configuracoes"}
