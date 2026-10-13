@@ -32,7 +32,7 @@ interface UsuarioRow {
 const perfilLabel = PERFIL_LABEL;
 
 export default function Usuarios() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === "admin";
   const [acessoUser, setAcessoUser] = useState<UsuarioRow | null>(null);
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
