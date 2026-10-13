@@ -22,6 +22,13 @@
       "when": 1791918491544,
       "tag": "0002_loc_schema_zen_locacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791918516635,
+      "tag": "0003_loc_schema_ciclo_locacao",
+      "breakpoints": true
     }
   ]
 }

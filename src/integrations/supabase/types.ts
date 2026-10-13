@@ -1077,6 +1077,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_aditivos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_aditivos_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -1120,6 +1127,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_codigos_lidderar_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_codigos_lidderar_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -1160,6 +1174,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_contrato_unidades_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_contrato_unidades_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -1173,6 +1194,13 @@ export type Database = {
             referencedRelation: "loc_unidades"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loc_contrato_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ocupacao"
+            referencedColumns: ["unidade_id"]
+          },
         ]
       }
       loc_contratos: {
@@ -1182,14 +1210,18 @@ export type Database = {
           contrato_anterior_id: string | null
           created_at: string | null
           data_assinatura: string | null
+          data_em_pauta: string | null
           data_fim: string | null
           data_inicio: string | null
+          data_inicio_vigente: string | null
+          data_saida: string | null
           dia_vencimento: number | null
           edificio_id: string
           id: string
           indice: Database["public"]["Enums"]["loc_indice"]
           locatario_id: string
           mes_aniversario: string | null
+          motivo_encerramento: string | null
           periodicidade_meses: number
           piso_zero: boolean
           status: Database["public"]["Enums"]["loc_status"]
@@ -1202,14 +1234,18 @@ export type Database = {
           contrato_anterior_id?: string | null
           created_at?: string | null
           data_assinatura?: string | null
+          data_em_pauta?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          data_inicio_vigente?: string | null
+          data_saida?: string | null
           dia_vencimento?: number | null
           edificio_id: string
           id?: string
           indice?: Database["public"]["Enums"]["loc_indice"]
           locatario_id: string
           mes_aniversario?: string | null
+          motivo_encerramento?: string | null
           periodicidade_meses?: number
           piso_zero?: boolean
           status?: Database["public"]["Enums"]["loc_status"]
@@ -1222,14 +1258,18 @@ export type Database = {
           contrato_anterior_id?: string | null
           created_at?: string | null
           data_assinatura?: string | null
+          data_em_pauta?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          data_inicio_vigente?: string | null
+          data_saida?: string | null
           dia_vencimento?: number | null
           edificio_id?: string
           id?: string
           indice?: Database["public"]["Enums"]["loc_indice"]
           locatario_id?: string
           mes_aniversario?: string | null
+          motivo_encerramento?: string | null
           periodicidade_meses?: number
           piso_zero?: boolean
           status?: Database["public"]["Enums"]["loc_status"]
@@ -1249,6 +1289,13 @@ export type Database = {
             columns: ["contrato_anterior_id"]
             isOneToOne: false
             referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_contrato_anterior_id_fkey"
+            columns: ["contrato_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1306,6 +1353,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_contratos_notas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_contratos_notas_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -1349,6 +1403,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1413,6 +1474,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_documentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_documentos_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -1425,6 +1493,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "loc_unidades"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ocupacao"
+            referencedColumns: ["unidade_id"]
           },
         ]
       }
@@ -1590,6 +1665,13 @@ export type Database = {
             referencedRelation: "loc_unidades"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loc_novas_locacoes_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ocupacao"
+            referencedColumns: ["unidade_id"]
+          },
         ]
       }
       loc_pagamentos: {
@@ -1651,6 +1733,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_pagamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1758,6 +1847,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -2407,7 +2503,52 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_reajustes_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_ciclo: {
+        Row: {
+          ciclo: string | null
+          contrato_id: string | null
+          data_em_pauta: string | null
+          data_saida: string | null
+          dias_para_o_fim: number | null
+          edificio_id: string | null
+          fim_contrato: string | null
+          inicio_original: string | null
+          inicio_vigencia_atual: string | null
+          motivo_encerramento: string | null
+          unidade_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contrato_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_unidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contrato_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ocupacao"
+            referencedColumns: ["unidade_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
             referencedRelation: "loc_edificios"
@@ -2444,6 +2585,13 @@ export type Database = {
             referencedColumns: ["contrato_id"]
           },
           {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
             foreignKeyName: "loc_cronograma_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
@@ -2461,6 +2609,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "loc_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_ocupacao: {
+        Row: {
+          area_m2: number | null
+          edificio_id: string | null
+          nome: string | null
+          situacao: string | null
+          tipo: string | null
+          unidade_id: string | null
+        }
+        Insert: {
+          area_m2?: number | null
+          edificio_id?: string | null
+          nome?: string | null
+          situacao?: never
+          tipo?: string | null
+          unidade_id?: string | null
+        }
+        Update: {
+          area_m2?: number | null
+          edificio_id?: string | null
+          nome?: string | null
+          situacao?: never
+          tipo?: string | null
+          unidade_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_unidades_edificio_id_fkey"
             columns: ["edificio_id"]
             isOneToOne: false
             referencedRelation: "loc_edificios"
@@ -2534,7 +2717,7 @@ export type Database = {
         | "boleto"
         | "comunicado"
         | "outro"
-      loc_indice: "IGPM" | "IPCA" | "FIXO" | "NENHUM"
+      loc_indice: "IGPM" | "IPCA" | "FIXO" | "NENHUM" | "MEDIA"
       loc_status:
         | "rascunho"
         | "ativo"
@@ -2681,7 +2864,7 @@ export const Constants = {
         "comunicado",
         "outro",
       ],
-      loc_indice: ["IGPM", "IPCA", "FIXO", "NENHUM"],
+      loc_indice: ["IGPM", "IPCA", "FIXO", "NENHUM", "MEDIA"],
       loc_status: [
         "rascunho",
         "ativo",
