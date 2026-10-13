@@ -57,6 +57,13 @@
       "when": 1791921779575,
       "tag": "0007_loc_projecao",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791923608696,
+      "tag": "0008_loc_acessos_por_usuario",
+      "breakpoints": true
     }
   ]
 }

@@ -3167,6 +3167,13 @@ export type Database = {
         Returns: boolean
       }
       is_dominio_somma: { Args: { _email: string }; Returns: boolean }
+      loc_acessos_do_usuario: {
+        Args: { p_user: string }
+        Returns: {
+          edificio_id: string
+          papel: string
+        }[]
+      }
       loc_calcular_reajuste: {
         Args: {
           p_aniversario: string
@@ -3184,6 +3191,10 @@ export type Database = {
       loc_conceder_acesso: {
         Args: { p_edificio: string; p_email: string }
         Returns: string
+      }
+      loc_definir_acesso: {
+        Args: { p_edificio: string; p_papel: string; p_user: string }
+        Returns: undefined
       }
       loc_eh_admin: { Args: { p_edificio: string }; Returns: boolean }
       loc_fluxo: {
