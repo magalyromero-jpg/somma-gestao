@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart } from "recharts";
-import { Bloco, CORES, LegendaTexto, chartTooltipStyle, tableClasses } from "@/components/operacional/Shared";
+import {  Bloco,  CORES,  LegendaTexto,  chartTooltipStyle,   } from "@/components/operacional/Shared";
+import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { MESES, addMes, brl, dt, m2, mil, num2, pct, projetarContrato } from "@/lib/locacoes";
+const inteiro = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
 type Mes = { mes: string; key: string; i: number; orcado: number; realizado: number; fechado: boolean };
 
@@ -58,13 +60,13 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     </Bloco>
 
     <Bloco titulo="Orçado × realizado, visão global (R$)">
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1300px]")}><thead><tr className={tableClasses.head}>
+      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}></th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
       </tr></thead><tbody>
         {([["Orçado", (m: Mes) => m.orcado, tot.o], ["Realizado", (m: Mes) => (m.fechado ? m.realizado : null), tot.r], ["Diferença", (m: Mes) => (m.fechado ? m.realizado - m.orcado : null), tot.r - meses.filter((m) => m.fechado).reduce((s, m) => s + m.orcado, 0)]] as const).map(([rot, f, t]) =>
           <tr key={rot}><td className={cn(tableClasses.td, "font-medium")}>{rot}</td>
-            {meses.map((m) => { const v = f(m); return <td key={m.key} className={cn(tableClasses.num, rot === "Diferença" && v != null && v < 0 && "text-destructive")}>{v == null ? "—" : num2(v)}</td>; })}
-            <td className={cn(tableClasses.num, "font-medium", rot === "Diferença" && t < 0 && "text-destructive")}>{num2(t)}</td></tr>)}
+            {meses.map((m) => { const v = f(m); return <td key={m.key} className={cn(tableClasses.num, rot === "Diferença" && v != null && v < 0 && "text-destructive")}>{v == null ? "—" : inteiro(v)}</td>; })}
+            <td className={cn(tableClasses.num, "font-medium", rot === "Diferença" && t < 0 && "text-destructive")}>{inteiro(t)}</td></tr>)}
       </tbody></table></div>
     </Bloco>
 
@@ -101,23 +103,23 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
     <Button size="sm" variant={visao === "or" ? "default" : "outline"} aria-pressed={visao === "or"} onClick={() => setVisao("or")}>Orçado × realizado</Button>
     <Button size="sm" variant={visao === "mes" ? "default" : "outline"} aria-pressed={visao === "mes"} onClick={() => setVisao("mes")}>Orçado por mês</Button>
   </div>}>
-    {visao === "or" ? <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1000px]")}><thead><tr className={tableClasses.head}>
+    {visao === "or" ? <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {rows.map(({ l, o, r }) => <tr key={l.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={tableClasses.td}>{l.locatario}</td>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
         <td className={tableClasses.num}>{brl(o)}</td><td className={tableClasses.num}>{brl(r)}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{brl(r - o)}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
-        <td className={cn(tableClasses.td, "max-w-[280px] truncate")} title={obs(l.contrato_id)}>{obs(l.contrato_id)}</td>
+        <td className={cn(tableClasses.td, "zen-txt")} title={obs(l.contrato_id)}>{obs(l.contrato_id)}</td>
       </tr>)}
       <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td><td className={tableClasses.td}></td></tr>
     </tbody></table></div>
-    : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1400px]")}><thead><tr className={tableClasses.head}>
+    : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
     </tr></thead><tbody>
-      {rows.map(({ l, porMes }) => <tr key={l.contrato_id}><td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={tableClasses.td}>{l.locatario}</td>{porMes.map((v, i) => <td key={i} className={tableClasses.num}>{num2(v)}</td>)}</tr>)}
-      <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => <td key={i} className={tableClasses.num}>{num2(rows.reduce((s, x) => s + x.porMes[i], 0))}</td>)}</tr>
+      {rows.map(({ l, porMes }) => <tr key={l.contrato_id}><td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>{porMes.map((v, i) => <td key={i} className={tableClasses.num}>{inteiro(v)}</td>)}</tr>)}
+      <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => <td key={i} className={tableClasses.num}>{inteiro(rows.reduce((s, x) => s + x.porMes[i], 0))}</td>)}</tr>
     </tbody></table></div>}
   </Bloco>;
 }
@@ -169,15 +171,15 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
         <Bar dataKey="v" name="Receita projetada" fill={CORES.secundaria} radius={[2, 2, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
-    <div className="mt-4"><table className={cn(tableClasses.table, "min-w-0")}><thead><tr className={tableClasses.head}>
+    <div className="mt-4"><table className={cn(tableClasses.table)}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Ano</th><th className={cn(tableClasses.th, "text-right")}>Receita projetada (R$)</th><th className={cn(tableClasses.th, "text-right")}>Variação vs ano anterior</th>
     </tr></thead><tbody>{r.anos.map((a) => <tr key={a.y}><td className={tableClasses.td}>{a.y}</td><td className={tableClasses.num}>{num2(a.v)}</td><td className={cn(tableClasses.num, a.varPct < 0 && "text-destructive")}>{pct(a.varPct)}</td></tr>)}</tbody></table></div>
     <div className="mt-4"><Button size="sm" variant="outline" aria-pressed={detalhe} onClick={() => setDetalhe((x) => !x)}>{detalhe ? "Ocultar detalhe por unidade" : "Ver detalhe por unidade"}</Button></div>
-    {detalhe && <div className={cn(tableClasses.wrap, "mt-4")}><table className={cn(tableClasses.table, "min-w-[1100px]")}><thead><tr className={tableClasses.head}>
+    {detalhe && <div className={cn(tableClasses.wrap, "mt-4")}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "m²", "R$/m² hoje", "R$/m² nov/29", "Próxima renovação", "2027", "2028", "2029"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i !== 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {r.porContrato.map((x) => <tr key={x.l.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium")}>{x.l.unidades}</td><td className={tableClasses.td}>{x.l.locatario}</td>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.l.locatario}</td>
         <td className={tableClasses.num}>{x.area ? m2(x.area) : "—"}</td><td className={tableClasses.num}>{x.hoje == null ? "—" : num2(x.hoje)}</td><td className={tableClasses.num}>{x.nov29 == null ? "—" : num2(x.nov29)}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(x.renov)}</td>
         <td className={tableClasses.num}>{num2(x.a2027)}</td><td className={tableClasses.num}>{num2(x.a2028)}</td><td className={tableClasses.num}>{num2(x.a2029)}</td>

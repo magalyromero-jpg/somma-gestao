@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Bloco, tableClasses } from "@/components/operacional/Shared";
+import {  Bloco,   } from "@/components/operacional/Shared";
+import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +59,7 @@ export function AcessosCliente({ edificioId }: { edificioId: string }) {
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Nome</th><th className={tableClasses.th}>E-mail</th><th className={tableClasses.th}></th>
         </tr></thead><tbody>{data.map((a) => <tr key={a.user_id}>
-          <td className={tableClasses.td}>{a.nome ?? "—"}</td>
+          <td className={tableClasses.td + " zen-txt"}>{a.nome ?? "—"}</td>
           <td className={tableClasses.td}>{a.email ?? "—"}</td>
           <td className={tableClasses.td}><Button size="sm" variant="ghost" onClick={() => revogar(a.user_id)}>Remover</Button></td>
         </tr>)}</tbody></table></div>
