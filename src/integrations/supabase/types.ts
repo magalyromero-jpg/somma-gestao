@@ -1959,6 +1959,54 @@ export type Database = {
         }
         Relationships: []
       }
+      loc_projecao_indices: {
+        Row: {
+          ano: number
+          boletim: string
+          indice: string
+          valor: number
+        }
+        Insert: {
+          ano: number
+          boletim: string
+          indice: string
+          valor: number
+        }
+        Update: {
+          ano?: number
+          boletim?: string
+          indice?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      loc_projecao_regras: {
+        Row: {
+          contrato_id: string
+          edificio_id: string
+          id: string
+          observacao: string | null
+          renovacao_em: string
+          valor_renovacao: number
+        }
+        Insert: {
+          contrato_id: string
+          edificio_id: string
+          id?: string
+          observacao?: string | null
+          renovacao_em: string
+          valor_renovacao: number
+        }
+        Update: {
+          contrato_id?: string
+          edificio_id?: string
+          id?: string
+          observacao?: string | null
+          renovacao_em?: string
+          valor_renovacao?: number
+        }
+        Relationships: []
+      }
       loc_reajustes: {
         Row: {
           aniversario: string

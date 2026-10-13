@@ -50,6 +50,13 @@
       "when": 1791918985929,
       "tag": "0006_somma_admin_e_area_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791921779575,
+      "tag": "0007_loc_projecao",
+      "breakpoints": true
     }
   ]
 }
