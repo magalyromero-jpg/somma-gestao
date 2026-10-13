@@ -114,7 +114,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       </tr></thead><tbody>{data.pags.map((p: any) => <tr key={p.id}>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(p.data_pagamento)}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(p.data_vencimento)}</td>
-        <td className={cn(tableClasses.td, "tabular-nums text-muted-foreground")}>{p.codigo}</td>
+        <td className={cn(tableClasses.td, "whitespace-nowrap tabular-nums text-muted-foreground")}>{p.codigo}</td>
         <td className={tableClasses.td}>{p.imovel_nome?.replace(`${data.edificio.nome} - `, "")}</td>
         <td className={tableClasses.td}>{p.contrato_id ? (() => { const l = porContrato.get(p.contrato_id); return l ? `${l.unidades} · ${l.locatario}` : "—"; })() : <span className="op-tag op-tag-gray">Receita eventual</span>}</td>
         <td className={cn(tableClasses.num, p.dias_atraso > 3 && "text-destructive")}>{p.dias_atraso ? `${p.dias_atraso} d` : "—"}</td>

@@ -104,7 +104,6 @@ export default function AppLayout() {
         <header className="md:hidden flex items-center justify-between gap-3 px-4 py-3 bg-sidebar text-sidebar-foreground">
           <div className="flex items-center gap-2">
             <img src={logoWhite} alt="Somma Multi-Family Office" className="h-6 w-auto" />
-            <div className="font-light text-sm">Somma MFO</div>
           </div>
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
