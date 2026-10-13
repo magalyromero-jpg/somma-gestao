@@ -10,6 +10,6 @@
 
 # Autenticação Somma MFO
 - [x] Trocar os logotipos das três telas claras pela versão escura, mantendo o branco no painel escuro e na sidebar.
-- [ ] Verificar as telas de autenticação.
+- [x] Verificar as três telas de autenticação: logotipos escuros carregados, título Somma MFO e nenhum erro de página.
 - [ ] Personalizar os e-mails e o remetente: depende da configuração do domínio e do envio do modelo email_convite_somma.html.
 - [ ] Informar os registros DNS reais após a configuração do domínio.
