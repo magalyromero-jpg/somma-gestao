@@ -1,14 +1,14 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
-import { FileText, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { brl, dt, num2 } from "@/lib/locacoes";
+import { brl, dt, num2, formatoPagamentoPermitido } from "@/lib/locacoes";
 
 const db = supabase as any;
 
@@ -54,6 +54,10 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
 
   const importar = async (files: File[]) => {
     const f = files[0]; if (!f) return;
+    if (files.some((file) => !formatoPagamentoPermitido(file.name))) {
+      toast({ title: "Formato não permitido", description: "Envie pagamentos em .xlsx, .xls ou .csv.", variant: "destructive" });
+      return;
+    }
     setOcupado(true);
     try {
       const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
@@ -121,59 +125,6 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
         <td className={cn(tableClasses.num, p.dias_atraso > 3 && "text-destructive")}>{p.dias_atraso ? `${p.dias_atraso} d` : "—"}</td>
         <td className={tableClasses.num}>{brl(p.valor_liquido)}</td>
       </tr>)}</tbody></table></div>
-    </Bloco>
-  </div>;
-}
-
-const SITUACAO: Record<string, { label: string; cls: string }> = {
-  completo: { label: "Completo", cls: "op-tag-green" },
-  incompleto: { label: "Incompleto: faltam aditivos", cls: "op-tag-amber" },
-  nao_recebido: { label: "Não recebido", cls: "op-tag-gray" },
-};
-
-export function Documentos({ data, linhas, docContrato, admin, abrirPdf }: { data: any; linhas: any[]; docContrato: (id: string) => { arquivo: any; situacao: string }; admin: boolean; abrirPdf: (p: string) => void }) {
-  const qc = useQueryClient();
-  const { toast } = useToast();
-  const [contrato, setContrato] = useState<string>("");
-  const [ocupado, setOcupado] = useState(false);
-
-  const enviar = async (files: File[]) => {
-    if (!contrato) return toast({ title: "Escolha o contrato antes de enviar", variant: "destructive" });
-    setOcupado(true);
-    try {
-      for (const f of files) {
-        const path = `${data.edificio.id}/${contrato}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
-        const up = await supabase.storage.from("loc-docs").upload(path, f, { contentType: f.type || "application/pdf" });
-        if (up.error) throw up.error;
-        const { error } = await db.from("loc_documentos").insert({ edificio_id: data.edificio.id, contrato_id: contrato, tipo: /aditivo/i.test(f.name) ? "aditivo" : "contrato", titulo: f.name, storage_path: path, revisado: false, visivel_cliente: false });
-        if (error) throw error;
-      }
-      toast({ title: "Documento recebido", description: "Passa por revisão da equipe antes de aparecer para o cliente." });
-      qc.invalidateQueries({ queryKey: ["loc-edificio"] });
-    } catch (e) {
-      toast({ title: "Não foi possível enviar", description: (e as Error).message, variant: "destructive" });
-    } finally { setOcupado(false); }
-  };
-
-  return <div className="space-y-4">
-    {admin && <div className="space-y-2">
-      <Select value={contrato} onValueChange={setContrato}><SelectTrigger className="h-9 w-80 text-xs" aria-label="Contrato"><SelectValue placeholder="Vincular ao contrato…" /></SelectTrigger>
-        <SelectContent>{linhas.map((l) => <SelectItem key={l.contrato_id} value={l.contrato_id}>{l.unidades} · {l.locatario}</SelectItem>)}</SelectContent></Select>
-      <Zona titulo="Arraste os contratos aqui" detalhe="PDF. Passa por revisão da equipe antes de aparecer para o cliente." accept=".pdf" onFiles={enviar} ocupado={ocupado} />
-    </div>}
-    <Bloco titulo="Documentos">
-      <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th><th className={tableClasses.th}>Arquivo</th><th className={tableClasses.th}>Situação</th>
-      </tr></thead><tbody>{linhas.map((l) => {
-        const d = docContrato(l.contrato_id);
-        const s = SITUACAO[d.situacao];
-        return <tr key={l.contrato_id}>
-          <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades}</td>
-          <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
-          <td className={cn(tableClasses.td, "zen-txt")}>{d.arquivo ? <button type="button" className="inline-flex items-center gap-1.5 text-secondary hover:text-foreground" onClick={() => abrirPdf(d.arquivo.storage_path)}><FileText className="h-3.5 w-3.5" strokeWidth={1.5} />{d.arquivo.titulo ?? "Documento"}</button> : "—"}</td>
-          <td className={tableClasses.td}><span className={cn("op-tag", s.cls)}>{s.label}</span></td>
-        </tr>;
-      })}</tbody></table></div>
     </Bloco>
   </div>;
 }

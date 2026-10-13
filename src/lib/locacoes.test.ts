@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { projetarContrato, taxaProjetada } from "./locacoes";
+import { formatoPagamentoPermitido, projetarContrato, taxaProjetada } from "./locacoes";
 
 const focus = { IPCA: { 2026: 5.01, 2027: 4.3 }, IGPM: { 2026: 5.27, 2027: 4.11 } };
+
+describe("formatos de importação de pagamentos", () => {
+  it("rejeita PDFs soltos", () => {
+    expect(formatoPagamentoPermitido("contrato.pdf")).toBe(false);
+    expect(formatoPagamentoPermitido("aditivo.PDF")).toBe(false);
+  });
+  it("rejeita ZIPs", () => {
+    expect(formatoPagamentoPermitido("pagamentos.zip")).toBe(false);
+    expect(formatoPagamentoPermitido("pagamentos.xlsx.zip")).toBe(false);
+  });
+  it("mantém os formatos de pagamentos existentes", () => {
+    expect(formatoPagamentoPermitido("pagamentos.xlsx")).toBe(true);
+    expect(formatoPagamentoPermitido("pagamentos.xls")).toBe(true);
+    expect(formatoPagamentoPermitido("pagamentos.CSV")).toBe(true);
+  });
+});
 
 describe("projeção de locações", () => {
   it("taxa ponderada pelo mês do reajuste", () => {
