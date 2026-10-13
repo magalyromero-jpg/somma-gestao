@@ -1094,6 +1094,13 @@ export type Database = {
             foreignKeyName: "loc_aditivos_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_aditivos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -1159,6 +1166,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigos_lidderar_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1233,6 +1247,13 @@ export type Database = {
             foreignKeyName: "loc_contrato_unidades_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contrato_unidades_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -1278,6 +1299,7 @@ export type Database = {
           data_inicio: string | null
           data_inicio_vigente: string | null
           data_saida: string | null
+          debito_condominio: number
           dia_vencimento: number | null
           edificio_id: string
           id: string
@@ -1286,6 +1308,7 @@ export type Database = {
           mes_aniversario: string | null
           mes_reajuste: number | null
           motivo_encerramento: string | null
+          no_orcamento: boolean
           periodicidade_meses: number
           piso_zero: boolean
           retencao_pct: number
@@ -1304,6 +1327,7 @@ export type Database = {
           data_inicio?: string | null
           data_inicio_vigente?: string | null
           data_saida?: string | null
+          debito_condominio?: number
           dia_vencimento?: number | null
           edificio_id: string
           id?: string
@@ -1312,6 +1336,7 @@ export type Database = {
           mes_aniversario?: string | null
           mes_reajuste?: number | null
           motivo_encerramento?: string | null
+          no_orcamento?: boolean
           periodicidade_meses?: number
           piso_zero?: boolean
           retencao_pct?: number
@@ -1330,6 +1355,7 @@ export type Database = {
           data_inicio?: string | null
           data_inicio_vigente?: string | null
           data_saida?: string | null
+          debito_condominio?: number
           dia_vencimento?: number | null
           edificio_id?: string
           id?: string
@@ -1338,6 +1364,7 @@ export type Database = {
           mes_aniversario?: string | null
           mes_reajuste?: number | null
           motivo_encerramento?: string | null
+          no_orcamento?: boolean
           periodicidade_meses?: number
           piso_zero?: boolean
           retencao_pct?: number
@@ -1372,6 +1399,13 @@ export type Database = {
             columns: ["contrato_anterior_id"]
             isOneToOne: false
             referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_contrato_anterior_id_fkey"
+            columns: ["contrato_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1460,6 +1494,13 @@ export type Database = {
             foreignKeyName: "loc_contratos_notas_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: true
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_notas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -1528,6 +1569,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1617,6 +1665,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -1906,6 +1961,13 @@ export type Database = {
             foreignKeyName: "loc_pagamentos_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_pagamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -2089,6 +2151,13 @@ export type Database = {
             foreignKeyName: "loc_reajustes_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -2263,6 +2332,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_vigencias_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
             referencedColumns: ["contrato_id"]
           },
           {
@@ -2912,6 +2988,13 @@ export type Database = {
             foreignKeyName: "loc_reajustes_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -3015,6 +3098,13 @@ export type Database = {
             foreignKeyName: "loc_cronograma_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
             referencedRelation: "loc_v_evolucao"
             referencedColumns: ["contrato_id"]
           },
@@ -3049,6 +3139,28 @@ export type Database = {
           unidades: string | null
           valor_vigente: number | null
           vigencia_seq: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_encerrados: {
+        Row: {
+          alugueis_em_aberto: number | null
+          contrato_id: string | null
+          data_em_pauta: string | null
+          data_saida: string | null
+          debito_condominio: number | null
+          edificio_id: string | null
+          locatario: string | null
+          motivo_encerramento: string | null
+          unidades: string | null
         }
         Relationships: [
           {

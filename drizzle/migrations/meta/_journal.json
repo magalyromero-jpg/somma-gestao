@@ -64,6 +64,13 @@
       "when": 1791923608696,
       "tag": "0008_loc_acessos_por_usuario",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791925390643,
+      "tag": "0009_loc_encerramento_contratos",
+      "breakpoints": true
     }
   ]
 }
