@@ -206,3 +206,4 @@
 .zen-portal .zen-wide th, .zen-portal .zen-wide td { padding-left: 8px; padding-right: 8px; font-size: 12px; }
 @media (min-width: 1024px) { .zen-portal .zen-table th { white-space: normal; } }
 .zen-portal .zen-table td.zen-un { white-space: normal; min-width: 4.5rem; }
+.zen-portal .zen-table td.zen-txt .op-tag { white-space: normal; }
