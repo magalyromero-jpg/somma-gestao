@@ -110,7 +110,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
         <td className={tableClasses.num}>{brl(o)}</td><td className={tableClasses.num}>{brl(r)}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{brl(r - o)}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
-        <td className={cn(tableClasses.td, "max-w-[280px] truncate")} title={obs(l.contrato_id)}>{obs(l.contrato_id)}</td>
+        <td className={cn(tableClasses.td, "zen-txt")} title={obs(l.contrato_id)}>{obs(l.contrato_id)}</td>
       </tr>)}
       <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td><td className={tableClasses.td}></td></tr>
     </tbody></table></div>
