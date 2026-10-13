@@ -1,3 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format, isPast, isToday, differenceInDays } from "date-fns";
@@ -544,6 +546,7 @@ function PerfilTab({ taskId, titulo }: { taskId: string; titulo: string }) {
 }
 
 export default function OperacionalDetalhe() {
+  const { role } = useAuth();
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -927,7 +930,7 @@ export default function OperacionalDetalhe() {
       )}
 
       {/* Aba — Perfil */}
-      {aba === "perfil" && taskId && <PerfilTab taskId={taskId} titulo={titulo} />}
+      {aba === "perfil" && taskId && <fieldset disabled={!podeEditar(role)} className="contents"><PerfilTab taskId={taskId} titulo={titulo} /></fieldset>}
     </>
 
   );

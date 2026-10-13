@@ -1,3 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { podeEditar } from "@/lib/perfis";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -36,6 +38,7 @@ async function buscarSnapshots() {
 }
 
 export default function Operacional() {
+  const { role } = useAuth();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const familia = params.get("familia");
