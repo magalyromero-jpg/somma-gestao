@@ -6,20 +6,20 @@ import logoWhite from "@/assets/somma-logo-white.png";
 import { Button } from "@/components/ui/button";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
-  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"] },
-  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "analista"] },
+  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor"], grupo: "Visão geral" },
+  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "analista"], grupo: "Visão geral" },
 
 
-  { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "analista"] },
-  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "analista"] },
-  { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor"] },
+  { to: "/admin/zen-tower",      label: "Zen Tower",           icon: Landmark,        allowed: ["admin", "gestor"], grupo: "Carteira" },
+  { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "analista"], grupo: "Inteligência de mercado" },
+  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "analista"], grupo: "Inteligência de mercado" },
+  { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor"], grupo: "Inteligência de mercado" },
 
   { to: "/area-cliente",         label: "Área do Cliente",     icon: Landmark,        allowed: ["familia"] },
-  { to: "/admin/zen-tower",      label: "Zen Tower",           icon: Landmark,        allowed: ["admin", "gestor"], grupo: "Administração" },
-  { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"] },
-  { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"] },
+  { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"], grupo: "Administração" },
+  { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"], grupo: "Administração" },
   
-  { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"] },
+  { to: "/configuracoes",         label: "Configurações",     icon: Settings,        allowed: ["admin", "gestor"], grupo: "Administração" },
 ];
 
 export default function AppLayout() {
@@ -53,11 +53,12 @@ export default function AppLayout() {
           </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <div key={item.to}>
-            {item.grupo && <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-[0.15em] text-white/40">{item.grupo}</div>}
+            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-[0.15em] text-sidebar-foreground/40">{item.grupo}</div>}
             <NavLink
               to={item.to}
+              end={item.to === "/configuracoes"}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-light transition-colors",
