@@ -90,7 +90,6 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
   const ano = String(data.ano);
   const u = Number(ultimoMes.slice(5, 7)) || 0;
   const ms = new Set((PERIODOS.find((p) => p.v === periodo) ?? PERIODOS[0]).meses(u));
-  const obs = (cid: string) => [...data.vigencias].filter((v: any) => v.contrato_id === cid).sort((a: any, b: any) => b.seq - a.seq)[0]?.observacao ?? "";
   const orcMes = (cid: string, m: number) => data.orcado.filter((o: any) => o.contrato_id === cid && o.mes.startsWith(`${ano}-${String(m).padStart(2, "0")}`)).reduce((s: number, o: any) => s + Number(o.valor ?? 0), 0);
   const rows = linhas.map((l) => {
     const o = [...ms].reduce((s, m) => s + orcMes(l.contrato_id, m), 0);
@@ -104,16 +103,15 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
     <Button size="sm" variant={visao === "mes" ? "default" : "outline"} aria-pressed={visao === "mes"} onClick={() => setVisao("mes")}>Orçado por mês</Button>
   </div>}>
     {visao === "or" ? <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {rows.map(({ l, o, r }) => <tr key={l.contrato_id}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
         <td className={tableClasses.num}>{brl(o)}</td><td className={tableClasses.num}>{brl(r)}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{brl(r - o)}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
-        <td className={cn(tableClasses.td, "zen-txt")} title={obs(l.contrato_id)}>{obs(l.contrato_id)}</td>
       </tr>)}
-      <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td><td className={tableClasses.td}></td></tr>
+      <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td></tr>
     </tbody></table></div>
     : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}

@@ -6,6 +6,7 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const db = supabase as any;
 
@@ -67,4 +68,56 @@ export function AcessosCliente({ edificioId }: { edificioId: string }) {
       <p className="mt-2 text-xs text-muted-foreground">O cliente vê apenas Visão geral, Contratos e Fluxo de caixa deste edifício.</p>
     </Bloco>
   );
+}
+
+/** Acesso de um usuário aos edifícios (Administração › Usuários). Só admin. */
+export function AcessoEdificios({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery({
+    queryKey: ["loc-acessos-usuario", userId],
+    queryFn: async () => {
+      const [ed, ac] = await Promise.all([
+        db.from("loc_edificios").select("id,nome").order("nome"),
+        db.rpc("loc_acessos_do_usuario", { p_user: userId }),
+      ]);
+      if (ed.error) throw ed.error;
+      if (ac.error) throw ac.error;
+      return { edificios: ed.data ?? [], acessos: new Map<string, string>((ac.data ?? []).map((a: any) => [a.edificio_id, a.papel])) };
+    },
+  });
+  const [papeis, setPapeis] = useState<Record<string, string>>({});
+  const recarregar = () => qc.invalidateQueries({ queryKey: ["loc-acessos-usuario", userId] });
+  const conceder = async (edificio: string) => {
+    const papel = papeis[edificio] ?? data?.acessos.get(edificio) ?? "cliente";
+    const { error } = await db.rpc("loc_definir_acesso", { p_edificio: edificio, p_user: userId, p_papel: papel });
+    if (error) return toast({ title: "Não foi possível conceder", description: error.message, variant: "destructive" });
+    toast({ title: "Acesso concedido" }); recarregar();
+  };
+  const revogar = async (edificio: string) => {
+    const { error } = await db.rpc("loc_revogar_acesso", { p_edificio: edificio, p_user: userId });
+    if (error) return toast({ title: "Não foi possível revogar", description: error.message, variant: "destructive" });
+    toast({ title: "Acesso revogado" }); recarregar();
+  };
+  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
+  return <div className="space-y-2">
+    <h3 className="text-[15px] font-medium">Acesso a edifícios</h3>
+    <table className="w-full text-[13px]"><thead><tr className="border-b text-left text-[11px] font-bold uppercase tracking-[0.04em] text-secondary">
+      <th className="px-[10px] py-2">Edifício</th><th className="px-[10px] py-2">Papel</th><th className="px-[10px] py-2">Situação</th><th className="px-[10px] py-2"></th>
+    </tr></thead><tbody>{(data?.edificios ?? []).map((e: any) => {
+      const atual = data?.acessos.get(e.id);
+      return <tr key={e.id} className="border-b">
+        <td className="px-[10px] py-2.5 font-medium">{e.nome}</td>
+        <td className="px-[10px] py-2.5"><Select value={papeis[e.id] ?? atual ?? "cliente"} onValueChange={(v) => setPapeis((p) => ({ ...p, [e.id]: v }))}>
+          <SelectTrigger className="h-8 w-52 text-xs" aria-label={`Papel em ${e.nome}`}><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="admin">Admin Somma</SelectItem><SelectItem value="cliente">Cliente somente leitura</SelectItem></SelectContent>
+        </Select></td>
+        <td className="px-[10px] py-2.5">{atual ? <span className="op-tag op-tag-green">{atual === "admin" ? "Admin Somma" : "Cliente"}</span> : <span className="op-tag op-tag-gray">Sem acesso</span>}</td>
+        <td className="px-[10px] py-2.5 text-right whitespace-nowrap">
+          <Button size="sm" onClick={() => conceder(e.id)}>Conceder</Button>
+          {atual && <Button size="sm" variant="outline" className="ml-2" onClick={() => revogar(e.id)}>Revogar</Button>}
+        </td>
+      </tr>;
+    })}</tbody></table>
+  </div>;
 }

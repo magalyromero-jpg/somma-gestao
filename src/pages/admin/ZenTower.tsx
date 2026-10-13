@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
-import { AcessosCliente } from "@/components/locacoes/AcessosCliente";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { Documentos, ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { MESES, MESES_LONGOS, addMes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
@@ -42,7 +41,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_pagamentos").select("id,codigo,imovel_nome,data_vencimento,data_pagamento,valor_liquido,contrato_id,dias_atraso").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(5000),
     db.rpc("loc_orcado_caixa", { p_edificio: id, p_ano: ano }),
     db.from("loc_v_metragem").select("*").eq("edificio_id", id),
-    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,documento_id,observacao").eq("edificio_id", id),
+    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,documento_id").eq("edificio_id", id),
     db.from("loc_v_alerta_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_auditoria_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_evolucao").select("*").eq("edificio_id", id),
@@ -135,7 +134,6 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
           {admin && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
-          {admin && <TabsTrigger value="acessos">Acessos do cliente</TabsTrigger>}
         </TabsList></div>
 
         <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
@@ -189,7 +187,6 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           </Bloco>
         </TabsContent>}
 
-        {admin && <TabsContent value="acessos"><AcessosCliente edificioId={data.edificio.id} /></TabsContent>}
       </Tabs>
     </div>
   );
