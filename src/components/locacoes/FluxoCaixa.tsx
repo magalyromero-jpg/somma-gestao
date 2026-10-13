@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart } from "recharts";
-import { Bloco, CORES, LegendaTexto, chartTooltipStyle, tableClasses } from "@/components/operacional/Shared";
+import {  Bloco,  CORES,  LegendaTexto,  chartTooltipStyle,   } from "@/components/operacional/Shared";
+import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -58,7 +59,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     </Bloco>
 
     <Bloco titulo="Orçado × realizado, visão global (R$)">
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1300px]")}><thead><tr className={tableClasses.head}>
+      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}></th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
       </tr></thead><tbody>
         {([["Orçado", (m: Mes) => m.orcado, tot.o], ["Realizado", (m: Mes) => (m.fechado ? m.realizado : null), tot.r], ["Diferença", (m: Mes) => (m.fechado ? m.realizado - m.orcado : null), tot.r - meses.filter((m) => m.fechado).reduce((s, m) => s + m.orcado, 0)]] as const).map(([rot, f, t]) =>
@@ -101,7 +102,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
     <Button size="sm" variant={visao === "or" ? "default" : "outline"} aria-pressed={visao === "or"} onClick={() => setVisao("or")}>Orçado × realizado</Button>
     <Button size="sm" variant={visao === "mes" ? "default" : "outline"} aria-pressed={visao === "mes"} onClick={() => setVisao("mes")}>Orçado por mês</Button>
   </div>}>
-    {visao === "or" ? <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1000px]")}><thead><tr className={tableClasses.head}>
+    {visao === "or" ? <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {rows.map(({ l, o, r }) => <tr key={l.contrato_id}>
@@ -113,7 +114,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
       </tr>)}
       <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td><td className={tableClasses.td}></td></tr>
     </tbody></table></div>
-    : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[1400px]")}><thead><tr className={tableClasses.head}>
+    : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
     </tr></thead><tbody>
       {rows.map(({ l, porMes }) => <tr key={l.contrato_id}><td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={tableClasses.td}>{l.locatario}</td>{porMes.map((v, i) => <td key={i} className={tableClasses.num}>{num2(v)}</td>)}</tr>)}
@@ -169,11 +170,11 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
         <Bar dataKey="v" name="Receita projetada" fill={CORES.secundaria} radius={[2, 2, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
-    <div className="mt-4"><table className={cn(tableClasses.table, "min-w-0")}><thead><tr className={tableClasses.head}>
+    <div className="mt-4"><table className={cn(tableClasses.table)}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Ano</th><th className={cn(tableClasses.th, "text-right")}>Receita projetada (R$)</th><th className={cn(tableClasses.th, "text-right")}>Variação vs ano anterior</th>
     </tr></thead><tbody>{r.anos.map((a) => <tr key={a.y}><td className={tableClasses.td}>{a.y}</td><td className={tableClasses.num}>{num2(a.v)}</td><td className={cn(tableClasses.num, a.varPct < 0 && "text-destructive")}>{pct(a.varPct)}</td></tr>)}</tbody></table></div>
     <div className="mt-4"><Button size="sm" variant="outline" aria-pressed={detalhe} onClick={() => setDetalhe((x) => !x)}>{detalhe ? "Ocultar detalhe por unidade" : "Ver detalhe por unidade"}</Button></div>
-    {detalhe && <div className={cn(tableClasses.wrap, "mt-4")}><table className={cn(tableClasses.table, "min-w-[1100px]")}><thead><tr className={tableClasses.head}>
+    {detalhe && <div className={cn(tableClasses.wrap, "mt-4")}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "m²", "R$/m² hoje", "R$/m² nov/29", "Próxima renovação", "2027", "2028", "2029"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i !== 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {r.porContrato.map((x) => <tr key={x.l.contrato_id}>

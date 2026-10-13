@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { FileText, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bloco, tableClasses } from "@/components/operacional/Shared";
+import {  Bloco,   } from "@/components/operacional/Shared";
+import { tableClasses } from "@/components/locacoes/tabela";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
     </div>
     <Bloco titulo="Códigos para vincular">
       {!codigos?.length ? <p className="text-sm text-muted-foreground">Nenhum código pendente.</p> :
-        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[700px]")}><thead><tr className={tableClasses.head}>
+        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Código</th><th className={tableClasses.th}>Nome no Lidderar</th><th className={cn(tableClasses.th, "text-right")}>Linhas</th><th className={tableClasses.th}>Vincular a</th>
         </tr></thead><tbody>{codigos.map((c) => <tr key={c.codigo}>
           <td className={cn(tableClasses.td, "tabular-nums")}>{c.codigo}</td>
@@ -161,7 +162,7 @@ export function Documentos({ data, linhas, docContrato, admin, abrirPdf }: { dat
       <Zona titulo="Arraste os contratos aqui" detalhe="PDF. Passa por revisão da equipe antes de aparecer para o cliente." accept=".pdf" onFiles={enviar} ocupado={ocupado} />
     </div>}
     <Bloco titulo="Documentos">
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "min-w-[700px]")}><thead><tr className={tableClasses.head}>
+      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th><th className={tableClasses.th}>Arquivo</th><th className={tableClasses.th}>Situação</th>
       </tr></thead><tbody>{linhas.map((l) => {
         const d = docContrato(l.contrato_id);
