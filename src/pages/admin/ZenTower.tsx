@@ -83,7 +83,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
     const locNome = new Map<string, string>(data.locs.map((l: any) => [l.id, l.nome]));
     const contr = new Map<string, any>(data.contratos.map((c: any) => [c.id, c]));
     const ciclo = new Map<string, any>(data.ciclo.map((c: any) => [c.contrato_id, c]));
-    const linhas = data.vig.map((v: any) => ({ ...v, contrato: contr.get(v.contrato_id), locatario: locNome.get(contr.get(v.contrato_id)?.locatario_id) ?? "—", ciclo: ciclo.get(v.contrato_id) }))
+    const linhas = data.vig.map((v: any) => ({ ...v, contrato: contr.get(v.contrato_id), locatario: v.locatario ?? locNome.get(contr.get(v.contrato_id)?.locatario_id) ?? "—", ciclo: ciclo.get(v.contrato_id) }))
       .sort((a: any, b: any) => (a.unidades ?? "").localeCompare(b.unidades ?? "", "pt-BR", { numeric: true }));
     const porContrato = new Map<string, any>(linhas.map((l: any) => [l.contrato_id, l]));
     const ultimaData = data.pags.reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "");
@@ -127,12 +127,13 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="contratos">
           <Bloco titulo="Contratos vigentes" acao={<div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>{admin && <NovoContrato edificioId={data.edificio.id} locatarios={data.locs} unidades={data.ocup} />}</div>}>
             <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-              {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", ...(admin ? [""] : [])].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right")}>{h}</th>)}
+              {["Unidade", "Locatário", "Atividade", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", ...(admin ? [""] : [])].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 5 && i <= 7) || i === 11) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{d.linhas.map((l: any) => {
               const c = CICLO[l.ciclo?.ciclo];
               return <tr key={l.contrato_id}>
                 <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
+                <td className={cn(tableClasses.td, "zen-txt")}>{l.atividade || "—"}</td>
                 <td className={cn(tableClasses.td, "zen-un")}>{l.matriculas ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-un")}>{indiceLabel(l.indice)}</td>
                 <td className={tableClasses.num}>{brl(l.valor_vigente)}</td>
@@ -267,16 +268,21 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
 }
 
 function Reajustes({ data, d }: { data: DadosZen; d: any }) {
-  const PARECER: Record<string, { label: string; cls: string }> = { ok: { label: "OK", cls: "op-tag-green" }, divergente: { label: "Divergente", cls: "op-tag-red" }, pendente: { label: "Pendente", cls: "op-tag-amber" } };
+  const resultado = (a: any) => {
+    if (a.valor_aplicado == null || a.valor_calculado == null) return { label: "Reajuste pendente", cls: "op-tag-amber" };
+    const dif = Number(a.valor_aplicado) - Number(a.valor_calculado);
+    if (Math.abs(dif) <= 2) return { label: "Conforme", cls: "op-tag-green" };
+    return dif < 0 ? { label: "Faturado a menor", cls: "op-tag-red" } : { label: "Faturado a maior", cls: "op-tag-red" };
+  };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
   return <Bloco titulo="Verificação dos reajustes">
-    <p className="mb-4 text-[13px] text-muted-foreground">O aluguel vence todo dia 5 do mês seguinte ao de referência; o reajuste aplica o índice acumulado em 12 meses até o mês anterior ao aniversário do contrato.</p>
+    <p className="mb-4 text-[13px] text-muted-foreground">Conferência entre o valor faturado ao locatário e o valor devido segundo o contrato e o índice de reajuste. Tolerância de R$ 2,00.</p>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste a verificar.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Unidade", "Índice", "Referência", "Valor base", "Esperado", "Cobrado", "Diferença", "Parecer"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 6 && "text-right")}>{h}</th>)}
+        {["Unidade", "Índice", "Referência", "Valor base", "Valor contratual", "Valor faturado", "Divergência (R$)", "Resultado da conferência"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 6 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((a: any, i: number) => {
-        const p = PARECER[String(a.parecer ?? "").toLowerCase()] ?? PARECER.pendente;
+        const p = resultado(a);
         return <tr key={i}>
           <td className={cn(tableClasses.td, "font-medium")}>{d.porContrato.get(a.contrato_id)?.unidades ?? "—"}</td>
           <td className={tableClasses.td}>{indiceLabel(a.indice)}</td>
@@ -299,7 +305,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
   const area = comArea.reduce((s: number, e: any) => s + Number(e.l.area_matricula_m2), 0);
   const ini = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_inicial), 0) / area : null;
   const atu = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_atual), 0) / area : null;
-  const STATUS: Record<string, string> = { vigente: "Vigente", vencido: "Vencido", encerrado: "Encerrado" };
+  const STATUS: Record<string, string> = { vigente: "Vigente", vencido: "Vencido", encerrado: "Encerrado", "vence em até 180 dias": "Vence em até 180 dias" };
   return <div className="space-y-4">
     <div className="grid gap-4 sm:grid-cols-3">
       <Card label="R$/m² inicial (média ponderada)"><Valor>{brl(ini)}</Valor></Card>
@@ -308,17 +314,17 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
     </div>
     <Bloco titulo="Evolução do aluguel por unidade">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Unidade", "Locatário", "Início contrato inicial", "Aluguel inicial (R$)", "Tem aditivo?", "Início aditivo", "Aluguel atual (R$)", "Variação %", "Fim vigente", "Status"].map((h, i) => <th key={h} className={cn(tableClasses.th, [3, 6, 7].includes(i) && "text-right")}>{h}</th>)}
+        {["Unidade", "Locatário", "Início do contrato inicial", "Início do aditivo", "Fim da vigência atual", "Aluguel no início do aditivo", "Aluguel atual", "Variação acumulada %", "Possui aditivo?", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, [5, 6, 7].includes(i) && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.l.unidades}</td>
-        <td className={cn(tableClasses.td, "zen-txt")}>{e.l.locatario}</td>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? e.l.unidades}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{e.locatario ?? e.l.locatario}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_inicial)}</td>
-        <td className={tableClasses.num}>{num2(e.aluguel_inicial)}</td>
-        <td className={tableClasses.td}>{e.tem_aditivo ? "Sim" : "Não"}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_aditivo)}</td>
-        <td className={tableClasses.num}>{num2(e.aluguel_atual)}</td>
-        <td className={cn(tableClasses.num, Number(e.variacao_pct) < 0 && "text-destructive")}>{pct(e.variacao_pct)}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.fim_vigente)}</td>
+        <td className={tableClasses.num}>{brl(e.aluguel_inicio_aditivo)}</td>
+        <td className={tableClasses.num}>{brl(e.aluguel_atual)}</td>
+        <td className={cn(tableClasses.num, Number(e.variacao_pct) < 0 && "text-destructive")}>{pct(e.variacao_pct)}</td>
+        <td className={tableClasses.td}>{e.tem_aditivo ? "Sim" : "Não"}</td>
         <td className={cn(tableClasses.td, "zen-txt")}>{STATUS[e.status] ?? e.status ?? "—"}</td>
       </tr>)}</tbody></table></div>
     </Bloco>
