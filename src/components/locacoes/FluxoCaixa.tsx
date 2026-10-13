@@ -137,9 +137,10 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
     const porContrato = elegiveis.map((l) => {
       const vig = vigAtual.get(l.contrato_id);
       const reg = regras.get(l.contrato_id);
+      const futuro = vig && vig.inicio.slice(0, 7) > hoje ? [{ a_partir: vig.inicio, valor_mensal: Number(vig.valor_mensal) }] : [];
       const { ref, caixa } = projetarContrato({
-        contrato_id: l.contrato_id, valor_vigente: Number(l.valor_vigente ?? 0), indice: l.indice, mes_reajuste: l.mes_reajuste,
-        retencao_pct: l.contrato?.retencao_pct, degraus: data.degraus.filter((g: any) => g.vigencia_id === vig?.id),
+        contrato_id: l.contrato_id, valor_vigente: futuro.length ? 0 : Number(l.valor_vigente ?? 0), indice: l.indice, mes_reajuste: l.mes_reajuste,
+        retencao_pct: l.contrato?.retencao_pct, degraus: [...futuro, ...data.degraus.filter((g: any) => g.vigencia_id === vig?.id)],
         renovacao: reg ? { em: reg.renovacao_em, valor: Number(reg.valor_renovacao) } : null,
       }, hoje, "2029-12", focus, Number(cen));
       const anoTot = (y: number) => Array.from({ length: 12 }, (_, i) => caixa.get(`${y}-${String(i + 1).padStart(2, "0")}`) ?? 0).reduce((s, v) => s + v, 0);

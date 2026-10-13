@@ -10,6 +10,7 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
+import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
 import { MESES, MESES_LONGOS, addMes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
 
 const db = supabase as any;
@@ -35,12 +36,13 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_v_contrato_vigente").select("*").eq("edificio_id", id),
     db.from("loc_contratos").select("id,locatario_id,status,tipo,dia_vencimento,retencao_pct").eq("edificio_id", id),
     db.from("loc_locatarios").select("id,nome"),
+    db.from("loc_v_encerrados").select("*").eq("edificio_id", id),
     db.from("loc_v_ciclo").select("contrato_id,ciclo,dias_para_o_fim").eq("edificio_id", id),
     db.from("loc_v_ocupacao").select("unidade_id,nome,tipo,situacao").eq("edificio_id", id),
     db.from("loc_pagamentos").select("id,codigo,imovel_nome,data_vencimento,data_pagamento,valor_liquido,contrato_id,dias_atraso").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(5000),
     db.rpc("loc_orcado_caixa", { p_edificio: id, p_ano: ano }),
     db.from("loc_v_metragem").select("*").eq("edificio_id", id),
-    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim").eq("edificio_id", id),
+    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,valor_mensal,area_contrato_m2,indice,mes_reajuste").eq("edificio_id", id),
     db.from("loc_v_alerta_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_auditoria_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_evolucao").select("*").eq("edificio_id", id),
@@ -49,7 +51,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_projecao_regras").select("*").eq("edificio_id", id),
   ]);
   for (const r of rs) if (r.error) throw r.error;
-  const [vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras] = rs.map((r) => r.data ?? []);
+  const [vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras] = rs.map((r) => r.data ?? []);
   const vigIds = vigencias.map((v: any) => v.id);
   const deg = vigIds.length ? await db.from("loc_vigencia_degraus").select("*").in("vigencia_id", vigIds) : { data: [] };
   if (deg.error) throw deg.error;
@@ -61,7 +63,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
-  return { edificio: ed, ano, vig, contratos, locs, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin };
+  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin };
 }
 
 export type DadosZen = NonNullable<Awaited<ReturnType<typeof carregar>>>;
@@ -122,9 +124,9 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="caixa" className="space-y-4"><FluxoCaixa data={data} linhas={d.linhas} meses={d.meses} ultimoMes={d.ultimoMes} /></TabsContent>
 
         <TabsContent value="contratos">
-          <Bloco titulo="Contratos vigentes" acao={<span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>}>
+          <Bloco titulo="Contratos vigentes" acao={<div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>{admin && <NovoContrato edificioId={data.edificio.id} locatarios={data.locs} unidades={data.ocup} />}</div>}>
             <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-              {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²"].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right")}>{h}</th>)}
+              {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", ...(admin ? [""] : [])].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{d.linhas.map((l: any) => {
               const c = CICLO[l.ciclo?.ciclo];
               return <tr key={l.contrato_id}>
@@ -139,9 +141,11 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.fim)}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{c ? <span className={cn("op-tag", c.cls)}>{c.label}</span> : "—"}</td>
                 <td className={tableClasses.num}>{l.rs_m2_matricula == null ? "—" : num2(l.rs_m2_matricula)}</td>
+                {admin && <td className={tableClasses.td}><div className="flex flex-wrap justify-end gap-1"><EditarContrato linha={l} vigencias={data.vigencias} edificioId={data.edificio.id} /><EncerrarContrato contratoId={l.contrato_id} edificioId={data.edificio.id} unidade={l.unidades ?? ""} /></div></td>}
               </tr>;
             })}</tbody></table></div>
           </Bloco>
+          <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados} admin={admin} /></div>
         </TabsContent>
 
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
@@ -194,6 +198,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
     const r = data.pags.filter((p: any) => p.contrato_id === l.contrato_id && p.data_pagamento.startsWith(String(data.ano)) && p.data_pagamento.slice(0, 7) <= d.ultimoMes).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
     if (o - r > 1) vencido += o - r;
   }
+  for (const e of data.encerrados) vencido += Number(e.alugueis_em_aberto ?? 0) + Number(e.debito_condominio ?? 0);
   const hojeKey = new Date().toISOString().slice(0, 7);
   const limiteKey = addMes(hojeKey, 4);
   const [la, lm] = limiteKey.split("-").map(Number);
