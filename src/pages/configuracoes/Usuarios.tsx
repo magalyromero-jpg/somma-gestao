@@ -14,8 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AcessoEdificios } from "@/components/locacoes/AcessosCliente";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useEdificios } from "@/hooks/useEdificios";
+import { PERFIL_LABEL, type Perfil as PerfilBase } from "@/lib/perfis";
 
-type Perfil = "admin" | "gestor" | "analista" | "familia";
+type Perfil = PerfilBase;
 type Status = "ativo" | "pendente" | "inativo";
 
 interface UsuarioRow {
@@ -26,12 +29,7 @@ interface UsuarioRow {
   role: Perfil | null;
 }
 
-const perfilLabel: Record<Perfil, string> = {
-  admin: "Admin",
-  gestor: "Gestor",
-  analista: "Analista",
-  familia: "Família",
-};
+const perfilLabel = PERFIL_LABEL;
 
 export default function Usuarios() {
   const { role } = useAuth();
@@ -44,7 +42,9 @@ export default function Usuarios() {
   // form
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [perfil, setPerfil] = useState<"admin" | "gestor" | "analista">("admin");
+  const [perfil, setPerfil] = useState<Perfil>("admin");
+  const [edsSel, setEdsSel] = useState<string[]>([]);
+  const { data: edificios = [] } = useEdificios();
   const [modo, setModo] = useState<"convite" | "senha">("convite");
   const [senha, setSenha] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,8 +81,8 @@ export default function Usuarios() {
     const rolesByUser = new Map<string, Perfil>();
     (roles ?? []).forEach((r: any) => {
       const current = rolesByUser.get(r.user_id);
-      // precedência admin > gestor > analista > familia
-      const order: Record<Perfil, number> = { admin: 4, gestor: 3, analista: 2, familia: 1 };
+      // precedência admin > gestor > consulta > familia
+      const order: Record<Perfil, number> = { admin: 4, gestor: 3, consulta: 2, familia: 1 };
       if (!current || order[r.role as Perfil] > order[current]) rolesByUser.set(r.user_id, r.role);
     });
     const rows: UsuarioRow[] = (profiles ?? []).map((p: any) => ({
@@ -102,13 +102,14 @@ export default function Usuarios() {
 
   async function convidar(e: React.FormEvent) {
     e.preventDefault();
+    if (perfil === "familia" && !edsSel.length) { toast.error("Selecione ao menos um edifício"); return; }
     if (modo === "senha" && senha.length < 8) {
       toast.error("Senha deve ter ao menos 8 caracteres");
       return;
     }
     setBusy(true);
     const { data, error } = await supabase.functions.invoke("invite-user", {
-      body: { nome, email, perfil, ...(modo === "senha" ? { senha } : {}) },
+      body: { nome, email, perfil, edificios: perfil === "familia" ? edsSel : [], ...(modo === "senha" ? { senha } : {}) },
     });
     setBusy(false);
     if (error || (data as any)?.error) {
@@ -117,7 +118,7 @@ export default function Usuarios() {
     }
     toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
     setOpen(false);
-    setNome(""); setEmail(""); setPerfil("admin"); setSenha(""); setModo("convite");
+    setNome(""); setEmail(""); setPerfil("admin"); setEdsSel([]); setSenha(""); setModo("convite");
     carregar();
   }
 
@@ -128,7 +129,7 @@ export default function Usuarios() {
     carregar();
   }
 
-  async function alterarPerfil(user_id: string, novo: "admin" | "gestor" | "analista") {
+  async function alterarPerfil(user_id: string, novo: Perfil) {
     await supabase.from("user_roles").delete().eq("user_id", user_id);
     const { error } = await supabase.from("user_roles").insert({ user_id, role: novo });
     if (error) return toast.error(error.message);
@@ -138,9 +139,14 @@ export default function Usuarios() {
 
   async function reenviar(u: UsuarioRow) {
     if (!u.email) return;
-    const perfilEnvio = (u.role && u.role !== "familia" ? u.role : "analista") as "admin" | "gestor" | "analista";
+    const perfilEnvio: Perfil = u.role ?? "consulta";
+    let eds: string[] = [];
+    if (perfilEnvio === "familia") {
+      const { data: ac } = await (supabase as any).from("loc_acessos").select("edificio_id").eq("user_id", u.user_id);
+      eds = (ac ?? []).map((a: any) => a.edificio_id);
+    }
     const { data, error } = await supabase.functions.invoke("invite-user", {
-      body: { nome: u.nome ?? u.email, email: u.email, perfil: perfilEnvio },
+      body: { nome: u.nome ?? u.email, email: u.email, perfil: perfilEnvio, edificios: eds },
     });
     if (error || (data as any)?.error) {
       toast.error((data as any)?.error ?? error?.message ?? "Falha ao reenviar convite");
@@ -201,12 +207,26 @@ export default function Usuarios() {
                     <Select value={perfil} onValueChange={(v) => setPerfil(v as any)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Admin — acesso total + gestão de usuários</SelectItem>
-                        <SelectItem value="gestor">Gestor — acesso total</SelectItem>
-                        <SelectItem value="analista">Analista — leitura + upload</SelectItem>
+                        <SelectItem value="admin">Admin — tudo</SelectItem>
+                        <SelectItem value="gestor">Gestor — tudo, sem usuários e configurações</SelectItem>
+                        <SelectItem value="consulta">Consulta — vê tudo, não edita</SelectItem>
+                        <SelectItem value="familia">Cliente — só Carteira</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  {perfil === "familia" && (
+                    <div className="space-y-1.5">
+                      <Label>Edifícios liberados</Label>
+                      <div className="space-y-1 rounded-sm border p-2">
+                        {edificios.map((e) => (
+                          <label key={e.id} className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={edsSel.includes(e.id)} onCheckedChange={(c) => setEdsSel((s) => c ? [...s, e.id] : s.filter((x) => x !== e.id))} />
+                            {e.nome}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <Label>Modo de criação</Label>
                     <div className="flex gap-2">
@@ -274,13 +294,14 @@ export default function Usuarios() {
                   <td className="px-4 py-3 font-medium">{u.nome ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
                   <td className="px-4 py-3">
-                    {isAdmin && u.role && u.role !== "familia" ? (
+                    {isAdmin && u.role ? (
                       <Select value={u.role} onValueChange={(v) => alterarPerfil(u.user_id, v as any)}>
                         <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="gestor">Gestor</SelectItem>
-                          <SelectItem value="analista">Analista</SelectItem>
+                          <SelectItem value="consulta">Consulta</SelectItem>
+                          <SelectItem value="familia">Cliente</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -310,7 +331,7 @@ export default function Usuarios() {
                         </Button>
                       </>
                     )}
-                    {isAdmin && (
+                    {isAdmin && u.role === "familia" && (
                       <Button size="sm" variant="ghost" onClick={() => setAcessoUser(u)}>
                         Edifícios
                       </Button>

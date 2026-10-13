@@ -6,8 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type Perfil = "admin" | "gestor" | "analista";
-const PERFIS: Perfil[] = ["admin", "gestor", "analista"];
+type Perfil = "admin" | "gestor" | "consulta" | "familia";
+const PERFIS: Perfil[] = ["admin", "gestor", "consulta", "familia"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
     if (!isAdmin) return json({ error: "Apenas administradores podem convidar usuários" }, 403);
 
     const body = await req.json().catch(() => ({}));
-    const { email, nome, perfil, senha, acao, user_id } = body as {
+    const { email, nome, perfil, senha, acao, user_id, edificios } = body as {
+      edificios?: string[];
       email?: string; nome?: string; perfil?: Perfil; senha?: string;
       acao?: "criar" | "redefinir_senha"; user_id?: string;
     };
@@ -106,6 +107,14 @@ Deno.serve(async (req) => {
 
     await admin.from("user_roles").delete().eq("user_id", newUserId);
     await admin.from("user_roles").insert({ user_id: newUserId, role: perfil });
+
+    if (perfil === "familia" && Array.isArray(edificios) && edificios.length) {
+      await admin.from("loc_acessos").delete().eq("user_id", newUserId);
+      const { error: acErr } = await admin.from("loc_acessos").insert(
+        edificios.map((edificio_id) => ({ user_id: newUserId, edificio_id, papel: "cliente" })),
+      );
+      if (acErr) return json({ error: acErr.message }, 400);
+    }
 
     return json({ ok: true, user_id: newUserId, modo: senha ? "senha" : "convite" });
   } catch (e) {
