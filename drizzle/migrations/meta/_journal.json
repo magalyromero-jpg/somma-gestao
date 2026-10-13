@@ -78,6 +78,13 @@
       "when": 1791926185473,
       "tag": "0010_perfil_consulta_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791926205541,
+      "tag": "0011_perfis_acesso_consulta",
+      "breakpoints": true
     }
   ]
 }
