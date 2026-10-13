@@ -168,7 +168,7 @@ export function Documentos({ data, linhas, docContrato, admin, abrirPdf }: { dat
         const d = docContrato(l.contrato_id);
         const s = SITUACAO[d.situacao];
         return <tr key={l.contrato_id}>
-          <td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td>
+          <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades}</td>
           <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
           <td className={cn(tableClasses.td, "zen-txt")}>{d.arquivo ? <button type="button" className="inline-flex items-center gap-1.5 text-secondary hover:text-foreground" onClick={() => abrirPdf(d.arquivo.storage_path)}><FileText className="h-3.5 w-3.5" strokeWidth={1.5} />{d.arquivo.titulo ?? "Documento"}</button> : "—"}</td>
           <td className={tableClasses.td}><span className={cn("op-tag", s.cls)}>{s.label}</span></td>

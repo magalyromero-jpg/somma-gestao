@@ -150,9 +150,9 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
               const c = CICLO[l.ciclo?.ciclo];
               const doc = d.docContrato(l.contrato_id);
               return <tr key={l.contrato_id}>
-                <td className={cn(tableClasses.td, "font-medium")}>{l.unidades ?? "—"}</td>
+                <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidades ?? "—"}</td>
                 <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
-                <td className={tableClasses.td}>{l.matriculas ?? "—"}</td>
+                <td className={cn(tableClasses.td, "zen-un")}>{l.matriculas ?? "—"}</td>
                 <td className={tableClasses.td}>{indiceLabel(l.indice)}</td>
                 <td className={tableClasses.num}>{brl(l.valor_vigente)}</td>
                 <td className={tableClasses.num}>{m2(l.area_contrato_m2)}</td>
@@ -180,8 +180,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
             <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
               <th className={tableClasses.th}>Unidades</th><th className={tableClasses.th}>Matrículas</th><th className={cn(tableClasses.th, "text-right")}>m² contrato</th><th className={cn(tableClasses.th, "text-right")}>m² matrícula</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
             </tr></thead><tbody>{data.metragem.filter((m: any) => !soDivergentes || (m.diferenca_m2 != null && Math.abs(m.diferenca_m2) > 1)).map((m: any) => <tr key={m.contrato_id}>
-              <td className={cn(tableClasses.td, "font-medium")}>{m.unidades ?? "—"}</td>
-              <td className={tableClasses.td}>{m.matriculas ?? "—"}</td>
+              <td className={cn(tableClasses.td, "font-medium zen-un")}>{m.unidades ?? "—"}</td>
+              <td className={cn(tableClasses.td, "zen-un")}>{m.matriculas ?? "—"}</td>
               <td className={tableClasses.num}>{m2(m.area_contrato_m2)}</td>
               <td className={tableClasses.num}>{m2(m.area_matricula_m2)}</td>
               <td className={cn(tableClasses.num, m.diferenca_m2 != null && Math.abs(m.diferenca_m2) > 1 && "font-semibold text-destructive")}>{m2(m.diferenca_m2)}</td>
@@ -332,7 +332,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
       <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
         {["Unidade", "Locatário", "Início contrato inicial", "Aluguel inicial (R$)", "Tem aditivo?", "Início aditivo", "Aluguel atual (R$)", "Variação %", "Fim vigente", "Status"].map((h, i) => <th key={h} className={cn(tableClasses.th, [3, 6, 7].includes(i) && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium")}>{e.l.unidades}</td>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.l.unidades}</td>
         <td className={cn(tableClasses.td, "zen-txt")}>{e.l.locatario}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_inicial)}</td>
         <td className={tableClasses.num}>{num2(e.aluguel_inicial)}</td>
