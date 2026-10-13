@@ -53,8 +53,9 @@ export default function AppLayout() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {items.map((item) => (
+            <div key={item.to}>
+            {item.grupo && <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-[0.15em] text-white/40">{item.grupo}</div>}
             <NavLink
-              key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 cn(
@@ -74,6 +75,7 @@ export default function AppLayout() {
                 </>
               )}
             </NavLink>
+            </div>
           ))}
         </nav>
         <div className="px-3 py-3 border-t border-sidebar-border">

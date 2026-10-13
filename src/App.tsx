@@ -9,12 +9,10 @@ import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Familias from "./pages/Familias";
 import Operacional from "./pages/Operacional";
 import OperacionalDetalhe from "./pages/OperacionalDetalhe";
+import ZenTower from "./pages/admin/ZenTower";
 import SyncBitrix from "./pages/SyncBitrix";
-import Imoveis from "./pages/Imoveis";
-import ImovelClienteDetalhe from "./pages/ImovelClienteDetalhe";
 import Mercado from "./pages/Mercado";
 import PesquisaMercado from "./pages/PesquisaMercado";
 import PesquisaMercadoResultado from "./pages/PesquisaMercadoResultado";
@@ -24,10 +22,6 @@ import Usuarios from "./pages/configuracoes/Usuarios";
 import NotFound from "./pages/NotFound";
 import AnaliseLeilao from "./pages/AnaliseLeilao";
 import AnaliseLeilaoForm from "./pages/AnaliseLeilaoForm";
-import OnboardingFamilia from "./pages/OnboardingFamilia";
-import OnboardingLista from "./pages/onboarding/OnboardingLista";
-import OnboardingWorkspace from "./pages/onboarding/OnboardingWorkspace";
-import MapaFamilia from "./pages/MapaFamilia";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import SetPassword from "./pages/auth/SetPassword";
 
@@ -50,13 +44,14 @@ const App = () => (
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Dashboard /></ProtectedRoute>} />
-              <Route path="/familias" element={<Familias />} />
+              <Route path="/familias" element={<Navigate to="/" replace />} />
               <Route path="/operacional" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Operacional /></ProtectedRoute>} />
               <Route path="/operacional/principais" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Navigate to="/operacional" replace /></ProtectedRoute>} />
               <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
               <Route path="/sync-bitrix" element={<SyncBitrix />} />
-              <Route path="/imoveis" element={<Imoveis />} />
-              <Route path="/imoveis/cliente/:id" element={<ImovelClienteDetalhe />} />
+              <Route path="/imoveis" element={<Navigate to="/" replace />} />
+              <Route path="/imoveis/cliente/:id" element={<Navigate to="/" replace />} />
+              <Route path="/admin/zen-tower" element={<ProtectedRoute requireRole={["admin", "gestor"]}><ZenTower /></ProtectedRoute>} />
               <Route path="/mercado" element={<Mercado />} />
               <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
               <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
@@ -64,12 +59,12 @@ const App = () => (
               <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
 
               {/* Onboarding */}
-              <Route path="/onboarding" element={<OnboardingLista />} />
-              <Route path="/onboarding/novo" element={<OnboardingFamilia />} />
-              <Route path="/onboarding/novo/:familiaId" element={<OnboardingFamilia />} />
-              <Route path="/onboarding/workspace/:id" element={<OnboardingWorkspace />} />
+              <Route path="/onboarding" element={<Navigate to="/" replace />} />
+              <Route path="/onboarding/novo" element={<Navigate to="/" replace />} />
+              <Route path="/onboarding/novo/:familiaId" element={<Navigate to="/" replace />} />
+              <Route path="/onboarding/workspace/:id" element={<Navigate to="/" replace />} />
 
-              <Route path="/familias-onboarding/:id" element={<MapaFamilia />} />
+              <Route path="/familias-onboarding/:id" element={<Navigate to="/" replace />} />
               <Route path="/atualizacoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Atualizacoes /></ProtectedRoute>} />
               <Route path="/configuracoes/usuarios" element={<ProtectedRoute requireRole="admin"><Usuarios /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute requireRole={["admin", "gestor"]}><Configuracoes /></ProtectedRoute>} />
