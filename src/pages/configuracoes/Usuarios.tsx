@@ -32,7 +32,7 @@ interface UsuarioRow {
 const perfilLabel = PERFIL_LABEL;
 
 export default function Usuarios() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === "admin";
   const [acessoUser, setAcessoUser] = useState<UsuarioRow | null>(null);
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
@@ -126,6 +126,14 @@ export default function Usuarios() {
     const { error } = await supabase.from("profiles").update({ status }).eq("user_id", user_id);
     if (error) return toast.error(error.message);
     toast.success("Status atualizado");
+    carregar();
+  }
+
+  async function excluir(u: UsuarioRow) {
+    if (!window.confirm(`Excluir definitivamente ${u.nome ?? u.email}? Esta ação não pode ser desfeita.`)) return;
+    const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: u.user_id } });
+    if (error || (data as any)?.error) return toast.error((data as any)?.error ?? error?.message ?? "Falha ao excluir");
+    toast.success("Usuário excluído");
     carregar();
   }
 
@@ -349,6 +357,11 @@ export default function Usuarios() {
                     {isAdmin && u.status === "inativo" && (
                       <Button size="sm" variant="ghost" onClick={() => alterarStatus(u.user_id, "ativo")}>
                         Reativar
+                      </Button>
+                    )}
+                    {isAdmin && u.user_id !== user?.id && (
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => excluir(u)}>
+                        Excluir
                       </Button>
                     )}
                   </td>
