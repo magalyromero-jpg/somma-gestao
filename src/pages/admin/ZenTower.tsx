@@ -144,7 +144,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
 
         <TabsContent value="contratos">
           <Bloco titulo="Contratos vigentes" acao={<span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>}>
-            <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
+            <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
               {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", "Contrato"].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right", i === 11 && "text-center")}>{h}</th>)}
             </tr></thead><tbody>{d.linhas.map((l: any) => {
               const c = CICLO[l.ciclo?.ciclo];
@@ -276,7 +276,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
     </div>
     <Bloco titulo="Próximos reajustes">
       {proximos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste com valor definido nos próximos meses.</p> :
-        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
+        <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Regra</th><th className={tableClasses.th}>Boleto</th><th className={cn(tableClasses.th, "text-right")}>Novo valor</th>
         </tr></thead><tbody>{proximos.map((p) => <tr key={p.key}>
           <td className={cn(tableClasses.td, "font-medium")}>{p.unidade}</td>
@@ -295,7 +295,7 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   return <Bloco titulo="Verificação dos reajustes">
     <p className="mb-4 text-[13px] text-muted-foreground">O aluguel vence todo dia 5 do mês seguinte ao de referência; o reajuste aplica o índice acumulado em 12 meses até o mês anterior ao aniversário do contrato.</p>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste a verificar.</p> :
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
+      <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Unidade", "Índice", "Referência", "Valor base", "Esperado", "Cobrado", "Diferença", "Parecer"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 6 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((a: any, i: number) => {
         const p = PARECER[String(a.parecer ?? "").toLowerCase()] ?? PARECER.pendente;
@@ -329,7 +329,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
       <Card label="Variação do R$/m²"><Valor>{ini && atu ? pct((atu / ini - 1) * 100) : "—"}</Valor><div className="mt-2 text-xs text-muted-foreground">{comArea.length} salas com área ({m2(area)})</div></Card>
     </div>
     <Bloco titulo="Evolução do aluguel por unidade">
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "")}><thead><tr className={tableClasses.head}>
+      <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Unidade", "Locatário", "Início contrato inicial", "Aluguel inicial (R$)", "Tem aditivo?", "Início aditivo", "Aluguel atual (R$)", "Variação %", "Fim vigente", "Status"].map((h, i) => <th key={h} className={cn(tableClasses.th, [3, 6, 7].includes(i) && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.l.unidades}</td>
