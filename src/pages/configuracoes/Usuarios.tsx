@@ -31,6 +31,16 @@ interface UsuarioRow {
 
 const perfilLabel = PERFIL_LABEL;
 
+async function erroFuncao(data: any, error: any, padrao: string): Promise<string> {
+  let msg: string | undefined = data?.error;
+  if (!msg && error?.context && typeof error.context.json === "function") {
+    try { msg = (await error.context.json())?.error; } catch { /* sem corpo */ }
+  }
+  msg = msg ?? error?.message ?? padrao;
+  if (/weak|easy to guess|pwned|leaked/i.test(msg!)) return "Senha fraca ou já exposta em vazamentos. Escolha outra senha, misturando letras, números e símbolos.";
+  return msg!;
+}
+
 export default function Usuarios() {
   const { role, user } = useAuth();
   const isAdmin = role === "admin";
@@ -65,7 +75,7 @@ export default function Usuarios() {
     });
     setPwdBusy(false);
     if (error || (data as any)?.error) {
-      return toast.error((data as any)?.error ?? error?.message ?? "Falha ao definir senha");
+      return toast.error(await erroFuncao(data, error, "Falha ao definir senha"));
     }
     toast.success(`Senha definida para ${pwdUser.email}`);
     setPwdOpen(false); setPwdNova(""); setPwdUser(null);
@@ -113,7 +123,7 @@ export default function Usuarios() {
     });
     setBusy(false);
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Falha ao criar usuário");
+      toast.error(await erroFuncao(data, error, "Falha ao criar usuário"));
       return;
     }
     toast.success(modo === "senha" ? "Usuário criado com senha" : "Convite enviado");
@@ -132,7 +142,7 @@ export default function Usuarios() {
   async function excluir(u: UsuarioRow) {
     if (!window.confirm(`Excluir definitivamente ${u.nome ?? u.email}? Esta ação não pode ser desfeita.`)) return;
     const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: u.user_id } });
-    if (error || (data as any)?.error) return toast.error((data as any)?.error ?? error?.message ?? "Falha ao excluir");
+    if (error || (data as any)?.error) return toast.error(await erroFuncao(data, error, "Falha ao excluir"));
     toast.success("Usuário excluído");
     carregar();
   }
@@ -157,7 +167,7 @@ export default function Usuarios() {
       body: { nome: u.nome ?? u.email, email: u.email, perfil: perfilEnvio, edificios: eds },
     });
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Falha ao reenviar convite");
+      toast.error(await erroFuncao(data, error, "Falha ao reenviar convite"));
       return;
     }
     toast.success(`Convite reenviado para ${u.email}`);
@@ -169,7 +179,7 @@ export default function Usuarios() {
       body: { email: u.email },
     });
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Falha ao gerar link");
+      toast.error(await erroFuncao(data, error, "Falha ao gerar link"));
       return;
     }
     const link = (data as any)?.action_link;
