@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AreaCliente from "@/pages/AreaCliente";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
@@ -47,16 +48,17 @@ const App = () => (
               <Route path="/familias" element={<Navigate to="/" replace />} />
               <Route path="/operacional" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Operacional /></ProtectedRoute>} />
               <Route path="/operacional/principais" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Navigate to="/operacional" replace /></ProtectedRoute>} />
-              <Route path="/operacional/:taskId" element={<OperacionalDetalhe />} />
-              <Route path="/sync-bitrix" element={<SyncBitrix />} />
+              <Route path="/operacional/:taskId" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><OperacionalDetalhe /></ProtectedRoute>} />
+              <Route path="/sync-bitrix" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><SyncBitrix /></ProtectedRoute>} />
               <Route path="/imoveis" element={<Navigate to="/" replace />} />
               <Route path="/imoveis/cliente/:id" element={<Navigate to="/" replace />} />
               <Route path="/admin/zen-tower" element={<ProtectedRoute requireRole={["admin", "gestor"]}><ZenTower /></ProtectedRoute>} />
-              <Route path="/mercado" element={<Mercado />} />
-              <Route path="/pesquisa-mercado" element={<PesquisaMercado />} />
-              <Route path="/pesquisa-mercado/resultado/:id" element={<PesquisaMercadoResultado />} />
-              <Route path="/analise-leilao" element={<AnaliseLeilaoForm />} />
-              <Route path="/analise-leilao/resultado" element={<AnaliseLeilao />} />
+              <Route path="/area-cliente" element={<ProtectedRoute requireRole="familia"><AreaCliente /></ProtectedRoute>} />
+              <Route path="/mercado" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><Mercado /></ProtectedRoute>} />
+              <Route path="/pesquisa-mercado" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><PesquisaMercado /></ProtectedRoute>} />
+              <Route path="/pesquisa-mercado/resultado/:id" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><PesquisaMercadoResultado /></ProtectedRoute>} />
+              <Route path="/analise-leilao" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><AnaliseLeilaoForm /></ProtectedRoute>} />
+              <Route path="/analise-leilao/resultado" element={<ProtectedRoute requireRole={["admin", "gestor", "analista"]}><AnaliseLeilao /></ProtectedRoute>} />
 
               {/* Onboarding */}
               <Route path="/onboarding" element={<Navigate to="/" replace />} />

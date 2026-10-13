@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Bloco, CORES, FaixaNumeros, LegendaTexto, chartTooltipStyle, tableClasses } from "@/components/operacional/Shared";
 import { cn } from "@/lib/utils";
+import { AcessosCliente } from "@/components/locacoes/AcessosCliente";
 
 const db = supabase as any;
 const brl = (n: number | null | undefined) => n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
@@ -25,8 +26,9 @@ const CICLO: Record<string, { label: string; cls: string }> = {
   encerrado_em_pauta: { label: "Encerrado · em pauta", cls: "op-tag-gray" },
 };
 
-async function carregar() {
-  const { data: ed, error } = await db.from("loc_edificios").select("id,nome").eq("nome", "Zen Tower").maybeSingle();
+async function carregar(edificioId?: string) {
+  const q = db.from("loc_edificios").select("id,nome");
+  const { data: ed, error } = await (edificioId ? q.eq("id", edificioId) : q.eq("nome", "Zen Tower")).maybeSingle();
   if (error) throw error;
   if (!ed) return null;
   const id = ed.id;
@@ -47,7 +49,12 @@ async function carregar() {
 }
 
 export default function ZenTower() {
-  const { data, isLoading, error } = useQuery({ queryKey: ["zen-tower"], queryFn: carregar });
+  return <PortalEdificio modo="admin" />;
+}
+
+export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo: "admin" | "cliente" }) {
+  const admin = modo === "admin";
+  const { data, isLoading, error } = useQuery({ queryKey: ["loc-edificio", edificioId ?? "zen", modo], queryFn: () => carregar(edificioId) });
   const [soDivergentes, setSoDivergentes] = useState(true);
 
   const d = useMemo(() => {
@@ -82,18 +89,19 @@ export default function ZenTower() {
 
   if (isLoading) return <div className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-72 w-full" /></div>;
   if (error) return <p className="text-sm text-destructive">Não foi possível carregar o Zen Tower: {(error as Error).message}</p>;
-  if (!data || !d) return <p className="text-sm text-muted-foreground">Edifício Zen Tower não encontrado.</p>;
+  if (!data || !d) return <p className="text-sm text-muted-foreground">Edifício não encontrado.</p>;
 
   return (
     <div className="op-theme space-y-4">
-      <PageHeader title="Zen Tower" subtitle="Administração · Gestão de locações" />
+      <PageHeader title={data.edificio.nome} subtitle={admin ? "Administração · Gestão de locações" : "Área do Cliente · Gestão de locações"} />
       <Tabs defaultValue="geral" className="space-y-4">
         <TabsList>
           <TabsTrigger value="geral">Visão geral</TabsTrigger>
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de caixa</TabsTrigger>
-          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="conferencia">Conferência</TabsTrigger>
+          {admin && <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>}
+          {admin && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
+          {admin && <TabsTrigger value="acessos">Acessos do cliente</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="geral" className="space-y-4">
@@ -188,6 +196,8 @@ export default function ZenTower() {
             </tr>)}</tbody></table></div>
           </Bloco>
         </TabsContent>
+
+        {admin && <TabsContent value="acessos"><AcessosCliente edificioId={data.edificio.id} /></TabsContent>}
       </Tabs>
     </div>
   );

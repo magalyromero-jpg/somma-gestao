@@ -43,6 +43,13 @@
       "when": 1791918725710,
       "tag": "0005_loc_acesso_equipe_somma",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791918985929,
+      "tag": "0006_somma_admin_e_area_cliente",
+      "breakpoints": true
     }
   ]
 }

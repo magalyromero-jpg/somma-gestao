@@ -5,6 +5,7 @@ const Index = () => {
   const { role } = useAuth();
   if (role === "admin" || role === "gestor") return <Navigate to="/dashboard" replace />;
   if (role === "analista") return <Navigate to="/operacional" replace />;
+  if (role === "familia") return <Navigate to="/area-cliente" replace />;
   return <Navigate to="/mercado" replace />;
 };
 export default Index;

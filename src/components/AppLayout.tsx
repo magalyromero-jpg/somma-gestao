@@ -10,10 +10,11 @@ const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; gr
   { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "analista"] },
 
 
-  { to: "/mercado",              label: "Mercado",             icon: LineChart },
-  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search },
+  { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "analista"] },
+  { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "analista"] },
   { to: "/analise-leilao",       label: "Análise de Leilão",   icon: Gavel,           allowed: ["admin", "gestor"] },
 
+  { to: "/area-cliente",         label: "Área do Cliente",     icon: Landmark,        allowed: ["familia"] },
   { to: "/admin/zen-tower",      label: "Zen Tower",           icon: Landmark,        allowed: ["admin", "gestor"], grupo: "Administração" },
   { to: "/atualizacoes",         label: "Atualizações",        icon: RefreshCw,       allowed: ["admin", "gestor"] },
   { to: "/configuracoes/usuarios", label: "Usuários",          icon: UserCog,         allowed: ["admin"] },

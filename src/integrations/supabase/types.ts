@@ -3118,6 +3118,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_dominio_somma: { Args: { _email: string }; Returns: boolean }
       loc_calcular_reajuste: {
         Args: {
           p_aniversario: string
@@ -3131,6 +3132,10 @@ export type Database = {
           valor_calculado: number
           vigencia_a_partir: string
         }[]
+      }
+      loc_conceder_acesso: {
+        Args: { p_edificio: string; p_email: string }
+        Returns: string
       }
       loc_eh_admin: { Args: { p_edificio: string }; Returns: boolean }
       loc_fluxo: {
@@ -3160,6 +3165,15 @@ export type Database = {
         }
         Returns: number
       }
+      loc_listar_acessos: {
+        Args: { p_edificio: string }
+        Returns: {
+          email: string
+          nome: string
+          papel: string
+          user_id: string
+        }[]
+      }
       loc_orcado_caixa: {
         Args: { p_ano: number; p_edificio: string }
         Returns: {
@@ -3170,6 +3184,10 @@ export type Database = {
       }
       loc_pode_ver: { Args: { p_edificio: string }; Returns: boolean }
       loc_remapear_pagamentos: { Args: { p_edificio: string }; Returns: number }
+      loc_revogar_acesso: {
+        Args: { p_edificio: string; p_user: string }
+        Returns: undefined
+      }
       loc_valor_em: {
         Args: { p_contrato: string; p_ref: string }
         Returns: number
