@@ -201,10 +201,10 @@
 /* Portal de locações — tabelas corridas */
 .zen-portal .zen-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: hsl(var(--secondary)); border-bottom: 1px solid hsl(var(--border)); }
 .zen-portal .zen-table td, .zen-portal .zen-table th { white-space: nowrap; }
-.zen-portal .zen-table td.zen-txt { white-space: normal; min-width: 6rem; }
+.zen-portal .zen-table td.zen-txt { white-space: normal; min-width: 5rem; }
 .zen-portal .zen-table tbody tr:hover { background: hsl(var(--muted)); }
 .zen-portal .zen-wide th, .zen-portal .zen-wide td { padding-left: 8px; padding-right: 8px; font-size: 12px; }
 @media (min-width: 1024px) { .zen-portal .zen-table th { white-space: normal; } }
-.zen-portal .zen-table td.zen-un { white-space: normal; min-width: 4rem; }
+.zen-portal .zen-table td.zen-un { white-space: normal; min-width: 3.5rem; }
 .zen-portal .zen-table td.zen-txt .op-tag { white-space: normal; }
 .zen-portal .zen-wide th { letter-spacing: .02em; }
