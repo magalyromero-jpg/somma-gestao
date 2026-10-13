@@ -2,8 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, ListTodo, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserCog, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
-import logoAsset from "@/assets/somma-logo-branco.png.asset.json";
-const logoWhite = logoAsset.url;
+import logoWhite from "@/assets/somma-logo-branco.png";
 import { Button } from "@/components/ui/button";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
@@ -104,8 +103,7 @@ export default function AppLayout() {
       <main className="flex-1 min-w-0">
         <header className="md:hidden flex items-center justify-between gap-3 px-4 py-3 bg-sidebar text-sidebar-foreground">
           <div className="flex items-center gap-2">
-            <img src={logoWhite} alt="Somma" className="h-7 brightness-0 invert" />
-            <div className="font-light text-sm">Somma MFO</div>
+            <img src={logoWhite} alt="Somma Multi-Family Office" className="h-6 w-auto" />
           </div>
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
