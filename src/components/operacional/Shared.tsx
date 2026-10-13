@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { AVISO_HISTORICO } from "@/lib/operacional";
 import { cn } from "@/lib/utils";
@@ -51,22 +52,23 @@ export function FaixaNumeros({ itens }: { itens: { label: string; valor: string 
   return (
     <div className="grid overflow-hidden rounded-md border bg-card sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
       {itens.map((item) => (
-        <button
+        <Button
+          variant="ghost"
           key={item.label}
           type="button"
           disabled={!item.onClick}
           aria-pressed={item.onClick ? !!item.ativo : undefined}
           onClick={item.onClick}
           className={cn(
-            "min-h-20 border-b px-4 py-3 text-left transition-colors sm:border-r lg:border-b-0 disabled:cursor-default",
+            "h-auto block whitespace-normal rounded-none hover:text-foreground disabled:opacity-100 min-h-24 border-b px-4 py-4 text-left transition-colors sm:border-r lg:border-b-0 disabled:cursor-default",
             item.onClick && "hover:bg-muted/60",
             item.ativo && "bg-[hsl(var(--goldbg))] shadow-[inset_0_-2px_0_hsl(var(--gold))]",
           )}
         >
-          <div className="text-[11px] font-medium uppercase text-muted-foreground">{item.label}</div>
-          <div className={cn("mt-1 text-2xl font-semibold tabular-nums", item.danger && "text-destructive")}>{item.valor}</div>
+          <div className="text-xs font-normal text-muted-foreground">{item.label}</div>
+          <div className={cn("mt-2 text-[26px] font-light tabular-nums", item.danger && "text-destructive")}>{item.valor}</div>
           {item.detalhe && <div className="mt-0.5 text-[11px] text-muted-foreground">{item.detalhe}</div>}
-        </button>
+        </Button>
       ))}
     </div>
   );

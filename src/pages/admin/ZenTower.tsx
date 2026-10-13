@@ -92,8 +92,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
   if (!data || !d) return <p className="text-sm text-muted-foreground">Edifício não encontrado.</p>;
 
   return (
-    <div className="op-theme space-y-4">
-      <PageHeader title={data.edificio.nome} subtitle={admin ? "Administração · Gestão de locações" : "Área do Cliente · Gestão de locações"} />
+    <div className="op-theme zen-portal space-y-6">
+      <PageHeader title={data.edificio.nome} subtitle={admin ? "Carteira · Gestão de locações" : "Área do Cliente · Gestão de locações"} />
       <Tabs defaultValue="geral" className="space-y-4">
         <TabsList>
           <TabsTrigger value="geral">Visão geral</TabsTrigger>
@@ -105,7 +105,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         </TabsList>
 
         <TabsContent value="geral" className="space-y-4">
-          <FaixaNumeros itens={[
+          <div className="portal-kpis">{[
             { label: "Unidades", valor: data.ocup.length, detalhe: `${d.ocupadas} locadas · ${data.ocup.length - d.ocupadas} vagas` },
             { label: "Ocupação", valor: `${data.ocup.length ? Math.round(d.ocupadas / data.ocup.length * 100) : 0}%` },
             { label: "Contratos ativos", valor: d.linhas.length },
@@ -113,7 +113,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
             { label: `Orçado ${data.ano} até hoje`, valor: brlK(d.orcadoYtd) },
             { label: `Realizado ${data.ano} até hoje`, valor: brlK(d.realizadoYtd), detalhe: d.orcadoYtd ? `${Math.round(d.realizadoYtd / d.orcadoYtd * 100)}% do orçado` : undefined },
             { label: "Vencidos ou a vencer (120 d)", valor: d.aVencer, danger: d.aVencer > 0 },
-          ]} />
+          ].map((item) => <div key={item.label} className="portal-kpi"><div className="portal-kpi-label">{item.label}</div><div className={cn("portal-kpi-value", item.danger && "text-destructive")}>{item.valor}</div>{item.detalhe && <div className="mt-2 text-xs text-muted-foreground">{item.detalhe}</div>}</div>)}</div>
           <Bloco titulo={`Orçado × realizado em caixa — ${data.ano}`}><CaixaChart meses={d.meses} /></Bloco>
         </TabsContent>
 
