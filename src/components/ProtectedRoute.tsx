@@ -26,7 +26,7 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
   if (requireRole) {
     const allowed = Array.isArray(requireRole) ? requireRole : [requireRole];
     if (!role || !allowed.includes(role)) {
-      return <Navigate to="/familias" replace />;
+      return <Navigate to="/" replace />;
     }
   }
 
