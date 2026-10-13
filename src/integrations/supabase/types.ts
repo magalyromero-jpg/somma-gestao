@@ -1001,6 +1001,812 @@ export type Database = {
         }
         Relationships: []
       }
+      loc_acessos: {
+        Row: {
+          edificio_id: string
+          papel: string
+          user_id: string
+        }
+        Insert: {
+          edificio_id: string
+          papel: string
+          user_id: string
+        }
+        Update: {
+          edificio_id?: string
+          papel?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_acessos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_aditivos: {
+        Row: {
+          contrato_id: string
+          data: string
+          descricao: string | null
+          edificio_id: string
+          id: string
+          tipo: string
+          valor_novo: number | null
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          contrato_id: string
+          data: string
+          descricao?: string | null
+          edificio_id: string
+          id?: string
+          tipo: string
+          valor_novo?: number | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          data?: string
+          descricao?: string | null
+          edificio_id?: string
+          id?: string
+          tipo?: string
+          valor_novo?: number | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_aditivos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_aditivos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_aditivos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_codigos_lidderar: {
+        Row: {
+          codigo: string
+          contrato_id: string | null
+          edificio_id: string
+          nome_no_lidderar: string | null
+        }
+        Insert: {
+          codigo: string
+          contrato_id?: string | null
+          edificio_id: string
+          nome_no_lidderar?: string | null
+        }
+        Update: {
+          codigo?: string
+          contrato_id?: string | null
+          edificio_id?: string
+          nome_no_lidderar?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_codigos_lidderar_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_codigos_lidderar_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigos_lidderar_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_contrato_unidades: {
+        Row: {
+          contrato_id: string
+          edificio_id: string
+          unidade_id: string
+        }
+        Insert: {
+          contrato_id: string
+          edificio_id: string
+          unidade_id: string
+        }
+        Update: {
+          contrato_id?: string
+          edificio_id?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contrato_unidades_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contrato_unidades_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contrato_unidades_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contrato_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_contratos: {
+        Row: {
+          carencia_meses: number
+          competencia: Database["public"]["Enums"]["loc_competencia"]
+          contrato_anterior_id: string | null
+          created_at: string | null
+          data_assinatura: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          dia_vencimento: number | null
+          edificio_id: string
+          id: string
+          indice: Database["public"]["Enums"]["loc_indice"]
+          locatario_id: string
+          mes_aniversario: string | null
+          periodicidade_meses: number
+          piso_zero: boolean
+          status: Database["public"]["Enums"]["loc_status"]
+          tipo: Database["public"]["Enums"]["loc_tipo_contrato"]
+          valor_inicial: number
+        }
+        Insert: {
+          carencia_meses?: number
+          competencia?: Database["public"]["Enums"]["loc_competencia"]
+          contrato_anterior_id?: string | null
+          created_at?: string | null
+          data_assinatura?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          dia_vencimento?: number | null
+          edificio_id: string
+          id?: string
+          indice?: Database["public"]["Enums"]["loc_indice"]
+          locatario_id: string
+          mes_aniversario?: string | null
+          periodicidade_meses?: number
+          piso_zero?: boolean
+          status?: Database["public"]["Enums"]["loc_status"]
+          tipo?: Database["public"]["Enums"]["loc_tipo_contrato"]
+          valor_inicial: number
+        }
+        Update: {
+          carencia_meses?: number
+          competencia?: Database["public"]["Enums"]["loc_competencia"]
+          contrato_anterior_id?: string | null
+          created_at?: string | null
+          data_assinatura?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          dia_vencimento?: number | null
+          edificio_id?: string
+          id?: string
+          indice?: Database["public"]["Enums"]["loc_indice"]
+          locatario_id?: string
+          mes_aniversario?: string | null
+          periodicidade_meses?: number
+          piso_zero?: boolean
+          status?: Database["public"]["Enums"]["loc_status"]
+          tipo?: Database["public"]["Enums"]["loc_tipo_contrato"]
+          valor_inicial?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contratos_contrato_anterior_id_fkey"
+            columns: ["contrato_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_contrato_anterior_id_fkey"
+            columns: ["contrato_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_locatario_id_fkey"
+            columns: ["locatario_id"]
+            isOneToOne: false
+            referencedRelation: "loc_locatarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_locatario_id_fkey"
+            columns: ["locatario_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_locatarios_cliente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_contratos_notas: {
+        Row: {
+          contrato_id: string
+          edificio_id: string
+          nota: string | null
+        }
+        Insert: {
+          contrato_id: string
+          edificio_id: string
+          nota?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          edificio_id?: string
+          nota?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contratos_notas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_notas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_contratos_notas_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_cronograma: {
+        Row: {
+          competencia: string
+          contrato_id: string
+          edificio_id: string
+          origem: string
+          valor_previsto: number
+        }
+        Insert: {
+          competencia: string
+          contrato_id: string
+          edificio_id: string
+          origem: string
+          valor_previsto: number
+        }
+        Update: {
+          competencia?: string
+          contrato_id?: string
+          edificio_id?: string
+          origem?: string
+          valor_previsto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_documentos: {
+        Row: {
+          contrato_id: string | null
+          created_at: string | null
+          edificio_id: string
+          id: string
+          revisado: boolean
+          storage_path: string
+          tipo: Database["public"]["Enums"]["loc_doc_tipo"]
+          titulo: string
+          unidade_id: string | null
+          visivel_cliente: boolean
+        }
+        Insert: {
+          contrato_id?: string | null
+          created_at?: string | null
+          edificio_id: string
+          id?: string
+          revisado?: boolean
+          storage_path: string
+          tipo?: Database["public"]["Enums"]["loc_doc_tipo"]
+          titulo: string
+          unidade_id?: string | null
+          visivel_cliente?: boolean
+        }
+        Update: {
+          contrato_id?: string | null
+          created_at?: string | null
+          edificio_id?: string
+          id?: string
+          revisado?: boolean
+          storage_path?: string
+          tipo?: Database["public"]["Enums"]["loc_doc_tipo"]
+          titulo?: string
+          unidade_id?: string | null
+          visivel_cliente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_documentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_edificios: {
+        Row: {
+          ativo_id: string | null
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo_id?: string | null
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo_id?: string | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      loc_importacoes: {
+        Row: {
+          arquivo: string | null
+          created_at: string | null
+          criado_por: string | null
+          duplicadas: number | null
+          edificio_id: string
+          id: string
+          linhas: number | null
+          novas: number | null
+          sem_mapeamento: number | null
+        }
+        Insert: {
+          arquivo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          duplicadas?: number | null
+          edificio_id: string
+          id?: string
+          linhas?: number | null
+          novas?: number | null
+          sem_mapeamento?: number | null
+        }
+        Update: {
+          arquivo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          duplicadas?: number | null
+          edificio_id?: string
+          id?: string
+          linhas?: number | null
+          novas?: number | null
+          sem_mapeamento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_importacoes_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_indices: {
+        Row: {
+          acumulado_12m: number
+          fonte: string | null
+          indice: Database["public"]["Enums"]["loc_indice"]
+          mes: string
+          variacao_mensal: number | null
+        }
+        Insert: {
+          acumulado_12m: number
+          fonte?: string | null
+          indice: Database["public"]["Enums"]["loc_indice"]
+          mes: string
+          variacao_mensal?: number | null
+        }
+        Update: {
+          acumulado_12m?: number
+          fonte?: string | null
+          indice?: Database["public"]["Enums"]["loc_indice"]
+          mes?: string
+          variacao_mensal?: number | null
+        }
+        Relationships: []
+      }
+      loc_locatarios: {
+        Row: {
+          documento: string | null
+          emails: string[] | null
+          id: string
+          nome: string
+          telefone: string | null
+        }
+        Insert: {
+          documento?: string | null
+          emails?: string[] | null
+          id?: string
+          nome: string
+          telefone?: string | null
+        }
+        Update: {
+          documento?: string | null
+          emails?: string[] | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      loc_novas_locacoes: {
+        Row: {
+          ativa: boolean
+          carencia_meses: number
+          descricao: string | null
+          edificio_id: string
+          id: string
+          inicio_previsto: string
+          probabilidade: number
+          unidade_id: string | null
+          valor_mensal: number
+        }
+        Insert: {
+          ativa?: boolean
+          carencia_meses?: number
+          descricao?: string | null
+          edificio_id: string
+          id?: string
+          inicio_previsto: string
+          probabilidade?: number
+          unidade_id?: string | null
+          valor_mensal: number
+        }
+        Update: {
+          ativa?: boolean
+          carencia_meses?: number
+          descricao?: string | null
+          edificio_id?: string
+          id?: string
+          inicio_previsto?: string
+          probabilidade?: number
+          unidade_id?: string | null
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_novas_locacoes_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_novas_locacoes_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "loc_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_pagamentos: {
+        Row: {
+          chave: string
+          codigo: string
+          competencia: string | null
+          contrato_id: string | null
+          data_pagamento: string
+          data_vencimento: string
+          dias_atraso: number | null
+          edificio_id: string
+          id: string
+          imovel_nome: string | null
+          importacao_id: string | null
+          valor_bruto: number | null
+          valor_liquido: number
+        }
+        Insert: {
+          chave: string
+          codigo: string
+          competencia?: string | null
+          contrato_id?: string | null
+          data_pagamento: string
+          data_vencimento: string
+          dias_atraso?: number | null
+          edificio_id: string
+          id?: string
+          imovel_nome?: string | null
+          importacao_id?: string | null
+          valor_bruto?: number | null
+          valor_liquido: number
+        }
+        Update: {
+          chave?: string
+          codigo?: string
+          competencia?: string | null
+          contrato_id?: string | null
+          data_pagamento?: string
+          data_vencimento?: string
+          dias_atraso?: number | null
+          edificio_id?: string
+          id?: string
+          imovel_nome?: string | null
+          importacao_id?: string | null
+          valor_bruto?: number | null
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_pagamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_pagamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_pagamentos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_pagamentos_importacao_id_fkey"
+            columns: ["importacao_id"]
+            isOneToOne: false
+            referencedRelation: "loc_importacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_parametros_cenario: {
+        Row: {
+          cenario: string
+          fator_prob_novas: number
+          recup_0_30: number
+          recup_31_90: number
+          recup_90_mais: number
+          usa_novas_locacoes: boolean
+        }
+        Insert: {
+          cenario: string
+          fator_prob_novas: number
+          recup_0_30: number
+          recup_31_90: number
+          recup_90_mais: number
+          usa_novas_locacoes: boolean
+        }
+        Update: {
+          cenario?: string
+          fator_prob_novas?: number
+          recup_0_30?: number
+          recup_31_90?: number
+          recup_90_mais?: number
+          usa_novas_locacoes?: boolean
+        }
+        Relationships: []
+      }
+      loc_reajustes: {
+        Row: {
+          aniversario: string
+          contrato_id: string
+          edificio_id: string
+          estimado: boolean
+          id: string
+          indice: Database["public"]["Enums"]["loc_indice"]
+          mes_referencia: string | null
+          observacao: string | null
+          percentual: number | null
+          status: string
+          valor_anterior: number
+          valor_aplicado: number | null
+          valor_calculado: number | null
+          vigencia_a_partir: string
+        }
+        Insert: {
+          aniversario: string
+          contrato_id: string
+          edificio_id: string
+          estimado?: boolean
+          id?: string
+          indice: Database["public"]["Enums"]["loc_indice"]
+          mes_referencia?: string | null
+          observacao?: string | null
+          percentual?: number | null
+          status?: string
+          valor_anterior: number
+          valor_aplicado?: number | null
+          valor_calculado?: number | null
+          vigencia_a_partir: string
+        }
+        Update: {
+          aniversario?: string
+          contrato_id?: string
+          edificio_id?: string
+          estimado?: boolean
+          id?: string
+          indice?: Database["public"]["Enums"]["loc_indice"]
+          mes_referencia?: string | null
+          observacao?: string | null
+          percentual?: number | null
+          status?: string
+          valor_anterior?: number
+          valor_aplicado?: number | null
+          valor_calculado?: number | null
+          vigencia_a_partir?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_unidades: {
+        Row: {
+          andar: number | null
+          area_m2: number | null
+          edificio_id: string
+          fora_da_cobranca: boolean | null
+          id: string
+          nome: string
+          tipo: string
+        }
+        Insert: {
+          andar?: number | null
+          area_m2?: number | null
+          edificio_id: string
+          fora_da_cobranca?: boolean | null
+          id?: string
+          nome: string
+          tipo?: string
+        }
+        Update: {
+          andar?: number | null
+          area_m2?: number | null
+          edificio_id?: string
+          fora_da_cobranca?: boolean | null
+          id?: string
+          nome?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_unidades_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market_conclusions: {
         Row: {
           competitividade: string | null
@@ -1521,7 +2327,147 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      loc_v_alerta_reajuste: {
+        Row: {
+          aniversario: string | null
+          contrato_id: string | null
+          edificio_id: string | null
+          gatilho: string | null
+          indice: Database["public"]["Enums"]["loc_indice"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_auditoria_reajuste: {
+        Row: {
+          aniversario: string | null
+          contrato_id: string | null
+          diferenca: number | null
+          edificio_id: string | null
+          estimado: boolean | null
+          indice: Database["public"]["Enums"]["loc_indice"] | null
+          mes_referencia: string | null
+          parecer: string | null
+          percentual: number | null
+          valor_anterior: number | null
+          valor_aplicado: number | null
+          valor_calculado: number | null
+          vigencia_a_partir: string | null
+        }
+        Insert: {
+          aniversario?: string | null
+          contrato_id?: string | null
+          diferenca?: never
+          edificio_id?: string | null
+          estimado?: boolean | null
+          indice?: Database["public"]["Enums"]["loc_indice"] | null
+          mes_referencia?: string | null
+          parecer?: never
+          percentual?: number | null
+          valor_anterior?: number | null
+          valor_aplicado?: number | null
+          valor_calculado?: number | null
+          vigencia_a_partir?: string | null
+        }
+        Update: {
+          aniversario?: string | null
+          contrato_id?: string | null
+          diferenca?: never
+          edificio_id?: string | null
+          estimado?: boolean | null
+          indice?: Database["public"]["Enums"]["loc_indice"] | null
+          mes_referencia?: string | null
+          parecer?: never
+          percentual?: number | null
+          valor_anterior?: number | null
+          valor_aplicado?: number | null
+          valor_calculado?: number | null
+          vigencia_a_partir?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_reajustes_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_cobranca: {
+        Row: {
+          competencia: string | null
+          contrato_id: string | null
+          dias_em_aberto: number | null
+          edificio_id: string | null
+          max_atraso: number | null
+          saldo: number | null
+          situacao: string | null
+          ultimo_pagamento: string | null
+          valor_pago: number | null
+          valor_previsto: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_cronograma_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_locatarios_cliente: {
+        Row: {
+          edificio_id: string | null
+          id: string | null
+          nome: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       atribuir_ids_sinteticos: { Args: never; Returns: undefined }
@@ -1534,6 +2480,43 @@ export type Database = {
         }
         Returns: boolean
       }
+      loc_calcular_reajuste: {
+        Args: {
+          p_aniversario: string
+          p_contrato: string
+          p_valor_anterior: number
+        }
+        Returns: {
+          estimado: boolean
+          mes_referencia: string
+          percentual: number
+          valor_calculado: number
+          vigencia_a_partir: string
+        }[]
+      }
+      loc_eh_admin: { Args: { p_edificio: string }; Returns: boolean }
+      loc_fluxo: {
+        Args: { p_ate?: string; p_cenario?: string; p_edificio: string }
+        Returns: {
+          atraso_recuperado: number
+          competencia: string
+          diferenca: number
+          novas_locacoes: number
+          previsto_contratual: number
+          realizado_caixa: number
+          total_projetado: number
+        }[]
+      }
+      loc_gerar_cronograma: {
+        Args: { p_ate?: string; p_contrato: string }
+        Returns: number
+      }
+      loc_importar_pagamentos: {
+        Args: { p_arquivo: string; p_edificio: string; p_linhas: Json }
+        Returns: Json
+      }
+      loc_pode_ver: { Args: { p_edificio: string }; Returns: boolean }
+      loc_remapear_pagamentos: { Args: { p_edificio: string }; Returns: number }
       registrar_snapshot_operacional: {
         Args: { p_data?: string }
         Returns: number
@@ -1541,6 +2524,24 @@ export type Database = {
     }
     Enums: {
       app_role: "gestor" | "familia" | "admin" | "analista"
+      loc_competencia: "posterior" | "antecipada"
+      loc_doc_tipo:
+        | "contrato"
+        | "aditivo"
+        | "distrato"
+        | "vistoria"
+        | "garantia"
+        | "boleto"
+        | "comunicado"
+        | "outro"
+      loc_indice: "IGPM" | "IPCA" | "FIXO" | "NENHUM"
+      loc_status:
+        | "rascunho"
+        | "ativo"
+        | "em_renovacao"
+        | "inadimplente"
+        | "encerrado"
+      loc_tipo_contrato: "locacao" | "eventual" | "repasse"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1669,6 +2670,26 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["gestor", "familia", "admin", "analista"],
+      loc_competencia: ["posterior", "antecipada"],
+      loc_doc_tipo: [
+        "contrato",
+        "aditivo",
+        "distrato",
+        "vistoria",
+        "garantia",
+        "boleto",
+        "comunicado",
+        "outro",
+      ],
+      loc_indice: ["IGPM", "IPCA", "FIXO", "NENHUM"],
+      loc_status: [
+        "rascunho",
+        "ativo",
+        "em_renovacao",
+        "inadimplente",
+        "encerrado",
+      ],
+      loc_tipo_contrato: ["locacao", "eventual", "repasse"],
     },
   },
 } as const
