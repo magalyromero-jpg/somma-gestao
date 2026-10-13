@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ListTodo, Users, Building2, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserPlus, UserCog, Landmark } from "lucide-react";
+import { LayoutDashboard, ListTodo, LineChart, Search, RefreshCw, Settings, LogOut, Gavel, UserCog, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/somma-logo-white.png";
@@ -41,31 +41,31 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="flex items-center gap-3 px-5 py-6 border-b border-sidebar-border">
+    <div className="portal-shell flex min-h-screen w-full bg-background">
+      <aside className="hidden md:flex w-[232px] shrink-0 flex-col bg-sidebar text-sidebar-foreground">
+        <div className="flex items-center gap-3 px-6 py-7">
           <img src={logoWhite} alt="Somma" className="h-9 w-auto brightness-0 invert" />
           <div className="min-w-0">
-            <div className="text-sm font-light leading-tight text-white truncate">Somma MFO</div>
-            <div className="text-[10px] uppercase tracking-[0.15em] font-light text-white/60">
+            <div className="text-[22px] font-light leading-tight text-sidebar-foreground truncate">Somma MFO</div>
+            <div className="text-xs font-light text-sidebar-foreground/65">
               Gestão de Ativos
             </div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 py-2 space-y-0.5">
           {items.map((item, index) => (
             <div key={item.to}>
-            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-[0.15em] text-sidebar-foreground/40">{item.grupo}</div>}
+            {item.grupo && item.grupo !== items[index - 1]?.grupo && <div className="px-6 pb-2 pt-5 text-[10px] uppercase tracking-wider text-sidebar-foreground/55">{item.grupo}</div>}
             <NavLink
               to={item.to}
               end={item.to === "/configuracoes"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-light transition-colors",
-                  "hover:bg-white/5",
+                  "flex items-center gap-3 border-l-[3px] px-6 py-3 text-[13px] font-light transition-colors",
+                  "hover:bg-sidebar-accent",
                   isActive
-                    ? "bg-white/10 text-white"
-                    : "text-white/65",
+                    ? "border-gold bg-sidebar-accent text-sidebar-foreground font-medium"
+                    : "border-transparent text-sidebar-foreground/75",
                 )
               }
             >
@@ -73,7 +73,7 @@ export default function AppLayout() {
                 <>
                   <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                   <span className="flex-1">{item.label}</span>
-                  {isActive && <span className="h-1.5 w-1.5 rounded-full bg-gold" />}
+                  
                 </>
               )}
             </NavLink>
@@ -86,32 +86,34 @@ export default function AppLayout() {
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-light text-white truncate">{profile?.nome ?? profile?.email ?? "Usuário"}</div>
-              <div className="text-[10px] uppercase tracking-wider text-white/50">{role ?? "—"}</div>
+              <div className="text-xs font-light text-sidebar-foreground truncate">{profile?.nome ?? profile?.email ?? "Usuário"}</div>
+              <div className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50">{role ?? "—"}</div>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleLogout}
-              className="text-white/60 hover:text-white transition-colors"
+              className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
               aria-label="Sair"
               title="Sair"
             >
               <LogOut className="h-4 w-4" strokeWidth={1.5} />
-            </button>
+            </Button>
           </div>
         </div>
       </aside>
 
       <main className="flex-1 min-w-0">
-        <header className="md:hidden flex items-center justify-between gap-3 px-4 py-3 bg-sidebar text-white">
+        <header className="md:hidden flex items-center justify-between gap-3 px-4 py-3 bg-sidebar text-sidebar-foreground">
           <div className="flex items-center gap-2">
             <img src={logoWhite} alt="Somma" className="h-7 brightness-0 invert" />
             <div className="font-light text-sm">Somma MFO</div>
           </div>
-          <Button size="sm" variant="ghost" className="text-white hover:text-white hover:bg-white/10" onClick={handleLogout}>
+          <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
           </Button>
         </header>
-        <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1400px] mx-auto animate-fade-in">
+        <div className="portal-content animate-fade-in">
           <Outlet />
         </div>
       </main>

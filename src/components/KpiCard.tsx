@@ -30,12 +30,12 @@ export const KpiCard = ({
   >
     <CardContent className="p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="text-xs text-muted-foreground font-normal">
           {label}
         </div>
         {icon && <div className="text-gold">{icon}</div>}
       </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+      <div className="mt-2 text-[26px] font-light text-foreground">{value}</div>
       <div className="mt-1 flex items-center gap-2 text-xs">
         {delta !== undefined && (
           <span className={cn(pctClass(delta), "font-medium")}>{formatPct(delta)}</span>

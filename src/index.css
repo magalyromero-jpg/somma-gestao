@@ -1,5 +1,13 @@
 @import 'leaflet/dist/leaflet.css';
 
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/__l5e/assets-v1/cc65fe90-b6b7-4e67-9342-d8fb3fc99a6d/portal-inter.woff2') format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,14 +18,14 @@
 @layer base {
   :root {
     /* Página */
-    --background: 222 16% 93%;          /* #E9EBF0 */
-    --foreground: 180 1% 23%;           /* #373C3C */
+    --background: 180 5% 96%;          /* #E9EBF0 */
+    --foreground: 197 19% 22%;           /* #373C3C */
 
     /* Cards / superfícies */
     --card: 0 0% 100%;
-    --card-foreground: 180 1% 23%;
+    --card-foreground: 197 19% 22%;
     --popover: 0 0% 100%;
-    --popover-foreground: 180 1% 23%;
+    --popover-foreground: 197 19% 22%;
 
     /* Somma dark #2E3E44 — primary */
     --primary: 197 19% 22%;
@@ -28,8 +36,8 @@
     --secondary-foreground: 0 0% 100%;
 
     /* Muted / subtle */
-    --muted: 222 16% 96%;
-    --muted-foreground: 197 17% 53%;    /* #6F8E9A */
+    --muted: 195 13% 94%;
+    --muted-foreground: 200 19% 37%;    /* #6F8E9A */
 
     /* Somma gold #CC8B15 — accent */
     --accent: 38 80% 44%;
@@ -39,39 +47,39 @@
     --gold-light: 39 73% 58%;           /* #E2A849 */
 
     /* Status — semânticos do Brand Book */
-    --destructive: 6 70% 49%;           /* #C0392B */
+    --destructive: 3 71% 41%;           /* #C0392B */
     --destructive-foreground: 0 0% 100%;
-    --destructive-bg: 0 92% 96%;        /* #FEECEC */
+    --destructive-bg: 6 67% 92%;        /* #FEECEC */
 
-    --success: 145 47% 33%;             /* #2D7A4F */
+    --success: 137 56% 27%;             /* #2D7A4F */
     --success-foreground: 0 0% 100%;
-    --success-bg: 138 47% 93%;          /* #E8F5ED */
+    --success-bg: 133 33% 92%;          /* #E8F5ED */
 
-    --warning: 39 88% 33%;              /* #9A6B0A */
+    --warning: 39 100% 27%;              /* #9A6B0A */
     --warning-foreground: 0 0% 100%;
-    --warning-bg: 41 93% 95%;           /* #FEF6E4 */
+    --warning-bg: 43 83% 91%;           /* #FEF6E4 */
 
-    --info: 211 75% 37%;                /* #185FA5 */
+    --info: 197 33% 37%;                /* #185FA5 */
     --info-foreground: 0 0% 100%;
-    --info-bg: 215 92% 96%;             /* #EBF3FE */
+    --info-bg: 195 29% 93%;             /* #EBF3FE */
 
     --neutral: 220 9% 46%;              /* #6B7280 */
     --neutral-foreground: 0 0% 100%;
     --neutral-bg: 220 10% 95%;          /* #F0F1F3 */
 
     /* Bordas / inputs */
-    --border: 240 2% 77%;               /* #C3C4C6 */
-    --input: 240 2% 77%;
+    --border: 200 10% 88%;               /* #C3C4C6 */
+    --input: 199 13% 76%;
     --ring: 38 80% 44%;
 
-    --radius: 0.5rem;                   /* 8px brand */
+    --radius: 0.375rem;                   /* 8px brand */
 
     /* Sidebar — escura Somma */
     --sidebar-background: 197 19% 22%;  /* #2E3E44 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 38 80% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 197 19% 28%;
+    --sidebar-accent: 196 18% 28%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 197 19% 32%;
     --sidebar-ring: 38 80% 44%;
@@ -79,7 +87,7 @@
     /* Gradients & shadows */
     --gradient-gold: linear-gradient(135deg, hsl(38 80% 44%), hsl(39 73% 58%));
     --gradient-navy: linear-gradient(135deg, hsl(197 19% 18%), hsl(200 19% 30%));
-    --shadow-card: 0 1px 3px 0 hsl(197 19% 22% / 0.06), 0 1px 2px -1px hsl(197 19% 22% / 0.06);
+    --shadow-card: none;
     --shadow-elevated: 0 10px 30px -12px hsl(197 19% 22% / 0.18);
   }
 
@@ -110,14 +118,15 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
-    font-weight: 300;                     /* Inter Light default */
+    font-weight: 400;
+    font-size: 13px;
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 {
     font-family: 'Inter', system-ui, sans-serif;
-    font-weight: 200;                     /* Inter ExtraLight para títulos */
-    letter-spacing: -0.015em;
+    font-weight: 300;
+    letter-spacing: 0;
   }
   strong, b { font-weight: 700; }         /* Inter Bold para destaques */
 
@@ -134,19 +143,19 @@
   .leaflet-container { border-radius: var(--radius); }
 }
 
-/* Operacional — sistema visual denso */
-.op-theme {
-  --op-bg: 200 11% 95%; --surface2: 180 17% 98%; --line: 200 15% 88%; --line2: 200 15% 93%;
-  --ink: 199 24% 14%; --faint: 199 10% 62%; --op-mid: 200 19% 37%;
-  --red: 358 66% 45%; --redbg: 357 69% 95%; --amber: 36 100% 30%; --amberbg: 40 100% 92%;
+/* Portal — semantic status palette shared by every screen */
+:root, .op-theme {
+  --op-bg: 180 5% 96%; --surface2: 180 17% 98%; --line: 200 10% 88%; --line2: 200 14% 92%;
+  --ink: 197 19% 22%; --faint: 199 10% 62%; --op-mid: 200 19% 37%;
+  --red: 3 71% 41%; --redbg: 6 67% 92%; --amber: 39 100% 27%; --amberbg: 43 83% 91%;
   --amber-bar: 38 67% 55%; --blue: 197 33% 37%; --bluebg: 195 29% 93%;
-  --gray: 204 10% 58%; --graybg: 204 13% 94%; --green: 154 46% 34%; --greenbg: 151 44% 92%;
+  --gray: 204 10% 58%; --graybg: 204 13% 94%; --green: 137 56% 27%; --greenbg: 133 33% 92%;
   --flame: 18 77% 50%; --goldbg: 38 80% 93%;
   --card: 0 0% 100%; --border: var(--line); --foreground: var(--ink); --card-foreground: var(--ink);
-  --muted: var(--surface2); --muted-foreground: 199 12% 44%; --destructive: var(--red);
+  --muted: var(--surface2); --muted-foreground: 200 19% 37%; --destructive: var(--red);
   font-size: 13px; color: hsl(var(--ink));
 }
-.dark .op-theme {
+.dark, .dark .op-theme {
   --op-bg: 199 20% 9%; --surface2: 199 18% 15%; --line: 199 15% 24%; --line2: 199 15% 19%;
   --ink: 200 15% 92%; --faint: 199 10% 55%; --op-mid: 200 18% 58%;
   --red: 358 81% 70%; --redbg: 358 40% 18%; --amber: 36 83% 65%; --amberbg: 36 50% 16%;
@@ -155,7 +164,7 @@
   --card: 199 19% 12%; --muted-foreground: 199 12% 65%;
 }
 .op-theme h1, .op-theme h2 { color: hsl(var(--ink)); }
-.op-theme section.rounded-md, .op-theme .op-card { border-color: hsl(var(--line)); border-radius: 8px; box-shadow: 0 1px 2px rgba(20,35,42,.06); }
+.op-theme section.rounded-md, .op-theme .op-card { border-color: hsl(var(--line)); border-radius: var(--radius); box-shadow: none; }
 .op-theme table thead tr { background: hsl(var(--surface2)); color: hsl(var(--muted-foreground)); font-size: 12px; }
 .op-theme table td { height: 37px; border-color: hsl(var(--line2)); }
 .op-theme table tbody tr:hover { background: hsl(var(--surface2)); }
@@ -166,3 +175,25 @@
 .op-tag-blue { background:hsl(var(--bluebg)); color:hsl(var(--blue)); }
 .op-tag-gray { background:hsl(var(--graybg)); color:hsl(var(--muted-foreground)); }
 .op-tag-green { background:hsl(var(--greenbg)); color:hsl(var(--green)); }
+
+/* Shared portal layout: light typography, quiet surfaces and dense data. */
+.portal-shell { font-size: 13px; }
+.portal-content { padding: 32px 40px; max-width: 1600px; margin: 0 auto; }
+.portal-content > div > .space-y-4 { gap: 24px; }
+.portal-shell h1 { font-size: 28px; line-height: 1.25; font-weight: 300; letter-spacing: 0; }
+.portal-shell h2 { font-size: 15px; letter-spacing: 0; }
+.portal-shell .tracking-tight { letter-spacing: 0; }
+.portal-shell table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.portal-shell table th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: hsl(var(--muted-foreground)); background: hsl(var(--card)); border-bottom: 1px solid hsl(var(--border)); position: sticky; top: 0; z-index: 1; }
+.portal-shell table td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid hsl(var(--line2)); }
+.portal-shell table tbody tr:hover { background: hsl(var(--surface2)); }
+.portal-tabs { display: flex; flex-wrap: nowrap; width: 100%; height: auto; justify-content: flex-start; overflow-x: auto; border-radius: 0; border-bottom: 1px solid hsl(var(--border)); background: transparent; padding: 0; }
+.portal-tab { flex-shrink: 0; min-height: 42px; border-radius: 0; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13px; font-weight: 400; }
+.portal-tab[data-state=active] { border-bottom-color: hsl(var(--gold)); background: transparent; color: hsl(var(--foreground)); box-shadow: none; font-weight: 500; }
+.portal-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: 16px; }
+.portal-kpi { min-width: 0; min-height: 110px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); background: hsl(var(--card)); padding: 18px 20px; }
+.portal-kpi-label { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.portal-kpi-value { margin-top: 8px; font-size: 26px; line-height: 1.25; font-weight: 300; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+@media (max-width: 1023px) { .portal-content { padding: 24px; } }
+@media (max-width: 639px) { .portal-content { padding: 20px 16px; } .portal-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .portal-kpi { padding: 14px; } .portal-kpi-value { font-size: 24px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
