@@ -115,8 +115,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do aluguel</TabsTrigger>
-          {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
           {admin && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
+          {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
         </TabsList></div>
 
         <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
@@ -145,7 +145,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
               </tr>;
             })}</tbody></table></div>
           </Bloco>
-          <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>
+          {admin && <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>}
         </TabsContent>
 
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
