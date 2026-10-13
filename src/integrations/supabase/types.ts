@@ -3131,7 +3131,6 @@ export type Database = {
         Row: {
           area_contrato_m2: number | null
           area_matricula_m2: number | null
-          atividade: string | null
           contrato_id: string | null
           edificio_id: string | null
           fim: string | null
@@ -3181,8 +3180,6 @@ export type Database = {
         Row: {
           aluguel_atual: number | null
           aluguel_inicial: number | null
-          aluguel_inicio_aditivo: number | null
-          atividade: string | null
           contrato_id: string | null
           edificio_id: string | null
           fim_vigente: string | null
@@ -3206,7 +3203,6 @@ export type Database = {
       }
       loc_v_locatarios_cliente: {
         Row: {
-          atividade: string | null
           edificio_id: string | null
           id: string | null
           nome: string | null
