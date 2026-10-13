@@ -151,7 +151,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
               const doc = d.docContrato(l.contrato_id);
               return <tr key={l.contrato_id}>
                 <td className={cn(tableClasses.td, "font-medium")}>{l.unidades ?? "—"}</td>
-                <td className={tableClasses.td}>{l.locatario}</td>
+                <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
                 <td className={tableClasses.td}>{l.matriculas ?? "—"}</td>
                 <td className={tableClasses.td}>{indiceLabel(l.indice)}</td>
                 <td className={tableClasses.num}>{brl(l.valor_vigente)}</td>
@@ -159,7 +159,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
                 <td className={tableClasses.num}>{m2(l.area_matricula_m2)}</td>
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.inicio)}</td>
                 <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.fim)}</td>
-                <td className={tableClasses.td}>{c ? <span className={cn("op-tag", c.cls)}>{c.label}</span> : "—"}</td>
+                <td className={cn(tableClasses.td, "zen-txt")}>{c ? <span className={cn("op-tag", c.cls)}>{c.label}</span> : "—"}</td>
                 <td className={tableClasses.num}>{l.rs_m2_matricula == null ? "—" : num2(l.rs_m2_matricula)}</td>
                 <td className={cn(tableClasses.td, "text-center")}>{doc.arquivo?.storage_path
                   ? <button type="button" onClick={() => abrirPdf(doc.arquivo.storage_path)} aria-label={`Abrir contrato de ${l.unidades}`} className={cn("inline-flex text-secondary hover:text-foreground", doc.situacao === "incompleto" && "opacity-40")}><FileText className="h-4 w-4" strokeWidth={1.5} /></button>
@@ -333,7 +333,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
         {["Unidade", "Locatário", "Início contrato inicial", "Aluguel inicial (R$)", "Tem aditivo?", "Início aditivo", "Aluguel atual (R$)", "Variação %", "Fim vigente", "Status"].map((h, i) => <th key={h} className={cn(tableClasses.th, [3, 6, 7].includes(i) && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>
         <td className={cn(tableClasses.td, "font-medium")}>{e.l.unidades}</td>
-        <td className={tableClasses.td}>{e.l.locatario}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{e.l.locatario}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_inicial)}</td>
         <td className={tableClasses.num}>{num2(e.aluguel_inicial)}</td>
         <td className={tableClasses.td}>{e.tem_aditivo ? "Sim" : "Não"}</td>

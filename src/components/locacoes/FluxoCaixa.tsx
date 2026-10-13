@@ -106,7 +106,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {rows.map(({ l, o, r }) => <tr key={l.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={tableClasses.td}>{l.locatario}</td>
+        <td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
         <td className={tableClasses.num}>{brl(o)}</td><td className={tableClasses.num}>{brl(r)}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{brl(r - o)}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
@@ -117,7 +117,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
     : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
     </tr></thead><tbody>
-      {rows.map(({ l, porMes }) => <tr key={l.contrato_id}><td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={tableClasses.td}>{l.locatario}</td>{porMes.map((v, i) => <td key={i} className={tableClasses.num}>{num2(v)}</td>)}</tr>)}
+      {rows.map(({ l, porMes }) => <tr key={l.contrato_id}><td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>{porMes.map((v, i) => <td key={i} className={tableClasses.num}>{num2(v)}</td>)}</tr>)}
       <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => <td key={i} className={tableClasses.num}>{num2(rows.reduce((s, x) => s + x.porMes[i], 0))}</td>)}</tr>
     </tbody></table></div>}
   </Bloco>;
@@ -178,7 +178,7 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
       {["Unidade", "Locatário", "m²", "R$/m² hoje", "R$/m² nov/29", "Próxima renovação", "2027", "2028", "2029"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i !== 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {r.porContrato.map((x) => <tr key={x.l.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium")}>{x.l.unidades}</td><td className={tableClasses.td}>{x.l.locatario}</td>
+        <td className={cn(tableClasses.td, "font-medium")}>{x.l.unidades}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.l.locatario}</td>
         <td className={tableClasses.num}>{x.area ? m2(x.area) : "—"}</td><td className={tableClasses.num}>{x.hoje == null ? "—" : num2(x.hoje)}</td><td className={tableClasses.num}>{x.nov29 == null ? "—" : num2(x.nov29)}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(x.renov)}</td>
         <td className={tableClasses.num}>{num2(x.a2027)}</td><td className={tableClasses.num}>{num2(x.a2028)}</td><td className={tableClasses.num}>{num2(x.a2029)}</td>

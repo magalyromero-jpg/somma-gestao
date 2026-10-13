@@ -100,7 +100,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
           <th className={tableClasses.th}>Código</th><th className={tableClasses.th}>Nome no Lidderar</th><th className={cn(tableClasses.th, "text-right")}>Linhas</th><th className={tableClasses.th}>Vincular a</th>
         </tr></thead><tbody>{codigos.map((c) => <tr key={c.codigo}>
           <td className={cn(tableClasses.td, "tabular-nums")}>{c.codigo}</td>
-          <td className={tableClasses.td}>{c.nome_no_lidderar ?? "—"}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{c.nome_no_lidderar ?? "—"}</td>
           <td className={tableClasses.num}>{contagem(c.codigo)}</td>
           <td className={tableClasses.td}><Select defaultValue="eventual" onValueChange={(v) => vincular(c.codigo, v)}>
             <SelectTrigger className="h-8 w-64 text-xs" aria-label={`Vincular ${c.codigo}`}><SelectValue /></SelectTrigger>
@@ -117,7 +117,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(p.data_vencimento)}</td>
         <td className={cn(tableClasses.td, "whitespace-nowrap tabular-nums text-muted-foreground")}>{p.codigo}</td>
         <td className={tableClasses.td}>{p.imovel_nome?.replace(`${data.edificio.nome} - `, "")}</td>
-        <td className={tableClasses.td}>{p.contrato_id ? (() => { const l = porContrato.get(p.contrato_id); return l ? `${l.unidades} · ${l.locatario}` : "—"; })() : <span className="op-tag op-tag-gray">Receita eventual</span>}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{p.contrato_id ? (() => { const l = porContrato.get(p.contrato_id); return l ? `${l.unidades} · ${l.locatario}` : "—"; })() : <span className="op-tag op-tag-gray">Receita eventual</span>}</td>
         <td className={cn(tableClasses.num, p.dias_atraso > 3 && "text-destructive")}>{p.dias_atraso ? `${p.dias_atraso} d` : "—"}</td>
         <td className={tableClasses.num}>{brl(p.valor_liquido)}</td>
       </tr>)}</tbody></table></div>
@@ -169,8 +169,8 @@ export function Documentos({ data, linhas, docContrato, admin, abrirPdf }: { dat
         const s = SITUACAO[d.situacao];
         return <tr key={l.contrato_id}>
           <td className={cn(tableClasses.td, "font-medium")}>{l.unidades}</td>
-          <td className={tableClasses.td}>{l.locatario}</td>
-          <td className={tableClasses.td}>{d.arquivo ? <button type="button" className="inline-flex items-center gap-1.5 text-secondary hover:text-foreground" onClick={() => abrirPdf(d.arquivo.storage_path)}><FileText className="h-3.5 w-3.5" strokeWidth={1.5} />{d.arquivo.titulo ?? "Documento"}</button> : "—"}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{d.arquivo ? <button type="button" className="inline-flex items-center gap-1.5 text-secondary hover:text-foreground" onClick={() => abrirPdf(d.arquivo.storage_path)}><FileText className="h-3.5 w-3.5" strokeWidth={1.5} />{d.arquivo.titulo ?? "Documento"}</button> : "—"}</td>
           <td className={tableClasses.td}><span className={cn("op-tag", s.cls)}>{s.label}</span></td>
         </tr>;
       })}</tbody></table></div>
