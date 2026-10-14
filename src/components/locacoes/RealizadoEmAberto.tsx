@@ -104,17 +104,16 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
         </BarChart>
       </ResponsiveContainer>
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Mês", "Previsto", "Recebido", "Em Aberto", "Regularizado", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
+        {["Mês", "Previsto", "Recebido", "Em Aberto", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
         {mensal.map((m) => { const sem = m.novo <= 0.004 && m.acum <= 0.004; return <tr key={m.mes} className={cn(sem && "text-muted-foreground")}>
           <td className={tableClasses.td}>{mesExtenso(m.mes)}</td>
           <td className={tableClasses.num}>{brl(n(m.previsto_contratual))}</td>
           <td className={tableClasses.num}>{valOuTraco(n(m.recebido_da_competencia))}</td>
           <td className={cn(tableClasses.num, m.novo > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.novo)}</td>
-          <td className={cn(tableClasses.num, m.reg > 0.004 && "num-positive")}>{valOuTraco(m.reg)}</td>
           <td className={cn(tableClasses.num, m.acum > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
         </tr>; })}
-        <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
+        <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
     </div>}
     </div>}
