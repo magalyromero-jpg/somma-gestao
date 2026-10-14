@@ -13,16 +13,16 @@ const n = (v: any) => Number(v ?? 0);
 const mesExtenso = (s: string) => { const m = MESES_LONGOS[Number(s.slice(5, 7)) - 1]; return m.charAt(0).toUpperCase() + m.slice(1); };
 const valOuTraco = (v: number) => (Math.abs(v) > 0.004 ? brl(v) : "—");
 
-function Quadro({ label, valor, destaque, legenda }: { label: string; valor: string; destaque?: boolean; legenda?: string }) {
-  return <div className={cn("rounded-sm border bg-card p-4", destaque && "reforecast-abaixo border-current")}>
-    <div className={cn("text-[12px]", destaque ? "font-medium" : "text-muted-foreground")}>{label}</div>
-    <div className={cn("mt-1 font-light tabular-nums", destaque ? "text-[28px] font-normal" : "text-[22px]")}>{valor}</div>
-    {legenda && <div className="mt-1 text-[11px] tabular-nums">{legenda}</div>}
+function Quadro({ label, valor, tom, forte, children }: { label: string; valor?: string; tom?: "vermelho" | "cinza"; forte?: boolean; children?: React.ReactNode }) {
+  return <div className={cn("rounded-sm border bg-card p-4", tom === "vermelho" && "reforecast-abaixo border-current", tom === "cinza" && "bg-muted")}>
+    <div className={cn("text-[12px]", tom ? "font-medium" : "text-muted-foreground")}>{label}</div>
+    {valor && <div className={cn("mt-1 tabular-nums text-[22px]", forte ? "font-bold" : "font-light")}>{valor}</div>}
+    {children}
   </div>;
 }
 
 export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano: number; edificioId: string; admin: boolean; ultimaData: string }) {
-  const [aba, setAba] = useState<"acum" | "mensal">("acum");
+  const [aba, setAba] = useState<"contrato" | "mes">("contrato");
   const q = useQuery({
     queryKey: ["loc-recebimentos", edificioId, ano],
     queryFn: async () => {
@@ -55,16 +55,24 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const ultimoAcum = mensal.length ? mensal[mensal.length - 1].acum : 0;
 
   return <Bloco titulo="Recebimentos e Saldo em Aberto" acao={<div className="flex gap-2">
-    {([["acum", "Acumulado"], ["mensal", "Mensal"]] as const).map(([v, l]) => <Button key={v} size="sm" variant={aba === v ? "default" : "outline"} aria-pressed={aba === v} onClick={() => setAba(v)}>{l}</Button>)}
+    {([["contrato", "Por Contrato"], ["mes", "Por Mês"]] as const).map(([v, l]) => <Button key={v} size="sm" variant={aba === v ? "default" : "outline"} aria-pressed={aba === v} onClick={() => setAba(v)}>{l}</Button>)}
   </div>}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p>
-    : aba === "acum" ? <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Quadro label="Previsto" valor={brl(previsto)} />
+    : <div className="space-y-6">
+      <div className={cn("grid grid-cols-2 gap-4", admin ? "lg:grid-cols-6" : "lg:grid-cols-4")}>
+        <Quadro label={admin ? "Previsto (Carteira Ativa)" : "Previsto"} valor={brl(previsto)} />
         <Quadro label="Recebido" valor={brl(recebido)} />
-        <Quadro label="Em Aberto" valor={valOuTraco(abertoTotal)} destaque legenda={admin && abertoEncerrados > 0.004 ? `Inclui contratos encerrados: ${brl(abertoEncerrados)}` : undefined} />
-        <Quadro label="Inadimplência" valor={previsto ? `${num2(abertoTotal / previsto * 100)}%` : "—"} />
+        <Quadro label={admin ? "Em Aberto Ativos" : "Em Aberto"} valor={valOuTraco(aberto)} tom="vermelho" />
+        {admin && <Quadro label="Em Aberto Não Ativos" valor={valOuTraco(abertoEncerrados)} tom="cinza" />}
+        {admin && <Quadro label="Total em Aberto" valor={valOuTraco(abertoTotal)} forte />}
+        <Quadro label="Inadimplência">
+          <div className="mt-1 space-y-0.5 text-[13px] tabular-nums">
+            <div className="flex justify-between gap-2"><span>Contratos Ativos</span><span className="text-[18px] font-light">{previsto ? `${num2(aberto / previsto * 100)}%` : "—"}</span></div>
+            {admin && <div className="flex justify-between gap-2"><span>Total</span><span className="text-[18px] font-light">{previsto ? `${num2(abertoTotal / previsto * 100)}%` : "—"}</span></div>}
+          </div>
+        </Quadro>
       </div>
+    {aba === "contrato" ? <div className="space-y-6">
       <section>
         <h4 className="mb-3 text-[15px] font-medium">Em Aberto por Contrato</h4>
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
@@ -84,13 +92,15 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
       </section>
     </div>
     : <div className="space-y-6">
+      <p className="text-[13px] text-muted-foreground">Contratos ativos.{admin && abertoEncerrados > 0.004 ? ` O saldo dos contratos não ativos (${brl(abertoEncerrados)}) está em Por Contrato.` : ""}</p>
+      <div className="text-[11px] text-muted-foreground">Contratos Ativos</div>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={mensal} margin={{ top: 20 }}>
           <CartesianGrid vertical={false} stroke={CORES.borda} />
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: CORES.texto }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} tickFormatter={(v) => mil(v)} width={44} />
           <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => brl(v)} cursor={{ fill: "hsl(var(--muted))" }} />
-          <Bar dataKey="acum" name="Em Aberto Acumulado" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
+          <Bar dataKey="acum" name="Contratos ativos" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
             <LabelList dataKey="acum" position="top" formatter={(v: number) => (v > 0.004 ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
         </BarChart>
@@ -106,8 +116,9 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
           <td className={cn(tableClasses.num, m.reg > 0.004 && "num-positive")}>{valOuTraco(m.reg)}</td>
           <td className={cn(tableClasses.num, m.acum > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
         </tr>; })}
-        <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
+        <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
+    </div>}
     </div>}
   </Bloco>;
 }
