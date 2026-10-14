@@ -206,16 +206,19 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
   };
   const fechados = d.meses.filter((m: any) => m.fechado);
   const ultimo = fechados[fechados.length - 1];
-  const acumO = fechados.reduce((s: number, m: any) => s + m.orcado, 0);
   const acumR = fechados.reduce((s: number, m: any) => s + m.realizado, 0);
-  // vencido em aberto: orçado − recebido por contrato até o último mês importado
-  let vencido = 0;
-  for (const l of d.linhas) {
-    const o = data.orcado.filter((x: any) => x.contrato_id === l.contrato_id && x.mes.slice(0, 7) <= d.ultimoMes).reduce((s: number, x: any) => s + Number(x.valor ?? 0), 0);
-    const r = data.pags.filter((p: any) => p.contrato_id === l.contrato_id && p.data_pagamento.startsWith(String(data.ano)) && p.data_pagamento.slice(0, 7) <= d.ultimoMes).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
-    if (o - r > 1) vencido += o - r;
-  }
-  for (const e of data.encerrados ?? []) vencido += Number(e.alugueis_em_aberto ?? 0) + Number(e.debito_condominio ?? 0);
+  const saldo = useSaldoEmAberto(data.edificio.id, data.ano, d.ultimaData, !!data.admin);
+  const recebidoPor = (pred: (k: string) => boolean) => {
+    let c = 0, a = 0;
+    for (const p of data.pags) { const k = p.data_pagamento.slice(0, 7); if (!pred(k)) continue; const v = Number(p.valor_liquido ?? 0); if (p.contrato_id) c += v; else a += v; }
+    return { c, a };
+  };
+  const reforecastPor = (pred: (k: string) => boolean) => (data.previsto ?? []).filter((x: any) => pred(String(x.mes).slice(0, 7))).reduce((s: number, x: any) => s + Number(x.valor ?? 0), 0);
+  const noMes = (k: string) => !!ultimo && k === ultimo.key;
+  const noPeriodo = (k: string) => k.startsWith(String(data.ano)) && k <= d.ultimoMes;
+  const recMes = recebidoPor(noMes), recAcum = recebidoPor(noPeriodo);
+  const refMes = reforecastPor(noMes), refAcum = reforecastPor(noPeriodo);
+  const difAjustes = refAcum - recAcum.c - saldo.total;
   const hojeKey = String(data.hoje ?? new Date().toISOString()).slice(0, 7);
   const limiteKey = addMes(hojeKey, 4);
   const [la, lm] = limiteKey.split("-").map(Number);
@@ -256,15 +259,23 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
       </Card>
       <Card label="Valor Médio do m² — Salas"><Valor>{brl(m2Medio("Sala"))}</Valor></Card>
       <Card label="Valor Médio do m² — Lojas"><Valor>{brl(m2Medio("Loja"))}</Valor></Card>
-      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i] : "—"}`}>
+      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i].charAt(0).toUpperCase() + MESES_LONGOS[ultimo.i].slice(1) : "—"}`}>
         <Valor>{brl(ultimo?.realizado ?? 0)}</Valor>
-        {ultimo && ultimo.realizado < ultimo.orcado && <div className="mt-2 text-xs text-destructive">{num2((1 - ultimo.realizado / ultimo.orcado) * 100)}% abaixo do previsto ({brl(ultimo.orcado)})</div>}
+        <div className="mt-2 text-xs text-muted-foreground">Contratos {brl(recMes.c)} · Receitas Avulsas {brl(recMes.a)}</div>
+        <div className="mt-1 text-xs text-muted-foreground">Reforecast do mês {brl(refMes)}</div>
       </Card>
-      <Card label={`Acumulado jan–${ultimo ? MESES[ultimo.i] : "—"}`}>
+      <Card label={`Acumulado Jan–${ultimo ? MESES[ultimo.i].charAt(0).toUpperCase() + MESES[ultimo.i].slice(1) : "—"}`}>
         <Valor>{brl(acumR)}</Valor>
-        {acumO > 0 && <div className="mt-2 text-xs text-muted-foreground">{num2(acumR / acumO * 100)}% do previsto ({brl(acumO)})</div>}
+        <div className="mt-2 text-xs text-muted-foreground">Contratos {brl(recAcum.c)} · Receitas Avulsas {brl(recAcum.a)}</div>
+        <div className="mt-1 text-xs text-muted-foreground">Reforecast do período {brl(refAcum)}</div>
       </Card>
-      <Card label="Vencido em Aberto"><Valor className={vencido > 0 ? "text-destructive" : undefined}>{brl(vencido)}</Valor></Card>
+      <div title={data.admin ? `Reforecast ${brl(refAcum)} − Realizado de contratos ${brl(recAcum.c)} = ${brl(refAcum - recAcum.c)}\nTotal em Aberto ${brl(saldo.total)}\nDiferença: ajustes de meses anteriores ${brl(difAjustes)}` : undefined}>
+        <Card label={data.admin ? "Total em Aberto" : "Em Aberto"} className="h-full">
+          <Valor className={saldo.total > 0 ? "text-destructive" : undefined}>{saldo.isLoading ? "—" : brl(data.admin ? saldo.total : saldo.ativos)}</Valor>
+          {data.admin && <div className="mt-2 text-xs text-muted-foreground">Ativos {brl(saldo.ativos)} · Não Ativos {brl(saldo.naoAtivos)}</div>}
+          {data.admin && saldo.condominio > 0.004 && <div className="mt-1 text-xs text-muted-foreground">Condomínio em Aberto {brl(saldo.condominio)}</div>}
+        </Card>
+      </div>
       <Card label={`Reajustes até ${MESES[lm - 1]}/${la}`}><Valor>{nReaj}</Valor><div className="mt-2 text-xs text-muted-foreground">contratos</div></Card>
       <Card label="Vencimentos em 12 Meses"><Valor>{vencem}</Valor></Card>
     </div>
