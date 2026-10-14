@@ -3292,6 +3292,21 @@ export type Database = {
           papel: string
         }[]
       }
+      loc_caixa_mensal: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          de_meses_anteriores: number
+          em_aberto: number
+          em_aberto_encerrados: number
+          entrou_no_caixa: number
+          mes: string
+          orcado: number
+          outras_receitas: number
+          recebido_a_maior: number
+          recebido_da_competencia: number
+          recebido_no_mes_seguinte: number
+        }[]
+      }
       loc_calcular_reajuste: {
         Args: {
           p_aniversario: string
@@ -3310,11 +3325,39 @@ export type Database = {
         Args: { p_edificio: string; p_email: string }
         Returns: string
       }
+      loc_conferencia: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          contrato_id: string
+          encerrado: boolean
+          locatario: string
+          mes: string
+          orcado: number
+          pago_em: string
+          recebido: number
+          saldo: number
+          situacao: string
+          unidades: string
+        }[]
+      }
       loc_definir_acesso: {
         Args: { p_edificio: string; p_papel: string; p_user: string }
         Returns: undefined
       }
       loc_eh_admin: { Args: { p_edificio: string }; Returns: boolean }
+      loc_em_aberto: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          competencias: string
+          contrato_id: string
+          encerrado: boolean
+          locatario: string
+          orcado: number
+          recebido: number
+          saldo: number
+          unidades: string
+        }[]
+      }
       loc_fluxo: {
         Args: { p_ate?: string; p_cenario?: string; p_edificio: string }
         Returns: {

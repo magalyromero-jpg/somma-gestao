@@ -99,6 +99,13 @@
       "when": 1791929036451,
       "tag": "0013_loc_views_sem_atividade",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791982353938,
+      "tag": "0014_loc_caixa_realizado_em_aberto",
+      "breakpoints": true
     }
   ]
 }
