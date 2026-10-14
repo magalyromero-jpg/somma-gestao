@@ -43,7 +43,7 @@ export function RealizadoEmAberto({ ano, edificioId, ultimaData }: { ano: number
   let acum = 0;
   const mensal = caixa.map((m) => { acum += n(m.em_aberto); return { ...m, acum, label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
 
-  return <Bloco titulo="Recebimentos e saldo em aberto" acao={<div className="flex gap-2">
+  return <Bloco titulo="Recebimentos e Saldo em Aberto" acao={<div className="flex gap-2">
     {([["acum", "Acumulado"], ["mensal", "Mensal"]] as const).map(([v, l]) => <Button key={v} size="sm" variant={aba === v ? "default" : "outline"} aria-pressed={aba === v} onClick={() => setAba(v)}>{l}</Button>)}
   </div>}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p>
@@ -51,13 +51,13 @@ export function RealizadoEmAberto({ ano, edificioId, ultimaData }: { ano: number
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Quadro label="Previsto" valor={brl(previsto)} />
         <Quadro label="Recebido" valor={brl(recebido)} />
-        <Quadro label="Em aberto" valor={valOuTraco(aberto)} destaque />
+        <Quadro label="Em Aberto" valor={valOuTraco(aberto)} destaque />
         <Quadro label="Inadimplência" valor={previsto ? `${num2(aberto / previsto * 100)}%` : "—"} />
       </div>
       <section>
-        <h4 className="mb-3 text-[15px] font-medium">Em aberto por contrato</h4>
+        <h4 className="mb-3 text-[15px] font-medium">Em Aberto por Contrato</h4>
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-          {["Unidade", "Locatário", "Previsto", "Recebido", "Em aberto", "Competências"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 4 && "text-right")}>{h}</th>)}
+          {["Unidade", "Locatário", "Previsto", "Recebido", "Em Aberto", "Competências"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 4 && "text-right")}>{h}</th>)}
         </tr></thead><tbody>
           {contratos.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhum valor em aberto.</td></tr>}
           {contratos.map((e) => <tr key={e.contrato_id}>
@@ -78,13 +78,13 @@ export function RealizadoEmAberto({ ano, edificioId, ultimaData }: { ano: number
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: CORES.texto }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} tickFormatter={(v) => mil(v)} width={44} />
           <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => brl(v)} cursor={{ fill: "hsl(var(--muted))" }} />
-          <Bar dataKey="em_aberto" name="Em aberto" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
+          <Bar dataKey="em_aberto" name="Em Aberto" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
             <LabelList dataKey="em_aberto" position="top" formatter={(v: number) => (v > 0.004 ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Mês", "Previsto", "Recebido", "Em aberto", "Em aberto acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
+        {["Mês", "Previsto", "Recebido", "Em Aberto", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
         {mensal.map((m) => { const sem = n(m.em_aberto) <= 0.004; return <tr key={m.mes} className={cn(sem && "text-muted-foreground")}>
           <td className={tableClasses.td}>{mesExtenso(m.mes)}</td>
