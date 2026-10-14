@@ -44,6 +44,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
   const { toast } = useToast();
   const [res, setRes] = useState<any>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const [codigos, setCodigos] = useState<any[] | null>(null);
 
   const carregarCodigos = async () => {
@@ -60,7 +61,17 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
     }
     setOcupado(true);
     try {
-      const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
+      setErro(null);
+      const buf = await f.arrayBuffer();
+      let wb: XLSX.WorkBook;
+      if (/\.csv$/i.test(f.name)) {
+        let txt = new TextDecoder("utf-8").decode(buf);
+        if (txt.includes("\uFFFD")) txt = new TextDecoder("windows-1252").decode(buf);
+        txt = txt.replace(/^\uFEFF/, "");
+        const primeira = txt.split(/\r?\n/)[0] ?? "";
+        const sep = (primeira.match(/;/g)?.length ?? 0) > (primeira.match(/,/g)?.length ?? 0) ? ";" : ",";
+        wb = XLSX.read(txt, { type: "string", FS: sep, raw: true });
+      } else wb = XLSX.read(buf, { cellDates: true });
       const rows: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
       const hi = rows.findIndex((r) => r.some((c) => norm(String(c ?? "")) === "codigo"));
       if (hi < 0) throw new Error("Colunas não encontradas. Use o export \"Pagamentos Recebidos\".");
@@ -75,6 +86,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       await carregarCodigos();
       qc.invalidateQueries({ queryKey: ["loc-edificio"] });
     } catch (e) {
+      setErro((e as Error).message);
       toast({ title: "Não foi possível importar", description: (e as Error).message, variant: "destructive" });
     } finally { setOcupado(false); }
   };
@@ -94,6 +106,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
 
   return <div className="space-y-4">
     <Zona titulo="Solte aqui o export &quot;Pagamentos Recebidos&quot; (.xlsx ou .csv)" detalhe={COLS.join(" | ")} accept=".xlsx,.xls,.csv" onFiles={importar} ocupado={ocupado} />
+    {erro && <p role="alert" className="rounded-md border border-destructive bg-card px-4 py-3 text-sm text-destructive">Não foi possível importar: {erro}</p>}
     <div className="grid gap-4 sm:grid-cols-4">
       {[["Linhas lidas", res?.linhas], ["Novas", res?.novas], ["Repetidas ignoradas", res?.duplicadas], ["Sem contrato", res?.sem_mapeamento]].map(([l, v]) =>
         <div key={l} className="rounded-md border bg-card p-5"><div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{l}</div><div className="mt-3 text-[32px] font-extralight leading-none tabular-nums">{v ?? "—"}</div></div>)}
