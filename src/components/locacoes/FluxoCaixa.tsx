@@ -15,12 +15,13 @@ const HATCH = "zen-hatch";
 
 export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linhas: any[]; meses: Mes[]; ultimoMes: string }) {
   const ano = data.ano;
-  const chart = meses.map((m) => ({ mes: m.mes, orcado: m.orcado, realizado: m.fechado ? m.realizado : null, projetado: m.fechado ? null : m.orcado }));
+  const prevMes = (key: string) => (data.previsto ?? []).filter((o: any) => o.mes.startsWith(key)).reduce((s: number, o: any) => s + Number(o.valor ?? 0), 0);
+  const chart = meses.map((m) => ({ mes: m.mes, orcado: m.orcado, realizado: m.fechado ? m.realizado : null, projetado: m.fechado ? null : prevMes(m.key) }));
   const tot = meses.reduce((a, m) => ({ o: a.o + m.orcado, r: a.r + (m.fechado ? m.realizado : 0) }), { o: 0, r: 0 });
 
   return <>
     <Bloco titulo={`Orçado × realizado em caixa, ${ano} (R$ mil)`}>
-      <LegendaTexto itens={[{ cor: CORES.marca, label: "Realizado" }, { cor: CORES.secundaria, label: "Projetado" }, { cor: CORES.ouro, label: "Orçado dos contratos" }]} />
+      <LegendaTexto itens={[{ cor: CORES.marca, label: "Realizado" }, { cor: CORES.secundaria, label: "Reforecast" }, { cor: CORES.ouro, label: "Orçado dos contratos" }]} />
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={chart} margin={{ top: 20 }}>
           <defs>
@@ -36,7 +37,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
           <Bar dataKey="realizado" name="Realizado" stackId="c" fill={CORES.marca} radius={[2, 2, 0, 0]}>
             <LabelList dataKey="realizado" position="top" formatter={(v: number) => (v ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
-          <Bar dataKey="projetado" name="Projetado" stackId="c" fill={`url(#${HATCH})`} radius={[2, 2, 0, 0]}>
+          <Bar dataKey="projetado" name="Reforecast" stackId="c" fill={`url(#${HATCH})`} radius={[2, 2, 0, 0]}>
             <LabelList dataKey="projetado" position="top" formatter={(v: number) => (v ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
           <Line dataKey="orcado" name="Orçado dos contratos" stroke={CORES.ouro} strokeWidth={2} dot={{ r: 2 }} />
@@ -86,45 +87,51 @@ const PERIODOS: { v: string; label: string; meses: (u: number) => number[] }[] =
   { v: "ano", label: "Ano", meses: () => Array.from({ length: 12 }, (_, i) => i + 1) },
 ];
 
-function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[]; ultimoMes: string }) {
-  const [visao, setVisao] = useState<"orc" | "real" | "or">("orc");
+function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoMes: string }) {
+  const [visao, setVisao] = useState<"orc" | "real" | "or" | "ref">("orc");
   const [periodo, setPeriodo] = useState("ytd");
   const ano = String(data.ano);
   const u = ultimoMes.startsWith(ano) ? Number(ultimoMes.slice(5, 7)) || 0 : 0;
   const ms = new Set((PERIODOS.find((p) => p.v === periodo) ?? PERIODOS[0]).meses(u));
-  const orcMes = (cid: string, m: number) => data.orcado.filter((o: any) => o.contrato_id === cid && o.mes.startsWith(`${ano}-${String(m).padStart(2, "0")}`)).reduce((s: number, o: any) => s + Number(o.valor ?? 0), 0);
-  const realMes = (cid: string, m: number) => data.pags.filter((p: any) => p.contrato_id === cid && p.data_pagamento.startsWith(`${ano}-${String(m).padStart(2, "0")}`)).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
-  const vigIds = new Set(linhas.map((l) => l.contrato_id));
-  const base = [
-    ...linhas.map((l) => ({ contrato_id: l.contrato_id, unidades: l.unidades, locatario: l.locatario, enc: false, saida: null as string | null })),
-    ...(data.orcFora ?? []).filter((e: any) => !vigIds.has(e.contrato_id)).map((e: any) => ({ contrato_id: e.contrato_id, unidades: e.unidades, locatario: e.locatario, enc: true, saida: e.data_saida })),
-  ];
-  const rows = base.map((l) => {
-    const porMes = Array.from({ length: 12 }, (_, i) => orcMes(l.contrato_id, i + 1));
-    const realPorMes = Array.from({ length: 12 }, (_, i) => (i + 1 <= u ? realMes(l.contrato_id, i + 1) : null));
-    const o = [...ms].reduce((s, m) => s + porMes[m - 1], 0);
-    const r = [...ms].reduce((s, m) => s + (realPorMes[m - 1] ?? 0), 0);
-    return { l, o, r, porMes, realPorMes };
+  const mk = (m: number) => `${ano}-${String(m).padStart(2, "0")}`;
+  const contratos: any[] = data.contratosInfo ?? [];
+  const soma = (arr: any[], ids: Set<string>, m: number, campo = "valor", data_campo = "mes") => arr.filter((o: any) => ids.has(o.contrato_id) && String(o[data_campo]).startsWith(mk(m))).reduce((s: number, o: any) => s + Number(o[campo] ?? 0), 0);
+  // agrupa por unidade
+  const porUn = new Map<string, any[]>();
+  for (const c of contratos) { if (!porUn.has(c.unidades)) porUn.set(c.unidades, []); porUn.get(c.unidades)!.push(c); }
+  const unidades = [...porUn.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { numeric: true })).map(([un, cs]) => {
+    const recente = [...cs].sort((a, b) => String(b.data_inicio ?? "").localeCompare(String(a.data_inicio ?? "")))[0];
+    const orcC = cs.filter((c) => c.no_orcamento && c.tipo === "locacao");
+    const ids = new Set(cs.map((c) => c.id)), orcIds = new Set(orcC.map((c) => c.id));
+    const meses12 = Array.from({ length: 12 }, (_, i) => i + 1);
+    const orc = meses12.map((m) => soma(data.orcado, orcIds, m));
+    const real = meses12.map((m) => (m <= u ? soma(data.pags, ids, m, "valor_liquido", "data_pagamento") : null));
+    const ref = meses12.map((m, i) => (m <= u ? real[i] : soma(data.previsto ?? [], ids, m)));
+    return { un, locRecente: recente?.locatario ?? "—", locOrc: (orcC[0] ?? recente)?.locatario ?? "—", temOrc: orcC.length > 0, orc, real, ref };
   });
-  const tO = rows.reduce((s, x) => s + x.o, 0), tR = rows.reduce((s, x) => s + x.r, 0);
   const fmt = (v: number | null) => (v == null || Math.round(v) === 0 ? "—" : inteiro(v));
-  const nomeUn = (l: any) => <>{l.unidades}{l.enc && (l.saida ? ` (encerrado em ${dt(l.saida)})` : " (encerrado)")}</>;
-  const mensal = (get: (x: typeof rows[number]) => (number | null)[]) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
+  const mensal = (lista: typeof unidades, get: (x: typeof unidades[number]) => (number | null)[], loc: (x: typeof unidades[number]) => string) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
     </tr></thead><tbody>
-      {rows.map((x) => { const v = get(x); return <tr key={x.l.contrato_id}><td className={cn(tableClasses.td, "font-medium zen-un")}>{nomeUn(x.l)}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.l.locatario}</td>{v.map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(v.reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>; })}
-      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => { const col = rows.map((x) => get(x)[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(rows.reduce((s, x) => s + get(x).reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>
+      {lista.map((x) => { const v = get(x); return <tr key={x.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{loc(x)}</td>{v.map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(v.reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>; })}
+      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => { const col = lista.map((x) => get(x)[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(lista.reduce((s, x) => s + get(x).reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>
     </tbody></table></div>;
+  const comOrc = unidades.filter((x) => x.temOrc);
+  const ox = unidades.map((x) => ({ x, o: [...ms].reduce((s, m) => s + x.orc[m - 1], 0), r: [...ms].reduce((s, m) => s + (x.real[m - 1] ?? 0), 0) })).filter(({ o, r }) => o || r);
+  const tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0);
   return <Bloco titulo="Detalhe por unidade" acao={<div className="flex flex-wrap items-center gap-2">
     {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
-    {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × realizado"]] as const).map(([v, l]) =>
+    {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × realizado"], ["ref", "Reforecast"]] as const).map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
   </div>}>
-    {visao === "orc" ? mensal((x) => x.porMes) : visao === "real" ? mensal((x) => x.realPorMes) : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
+    {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
+      : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente)
+      : visao === "ref" ? mensal(unidades, (x) => x.ref, (x) => x.locRecente)
+      : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
-      {rows.map(({ l, o, r }) => <tr key={l.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium zen-un")}>{nomeUn(l)}</td><td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
+      {ox.map(({ x, o, r }) => <tr key={x.un}>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locOrc}</td>
         <td className={tableClasses.num}>{o ? brl(o) : "—"}</td><td className={tableClasses.num}>{r ? brl(r) : "—"}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{Math.abs(r - o) > 0.004 ? brl(r - o) : "—"}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
