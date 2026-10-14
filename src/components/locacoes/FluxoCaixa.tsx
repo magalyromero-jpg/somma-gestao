@@ -177,7 +177,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
   </div>}>
     {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
-      : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente)
+      : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente, true)
       : visao === "ref" ? <>
         <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
       </>
@@ -190,6 +190,8 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
         <td className={cn(tableClasses.num, r - f < -0.004 ? "text-destructive" : "text-success")}>{Math.abs(r - f) > 0.004 ? brl(r - f) : "—"}</td>
         <td className={cn(tableClasses.num, r - f < -0.004 ? "text-destructive" : "text-success")}>{f ? pct((r - f) / f * 100) : ""}</td>
       </tr>)}
+      {ox2.length > 0 && <tr className="bg-muted"><td className={cn(tableClasses.td, "font-bold")} colSpan={7}>Outras Receitas</td></tr>}
+      {ox2.map((o) => <tr key={o.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{o.un}</td><td className={cn(tableClasses.td, "zen-txt")}>Receita avulsa</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>{o.r ? brl(o.r) : "—"}</td><td className={tableClasses.num}></td><td className={tableClasses.num}></td></tr>)}
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tF)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{brl(tR - tF)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{tF ? pct((tR - tF) / tF * 100) : ""}</td></tr>
     </tbody></table></div>}
   </Bloco>;
