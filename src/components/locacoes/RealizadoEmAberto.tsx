@@ -28,24 +28,24 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const [detalhe, setDetalhe] = useState(false);
 
   const q = useQuery({
-    queryKey: ["loc-realizado", edificioId, ano],
+    queryKey: ["loc-realizado", edificioId, ano, admin],
     queryFn: async () => {
-      const [cx, ea, cf] = await Promise.all([
+      const [cx, ea, cf, enc] = await Promise.all([
         db.rpc("loc_caixa_mensal", { p_edificio: edificioId, p_ano: ano }),
         db.rpc("loc_em_aberto", { p_edificio: edificioId, p_ano: ano }),
         db.rpc("loc_conferencia", { p_edificio: edificioId, p_ano: ano }),
+        admin ? db.from("loc_v_encerrados").select("contrato_id, alugueis_em_aberto").eq("edificio_id", edificioId) : Promise.resolve({ data: [], error: null }),
       ]);
-      for (const r of [cx, ea, cf]) if (r.error) throw r.error;
-      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], conf: (cf.data ?? []) as any[] };
+      for (const r of [cx, ea, cf, enc]) if (r.error) throw r.error;
+      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], conf: (cf.data ?? []) as any[], enc: (enc.data ?? []) as any[] };
     },
   });
 
   const limite = ultimaData.slice(0, 7);
   const caixa = (q.data?.caixa ?? []).filter((m) => !limite || m.mes.slice(0, 7) <= limite);
   const ativos = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).sort((a, b) => n(b.saldo) - n(a.saldo));
-  const encerrados = (q.data?.emAberto ?? []).filter((e) => e.encerrado).sort((a, b) => n(b.saldo) - n(a.saldo));
   const totAtivos = ativos.reduce((s, e) => s + n(e.saldo), 0);
-  const totEnc = encerrados.reduce((s, e) => s + n(e.saldo), 0);
+  const totEnc = (q.data?.enc ?? []).reduce((s, e) => s + n(e.alugueis_em_aberto), 0);
   const maior = ativos[0];
 
   const cols: { k: string; label: string; aberto?: boolean }[] = [
@@ -53,7 +53,6 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
     { k: "previsto_contratual", label: "Previsto pelos contratos" },
     { k: "entrou_no_caixa", label: "Entrou no caixa" },
     { k: "em_aberto", label: "Em aberto", aberto: true },
-    ...(admin ? [{ k: "em_aberto_encerrados", label: "Em aberto de encerrados", aberto: true }] : []),
     ...(detalhe ? [
       { k: "recebido_da_competencia", label: "Recebido da competência" },
       { k: "recebido_a_maior", label: "Recebido a maior" },
@@ -131,10 +130,6 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
         <h4 className="mb-3 text-[15px] font-medium">Valores em aberto por contrato</h4>
         {tabelaAberto(ativos)}
       </section>
-      {admin && <section>
-        <h4 className="mb-3 text-[15px] font-medium">Contratos encerrados</h4>
-        {tabelaAberto(encerrados)}
-      </section>}
     </div>}
   </Bloco>;
 }
