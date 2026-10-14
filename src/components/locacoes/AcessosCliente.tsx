@@ -65,7 +65,7 @@ export function AcessosCliente({ edificioId }: { edificioId: string }) {
           <td className={tableClasses.td}><Button size="sm" variant="ghost" onClick={() => revogar(a.user_id)}>Remover</Button></td>
         </tr>)}</tbody></table></div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">O cliente vê apenas Visão geral, Contratos e Fluxo de caixa deste edifício.</p>
+      <p className="mt-2 text-xs text-muted-foreground">O cliente vê apenas Visão geral, Contratos e Fluxo de Caixa deste edifício.</p>
     </Bloco>
   );
 }

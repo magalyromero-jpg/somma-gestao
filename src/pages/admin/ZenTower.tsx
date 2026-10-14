@@ -128,7 +128,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
       <Tabs defaultValue="geral" className="space-y-4">
         <div className="overflow-x-auto"><TabsList>
           <TabsTrigger value="geral">Visão geral</TabsTrigger>
-          <TabsTrigger value="caixa">Fluxo de caixa</TabsTrigger>
+          <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do aluguel</TabsTrigger>

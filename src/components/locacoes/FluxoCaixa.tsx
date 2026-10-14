@@ -133,9 +133,9 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => { const col = lista.map((x) => get(x)[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(lista.reduce((s, x) => s + get(x).reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>
     </tbody></table></div>;
   const comOrc = unidades.filter((x) => x.temOrc);
-  const ox = unidades.map((x) => ({ x, o: [...ms].reduce((s, m) => s + x.orc[m - 1], 0), r: [...ms].reduce((s, m) => s + (x.real[m - 1] ?? 0), 0) })).filter(({ o, r }) => o || r);
-  const tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0);
-  return <Bloco titulo="Detalhe por unidade" acao={<div className="flex flex-wrap items-center gap-2">
+  const ox = unidades.map((x) => ({ x, o: [...ms].reduce((s, m) => s + x.orc[m - 1], 0), r: [...ms].reduce((s, m) => s + (x.real[m - 1] ?? 0), 0), f: [...ms].reduce((s, m) => s + (x.ref[m - 1] ?? 0), 0) })).filter(({ o, r, f }) => o || r || f);
+  const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0);
+  return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
     {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
     {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × realizado"], ["ref", "Reforecast"]] as const).map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
@@ -146,15 +146,15 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
         <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
       </>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Orçado", "Reforecast", "Realizado", "Diferença", "% Realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
-      {ox.map(({ x, o, r }) => <tr key={x.un}>
+      {ox.map(({ x, o, r, f }) => <tr key={x.un}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locOrc}</td>
-        <td className={tableClasses.num}>{o ? brl(o) : "—"}</td><td className={tableClasses.num}>{r ? brl(r) : "—"}</td>
+        <td className={tableClasses.num}>{o ? brl(o) : "—"}</td><td className={tableClasses.num}>{f ? brl(f) : "—"}</td><td className={tableClasses.num}>{r ? brl(r) : "—"}</td>
         <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{Math.abs(r - o) > 0.004 ? brl(r - o) : "—"}</td>
         <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
       </tr>)}
-      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td></tr>
+      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tF)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td></tr>
     </tbody></table></div>}
   </Bloco>;
 }
@@ -236,10 +236,10 @@ function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
     },
   });
   const linhas = (q.data ?? []).filter((x) => String(x.data_decisao ?? "").startsWith(String(ano)));
-  return <Bloco titulo={`O que mudou em ${ano}`}>
+  return <Bloco titulo={`Mudanças em ${ano}`}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar.</p> :
     <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Tipo", "Data", "Valor mensal (R$)", "Pontos de atenção"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Tipo", "Data", "Valor Mensal (R$)", "Pontos de Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhuma mudança.</td></tr>}
       {linhas.map((x, i) => <tr key={`${x.contrato_id}-${i}`}>
@@ -298,14 +298,14 @@ function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number
     <p className="mb-3 text-xs text-muted-foreground">Verde: acima do orçado · Vermelho: abaixo do orçado</p>
     <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
-      <th className={cn(tableClasses.th, "text-right")}>Orçado {ano}</th><th className={cn(tableClasses.th, "text-right")}>Reforecast {ano}</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
+      <th className={cn(tableClasses.th, "text-right")}>Reforecast</th>
     </tr></thead><tbody>
       {linhas.map((g) => <tr key={g.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{g.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{g.loc}</td>
         {g.r.map((n, i) => cel(g.o[i], n, g.d[i], i))}
-        <td className={tableClasses.num}>{num2(soma(g.o))}</td><td className={cn(tableClasses.num, "font-bold")}>{num2(soma(g.r))}</td>{dif(soma(g.o), soma(g.r))}</tr>)}
+        <td className={cn(tableClasses.num, "font-bold")}>{num2(soma(g.r))}</td></tr>)}
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />
         {tR.map((n, i) => cel(tO[i], n, linhas.reduce((s, g) => s + g.d[i], 0), i))}
-        <td className={tableClasses.num}>{num2(soma(tO))}</td><td className={tableClasses.num}>{num2(soma(tR))}</td>{dif(soma(tO), soma(tR))}</tr>
+        <td className={tableClasses.num}>{num2(soma(tR))}</td></tr>
     </tbody></table></div>
   </>;
 }

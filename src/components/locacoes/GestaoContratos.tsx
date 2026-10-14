@@ -213,7 +213,7 @@ function CondominioEditavel({ e }: { e: any }) {
 
 export function ContratosEncerrados({ encerrados, admin }: { encerrados: any[]; admin: boolean }) {
   const linhas = [...(encerrados ?? [])].sort((a, b) => (b.data_saida ?? "").localeCompare(a.data_saida ?? ""));
-  return <Bloco titulo="Contratos encerrados" acao={<span className="text-xs text-muted-foreground">{linhas.length} contratos</span>}>
+  return <Bloco titulo="Contratos Encerrados" acao={<span className="text-xs text-muted-foreground">{linhas.length} contratos</span>}>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum contrato encerrado.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Unidade", "Locatário", "Saída", "Aluguéis em aberto", "Condomínio em aberto", "Em pauta desde"].map((h, i) => <th key={h} className={cn(tableClasses.th, (i === 3 || i === 4) && "text-right")}>{h}</th>)}
