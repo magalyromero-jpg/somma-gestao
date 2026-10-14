@@ -96,8 +96,8 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
   const realMes = (cid: string, m: number) => data.pags.filter((p: any) => p.contrato_id === cid && p.data_pagamento.startsWith(`${ano}-${String(m).padStart(2, "0")}`)).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
   const vigIds = new Set(linhas.map((l) => l.contrato_id));
   const base = [
-    ...linhas.map((l) => ({ contrato_id: l.contrato_id, unidades: l.unidades, locatario: l.locatario, enc: false })),
-    ...(data.admin ? (data.encerrados ?? []).filter((e: any) => !vigIds.has(e.contrato_id)).map((e: any) => ({ contrato_id: e.contrato_id, unidades: e.unidades, locatario: e.locatario, enc: true })) : []),
+    ...linhas.map((l) => ({ contrato_id: l.contrato_id, unidades: l.unidades, locatario: l.locatario, enc: false, saida: null as string | null })),
+    ...(data.orcFora ?? []).filter((e: any) => !vigIds.has(e.contrato_id)).map((e: any) => ({ contrato_id: e.contrato_id, unidades: e.unidades, locatario: e.locatario, enc: true, saida: e.data_saida })),
   ];
   const rows = base.map((l) => {
     const porMes = Array.from({ length: 12 }, (_, i) => orcMes(l.contrato_id, i + 1));
@@ -108,7 +108,7 @@ function DetalheUnidade({ data, linhas, ultimoMes }: { data: any; linhas: any[];
   });
   const tO = rows.reduce((s, x) => s + x.o, 0), tR = rows.reduce((s, x) => s + x.r, 0);
   const fmt = (v: number | null) => (v == null || Math.round(v) === 0 ? "—" : inteiro(v));
-  const nomeUn = (l: any) => <>{l.unidades}{l.enc && " (encerrado)"}</>;
+  const nomeUn = (l: any) => <>{l.unidades}{l.enc && (l.saida ? ` (encerrado em ${dt(l.saida)})` : " (encerrado)")}</>;
   const mensal = (get: (x: typeof rows[number]) => (number | null)[]) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
     </tr></thead><tbody>
