@@ -189,8 +189,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
   );
 }
 
-function Card({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return <div className={cn("rounded-md border bg-card p-5", className)}>
+function Card({ label, children, className, dica }: { label: string; children: React.ReactNode; className?: string; dica?: string }) {
+  return <div title={dica} className={cn("rounded-md border bg-card p-5", className)}>
     <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{label}</div>
     <div className="mt-3">{children}</div>
   </div>;
@@ -260,24 +260,17 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
       </Card>
       <Card label="Valor Médio do m² — Salas"><Valor>{brl(m2Medio("Sala"))}</Valor></Card>
       <Card label="Valor Médio do m² — Lojas"><Valor>{brl(m2Medio("Loja"))}</Valor></Card>
-      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i].charAt(0).toUpperCase() + MESES_LONGOS[ultimo.i].slice(1) : "—"}`}>
+      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i].charAt(0).toUpperCase() + MESES_LONGOS[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recMes.c)} · Receitas Avulsas ${brl(recMes.a)} · Reforecast do mês ${brl(refMes)}`}>
         <Valor>{brl(ultimo?.realizado ?? 0)}</Valor>
-        <div className="mt-2 text-xs text-muted-foreground">Contratos {brl(recMes.c)} · Receitas Avulsas {brl(recMes.a)}</div>
-        <div className="mt-1 text-xs text-muted-foreground">Reforecast do mês {brl(refMes)}</div>
       </Card>
-      <Card label={`Acumulado Jan–${ultimo ? MESES[ultimo.i].charAt(0).toUpperCase() + MESES[ultimo.i].slice(1) : "—"}`}>
+      <Card label={`Acumulado Jan–${ultimo ? MESES[ultimo.i].charAt(0).toUpperCase() + MESES[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recAcum.c)} · Receitas Avulsas ${brl(recAcum.a)} · Reforecast do período ${brl(refAcum)}`}>
         <Valor>{brl(acumR)}</Valor>
-        <div className="mt-2 text-xs text-muted-foreground">Contratos {brl(recAcum.c)} · Receitas Avulsas {brl(recAcum.a)}</div>
-        <div className="mt-1 text-xs text-muted-foreground">Reforecast do período {brl(refAcum)}</div>
       </Card>
-      <div title={data.admin ? `Reforecast ${brl(refAcum)} − Realizado de contratos ${brl(recAcum.c)} = ${brl(refAcum - recAcum.c)}\nTotal em Aberto ${brl(saldo.total)}\nDiferença: ajustes de meses anteriores ${brl(difAjustes)}` : undefined}>
-        <Card label={data.admin ? "Total em Aberto" : "Em Aberto"} className="h-full">
-          <Valor className={saldo.total > 0 ? "text-destructive" : undefined}>{saldo.isLoading ? "—" : brl(data.admin ? saldo.total : saldo.ativos)}</Valor>
-          {data.admin && <div className="mt-2 text-xs text-muted-foreground">Ativos {brl(saldo.ativos)} · Não Ativos {brl(saldo.naoAtivos)}</div>}
-          {data.admin && saldo.condominio > 0.004 && <div className="mt-1 text-xs text-muted-foreground">Condomínio em Aberto {brl(saldo.condominio)}</div>}
-        </Card>
-      </div>
-      <Card label={`Reajustes até ${MESES[lm - 1]}/${la}`}><Valor>{nReaj}</Valor><div className="mt-2 text-xs text-muted-foreground">contratos</div></Card>
+      <Card label={data.admin ? "Total em Aberto" : "Em Aberto"} dica={data.admin ? `Ativos ${brl(saldo.ativos)} · Não Ativos ${brl(saldo.naoAtivos)}\nDiferença: ajustes de meses anteriores ${brl(difAjustes)}` : undefined}>
+        <Valor className={saldo.total > 0 ? "text-destructive" : undefined}>{saldo.isLoading ? "—" : brl(data.admin ? saldo.total : saldo.ativos)}</Valor>
+      </Card>
+      {data.admin && saldo.condominio > 0.004 && <Card label="Condomínio em Aberto"><Valor>{brl(saldo.condominio)}</Valor></Card>}
+      <Card label={`Reajustes até ${MESES[lm - 1]}/${la}`} dica={`${nReaj} contratos`}><Valor>{nReaj}</Valor></Card>
       <Card label="Vencimentos em 12 Meses"><Valor>{vencem}</Valor></Card>
     </div>
     <Bloco titulo="Próximos Reajustes">
