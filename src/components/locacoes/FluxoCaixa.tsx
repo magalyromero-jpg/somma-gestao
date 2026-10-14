@@ -118,7 +118,12 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const [periodo, setPeriodo] = useState("ytd");
   const ano = String(data.ano);
   const u = ultimoMes.startsWith(ano) ? Number(ultimoMes.slice(5, 7)) || 0 : 0;
-  const ms = new Set((PERIODOS.find((p) => p.v === periodo) ?? PERIODOS[0]).meses(u));
+  // janela comparada: meses do período que já têm pagamento importado
+  const ms = new Set((PERIODOS.find((p) => p.v === periodo) ?? PERIODOS[0]).meses(u).filter((m) => m <= u));
+  const msLista = [...ms].sort((a, b) => a - b);
+  const janelaTxt = msLista.length === 0 ? "" : msLista.length === 1
+    ? `Comparando ${MESES[msLista[0] - 1]}/${ano} (meses com pagamento importado)`
+    : `Comparando ${MESES[msLista[0] - 1]} a ${MESES[msLista[msLista.length - 1] - 1]}/${ano} (meses com pagamento importado)`;
   const mk = (m: number) => `${ano}-${String(m).padStart(2, "0")}`;
   const contratos: any[] = data.contratosInfo ?? [];
   const soma = (arr: any[], ids: Set<string>, m: number, campo = "valor", data_campo = "mes") => arr.filter((o: any) => ids.has(o.contrato_id) && String(o[data_campo]).startsWith(mk(m))).reduce((s: number, o: any) => s + Number(o[campo] ?? 0), 0);
@@ -172,6 +177,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const ox2 = outras.map((o) => ({ un: o.un, r: [...ms].reduce((s, m) => s + (o.real[m - 1] ?? 0), 0) }));
   const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0) + ox2.reduce((s, y) => s + y.r, 0);
   return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
+    {visao === "or" && janelaTxt && <span className="text-xs text-muted-foreground">{janelaTxt}</span>}
     {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
     {VISOES_DETALHE.map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
@@ -181,6 +187,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
       : visao === "ref" ? <>
         <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
       </>
+      : ms.size === 0 ? <p className="text-sm text-muted-foreground">Sem pagamentos importados neste período</p>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Reforecast", "Realizado", "Diferença (R$)", "Variação (%)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
