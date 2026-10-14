@@ -173,10 +173,10 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
       {ox.map(({ x, o, r, f }) => <tr key={x.un}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locOrc}</td>
         <td className={tableClasses.num}>{o ? brl(o) : "—"}</td><td className={tableClasses.num}>{f ? brl(f) : "—"}</td><td className={tableClasses.num}>{r ? brl(r) : "—"}</td>
-        <td className={cn(tableClasses.num, r - o < -1 && "text-destructive")}>{Math.abs(r - o) > 0.004 ? brl(r - o) : "—"}</td>
-        <td className={tableClasses.num}>{o ? pct(r / o * 100) : "—"}</td>
+        <td className={cn(tableClasses.num, r - f < -0.004 ? "text-destructive" : "text-success")}>{Math.abs(r - f) > 0.004 ? brl(r - f) : "—"}</td>
+        <td className={cn(tableClasses.num, r - f < -0.004 ? "text-destructive" : "text-success")}>{f ? pct((r - f) / f * 100) : ""}</td>
       </tr>)}
-      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tF)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tO < 0 && "text-destructive")}>{brl(tR - tO)}</td><td className={tableClasses.num}>{tO ? pct(tR / tO * 100) : "—"}</td></tr>
+      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tF)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{brl(tR - tF)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{tF ? pct((tR - tF) / tF * 100) : ""}</td></tr>
     </tbody></table></div>}
   </Bloco>;
 }
