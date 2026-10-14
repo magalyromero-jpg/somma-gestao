@@ -31,7 +31,11 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   if (error) throw error;
   if (!ed) return null;
   const id = ed.id;
-  const ano = new Date().getFullYear();
+  const ult = await db.from("loc_pagamentos").select("data_pagamento").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(1);
+  const ultimoPag: string = ult.data?.[0]?.data_pagamento ?? "";
+  const ano = ultimoPag ? Number(ultimoPag.slice(0, 4)) : 2026;
+  const relogio = new Date().toISOString().slice(0, 10);
+  const hojeRef = ultimoPag > relogio ? ultimoPag : relogio;
   const rs = await Promise.all([
     db.from("loc_v_contrato_vigente").select("*").eq("edificio_id", id),
     db.from("loc_contratos").select("id,locatario_id,status,tipo,dia_vencimento,retencao_pct,data_inicio,no_orcamento").eq("edificio_id", id),
@@ -68,14 +72,14 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const deg = vigIds.length ? await db.from("loc_vigencia_degraus").select("*").in("vigencia_id", vigIds) : { data: [] };
   if (deg.error) throw deg.error;
   // reajustes por índice nos próximos meses (somente valor certo)
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeRef;
   const limite = addMes(hoje.slice(0, 7), 4) + "-31";
   const vigMap = new Map<string, any>(vig.map((v: any) => [v.contrato_id, v]));
   const proximos = alertas.filter((a: any) => a.aniversario >= hoje && a.aniversario <= limite);
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
-  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin, contratosInfo, previsto };
+  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin, contratosInfo, previsto, hoje: hojeRef };
 }
 
 export type DadosZen = NonNullable<Awaited<ReturnType<typeof carregar>>>;
@@ -212,7 +216,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
     if (o - r > 1) vencido += o - r;
   }
   for (const e of data.encerrados ?? []) vencido += Number(e.alugueis_em_aberto ?? 0) + Number(e.debito_condominio ?? 0);
-  const hojeKey = new Date().toISOString().slice(0, 7);
+  const hojeKey = String(data.hoje ?? new Date().toISOString()).slice(0, 7);
   const limiteKey = addMes(hojeKey, 4);
   const [la, lm] = limiteKey.split("-").map(Number);
   const vencem = d.linhas.filter((l: any) => ["a_vencer_12m", "a_vencer_120d"].includes(l.ciclo?.ciclo)).length;
