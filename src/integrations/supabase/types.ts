@@ -3480,6 +3480,15 @@ export type Database = {
           unidades: string
         }[]
       }
+      loc_em_aberto_mensal: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          em_aberto_acumulado: number
+          mes: string
+          novo_em_aberto: number
+          regularizado: number
+        }[]
+      }
       loc_fluxo: {
         Args: { p_ate?: string; p_cenario?: string; p_edificio: string }
         Returns: {
