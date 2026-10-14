@@ -1,26 +1,31 @@
 import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { MESES, MESES_LONGOS, brl, dt } from "@/lib/locacoes";
 
 const db = supabase as any;
 const n = (v: any) => Number(v ?? 0);
-const mesLabel = (s: string) => `${MESES[Number(s.slice(5, 7)) - 1]}/${s.slice(0, 4)}`;
-
-/** Valor em aberto: âmbar quando > 0, "—" quando zero. */
-function Aberto({ v }: { v: number }) {
-  return v > 0.004 ? <span className="op-tag op-tag-amber tabular-nums">{brl(v)}</span> : <>—</>;
-}
+const mesCurto = (s: string) => `${MESES[Number(s.slice(5, 7)) - 1]}/${s.slice(0, 4)}`;
+const mesExtenso = (s: string) => { const m = MESES_LONGOS[Number(s.slice(5, 7)) - 1]; return m.charAt(0).toUpperCase() + m.slice(1); };
 const valOuTraco = (v: number) => (Math.abs(v) > 0.004 ? brl(v) : "—");
+/** Em aberto: texto âmbar quando > 0; zero como "—". */
+const Aberto = ({ v }: { v: number }) => (v > 0.004 ? <span className="text-warning">{brl(v)}</span> : <>—</>);
 
-export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioId: string; admin: boolean; ultimaData: string }) {
-  const anoAtual = new Date().getFullYear();
-  const [ano, setAno] = useState(anoAtual);
+function Indicador({ label, valor, apoio, alerta }: { label: string; valor: string; apoio?: string; alerta?: boolean }) {
+  return <div className="rounded-sm border bg-card p-4">
+    <div className="text-[12px] text-muted-foreground">{label}</div>
+    <div className={cn("mt-1 text-[22px] font-light tabular-nums", alerta && "text-warning")}>{valor}</div>
+    <div className="mt-1 min-h-[1rem] text-xs text-muted-foreground">{apoio}</div>
+  </div>;
+}
+
+export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano: number; edificioId: string; admin: boolean; ultimaData: string }) {
   const [aberto, setAberto] = useState<string | null>(null);
+  const [detalhe, setDetalhe] = useState(false);
 
   const q = useQuery({
     queryKey: ["loc-realizado", edificioId, ano],
@@ -35,52 +40,55 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
     },
   });
 
-  const caixa = q.data?.caixa ?? [];
+  const limite = ultimaData.slice(0, 7);
+  const caixa = (q.data?.caixa ?? []).filter((m) => !limite || m.mes.slice(0, 7) <= limite);
   const ativos = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).sort((a, b) => n(b.saldo) - n(a.saldo));
   const encerrados = (q.data?.emAberto ?? []).filter((e) => e.encerrado).sort((a, b) => n(b.saldo) - n(a.saldo));
   const totAtivos = ativos.reduce((s, e) => s + n(e.saldo), 0);
   const totEnc = encerrados.reduce((s, e) => s + n(e.saldo), 0);
   const maior = ativos[0];
 
-  const cols: { k: string; label: string; aberto?: boolean; soAdmin?: boolean }[] = [
+  const cols: { k: string; label: string; aberto?: boolean }[] = [
     { k: "orcado", label: "Orçado" },
     { k: "previsto_contratual", label: "Previsto pelos contratos" },
-    { k: "recebido_da_competencia", label: "Recebido da competência" },
-    { k: "em_aberto", label: "Em aberto", aberto: true },
-    { k: "em_aberto_encerrados", label: "Em aberto de contratos encerrados", aberto: true, soAdmin: true },
-    { k: "recebido_a_maior", label: "Recebido a maior" },
-    { k: "outras_receitas", label: "Outras receitas" },
     { k: "entrou_no_caixa", label: "Entrou no caixa" },
-    { k: "de_meses_anteriores", label: "Recebido de meses anteriores" },
-    { k: "recebido_no_mes_seguinte", label: "Pago no mês seguinte" },
-  ].filter((c) => admin || !c.soAdmin);
+    { k: "em_aberto", label: "Em aberto", aberto: true },
+    ...(admin ? [{ k: "em_aberto_encerrados", label: "Em aberto de encerrados", aberto: true }] : []),
+    ...(detalhe ? [
+      { k: "recebido_da_competencia", label: "Recebido da competência" },
+      { k: "recebido_a_maior", label: "Recebido a maior" },
+      { k: "outras_receitas", label: "Outras receitas" },
+      { k: "de_meses_anteriores", label: "Recebido de meses anteriores" },
+      { k: "recebido_no_mes_seguinte", label: "Pago no mês seguinte" },
+    ] : []),
+  ];
 
   const ultimoMes = ultimaData ? `${MESES_LONGOS[Number(ultimaData.slice(5, 7)) - 1]} de ${ultimaData.slice(0, 4)}` : "—";
 
-  const tabelaAberto = (linhas: any[], enc: boolean) => (
+  const tabelaAberto = (linhas: any[]) => (
     <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Previsto no ano", "Recebido", "Saldo em aberto", "Competências em aberto"].map((h, i) =>
-        <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 4 && "text-right")}>{h}</th>)}
+      <th className={cn(tableClasses.th, "w-6")}></th>
+      {["Unidade", "Locatário", "Saldo em aberto", "Competências em aberto"].map((h, i) =>
+        <th key={h} className={cn(tableClasses.th, i === 2 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
-      {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhum valor em aberto.</td></tr>}
+      {linhas.length === 0 && <tr><td colSpan={5} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhum valor em aberto.</td></tr>}
       {linhas.map((e) => {
         const exp = aberto === e.contrato_id;
         const meses = (q.data?.conf ?? []).filter((c) => c.contrato_id === e.contrato_id).sort((a, b) => a.mes.localeCompare(b.mes));
         return <Fragment key={e.contrato_id}>
           <tr className="cursor-pointer" aria-expanded={exp} onClick={() => setAberto(exp ? null : e.contrato_id)}>
-            <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? "—"}{enc && " (encerrado)"}</td>
+            <td className={cn(tableClasses.td, "text-muted-foreground")}>{exp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</td>
+            <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? "—"}</td>
             <td className={cn(tableClasses.td, "zen-txt")}>{e.locatario ?? "—"}</td>
-            <td className={tableClasses.num}>{brl(e.previsto)}</td>
-            <td className={tableClasses.num}>{brl(e.recebido)}</td>
             <td className={tableClasses.num}><Aberto v={n(e.saldo)} /></td>
             <td className={cn(tableClasses.td, "zen-txt tabular-nums")}>{e.competencias ?? "—"}</td>
           </tr>
-          {exp && <tr><td colSpan={6} className="border-b bg-muted/40 px-[10px] py-3">
+          {exp && <tr><td colSpan={5} className="border-b bg-muted/40 px-[10px] py-3">
             <table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
               {["Competência", "Previsto", "Recebido", "Data do pagamento", "Saldo", "Situação"].map((h, i) =>
                 <th key={h} className={cn(tableClasses.th, [1, 2, 4].includes(i) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{meses.map((m) => <tr key={m.mes}>
-              <td className={cn(tableClasses.td, "tabular-nums")}>{mesLabel(m.mes)}</td>
+              <td className={cn(tableClasses.td, "tabular-nums")}>{mesCurto(m.mes)}</td>
               <td className={tableClasses.num}>{brl(m.previsto)}</td>
               <td className={tableClasses.num}>{valOuTraco(n(m.recebido))}</td>
               <td className={cn(tableClasses.td, "tabular-nums")}>{dt(m.pago_em)}</td>
@@ -93,41 +101,40 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
     </tbody></table></div>
   );
 
-  return <Bloco titulo="Realizado e valores em aberto" acao={
-    <Select value={String(ano)} onValueChange={(v) => { setAno(Number(v)); setAberto(null); }}>
-      <SelectTrigger className="h-8 w-28 text-xs" aria-label="Ano"><SelectValue /></SelectTrigger>
-      <SelectContent>{[anoAtual - 1, anoAtual].map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
-    </Select>}>
-    <p className="mb-4 text-[13px] text-muted-foreground">Pagamentos importados até {ultimoMes}.</p>
-    {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p> : <div className="space-y-6">
-      <div className="portal-kpis">
-        <div className="portal-kpi"><div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Em aberto (contratos ativos)</div><div className="mt-1 text-2xl font-extralight tabular-nums">{totAtivos > 0 ? <span className="text-warning">{brl(totAtivos)}</span> : "—"}</div></div>
-        <div className="portal-kpi"><div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Contratos com saldo em aberto</div><div className="mt-1 text-2xl font-extralight tabular-nums">{ativos.length}</div></div>
-        <div className="portal-kpi"><div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Maior saldo em aberto</div><div className="mt-1 text-2xl font-extralight tabular-nums">{maior ? brl(maior.saldo) : "—"}</div>{maior && <div className="mt-1 text-xs text-muted-foreground">{maior.locatario}</div>}</div>
-        {admin && <div className="portal-kpi"><div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Contratos encerrados em aberto</div><div className="mt-1 text-2xl font-extralight tabular-nums">{totEnc > 0 ? brl(totEnc) : "—"}</div><div className="mt-1 text-xs text-muted-foreground">Detalhe em Contratos encerrados</div></div>}
+  return <Bloco titulo={`Realizado e valores em aberto, ${ano}`}>
+    <p className="-mt-1 mb-6 text-[13px] text-muted-foreground">Pagamentos importados até {ultimoMes}</p>
+    {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p> : <div className="space-y-10">
+      <div className={cn("grid grid-cols-2 gap-4", admin ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
+        <Indicador label="Em aberto dos contratos ativos" valor={totAtivos > 0.004 ? brl(totAtivos) : "—"} alerta={totAtivos > 0.004} apoio={`${ativos.length} contrato${ativos.length === 1 ? "" : "s"}`} />
+        <Indicador label="Contratos com saldo" valor={String(ativos.length)} apoio="Contratos ativos" />
+        <Indicador label="Maior saldo" valor={maior ? brl(maior.saldo) : "—"} alerta={!!maior} apoio={maior?.locatario} />
+        {admin && <Indicador label="Contratos encerrados em aberto" valor={totEnc > 0.004 ? brl(totEnc) : "—"} alerta={totEnc > 0.004} apoio="Detalhe em Contratos encerrados" />}
       </div>
 
-      <div>
-        <h4 className="mb-2 text-[15px] font-medium">Fluxo de caixa realizado</h4>
-        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
+      <section>
+        <h4 className="mb-3 text-[15px] font-medium">Fluxo de caixa realizado</h4>
+        <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Mês</th>{cols.map((c) => <th key={c.k} className={cn(tableClasses.th, "text-right wrap")}>{c.label}</th>)}
         </tr></thead><tbody>
-          {caixa.map((m) => <tr key={m.mes}><td className={cn(tableClasses.td, "tabular-nums")}>{mesLabel(m.mes)}</td>
+          {caixa.map((m) => <tr key={m.mes}><td className={tableClasses.td}>{mesExtenso(m.mes)}</td>
             {cols.map((c) => <td key={c.k} className={tableClasses.num}>{c.aberto ? <Aberto v={n(m[c.k])} /> : valOuTraco(n(m[c.k]))}</td>)}</tr>)}
-          <tr className="font-bold"><td className={tableClasses.td}>Total</td>
+          <tr className="font-bold [&>td]:border-b-0 [&>td]:border-t-2 [&>td]:border-t-border"><td className={tableClasses.td}>Total</td>
             {cols.map((c) => { const t = caixa.reduce((s, m) => s + n(m[c.k]), 0); return <td key={c.k} className={tableClasses.num}>{c.aberto ? <Aberto v={t} /> : valOuTraco(t)}</td>; })}</tr>
         </tbody></table></div>
-        <p className="mt-2 text-xs text-muted-foreground">Previsto pelos contratos considera os valores vigentes hoje, inclusive aditivos e contratos novos. Competência é o mês do vencimento do boleto; "Entrou no caixa" considera a data do pagamento.</p>
-      </div>
+        <button type="button" className="mt-3 text-[13px] font-medium text-secondary-foreground underline-offset-4 hover:underline" aria-expanded={detalhe} onClick={() => setDetalhe((x) => !x)}>
+          {detalhe ? "Ocultar detalhamento" : "Ver detalhamento"}
+        </button>
+        <p className="mt-2 text-xs text-muted-foreground">Competência é o mês do vencimento do boleto. "Entrou no caixa" considera a data do pagamento.</p>
+      </section>
 
-      <div>
-        <h4 className="mb-2 text-[15px] font-medium">Valores em aberto por contrato</h4>
-        {tabelaAberto(ativos, false)}
-      </div>
-      {admin && <div>
-        <h4 className="mb-2 text-[15px] font-medium">Contratos encerrados</h4>
-        {tabelaAberto(encerrados, true)}
-      </div>}
+      <section>
+        <h4 className="mb-3 text-[15px] font-medium">Valores em aberto por contrato</h4>
+        {tabelaAberto(ativos)}
+      </section>
+      {admin && <section>
+        <h4 className="mb-3 text-[15px] font-medium">Contratos encerrados</h4>
+        {tabelaAberto(encerrados)}
+      </section>}
     </div>}
   </Bloco>;
 }
