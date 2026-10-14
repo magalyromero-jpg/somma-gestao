@@ -48,7 +48,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
       </ResponsiveContainer>
     </Bloco>
 
-    <Bloco titulo="Por mês">
+    <Bloco titulo="Mensal">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}>Mês</th><th className={cn(tableClasses.th, "text-right")}>Orçado (R$)</th><th className={cn(tableClasses.th, "text-right")}>Realizado (R$)</th><th className={cn(tableClasses.th, "text-right")}>Diferença (R$)</th><th className={tableClasses.th}>Situação</th>
       </tr></thead><tbody>{meses.map((m) => {
@@ -64,7 +64,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
       })}</tbody></table></div>
     </Bloco>
 
-    <Bloco titulo="Orçado × realizado, visão global (R$)">
+    <Bloco titulo="Orçado × Realizado (R$)">
       <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}></th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
       </tr></thead><tbody>
@@ -137,7 +137,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0);
   return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
     {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
-    {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × realizado"], ["ref", "Reforecast"]] as const).map(([v, l]) =>
+    {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × Realizado"], ["ref", "Reforecast"]] as const).map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
   </div>}>
     {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
@@ -191,13 +191,13 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
     return { porContrato, barras, anos: anos.map((a, i) => ({ ...a, varPct: ((a.v / (i ? anos[i - 1].v : orc2026)) - 1) * 100 })) };
   }, [data, linhas, cen]);
 
-  return <Bloco titulo="Projetado 2027 a 2029 (R$ mil por mês)" acao={<div className="flex items-center gap-2">
+  return <Bloco titulo="Projeção 2027–2029 (R$ mil)" acao={<div className="flex items-center gap-2">
     <span className="text-xs text-muted-foreground">Índices</span>
     <Select value={cen} onValueChange={setCen}><SelectTrigger className="h-8 w-48 text-xs" aria-label="Índices"><SelectValue /></SelectTrigger><SelectContent>
       <SelectItem value="0">Focus {dt(boletim)}</SelectItem><SelectItem value="1">Focus + 1 p.p.</SelectItem><SelectItem value="-1">Focus − 1 p.p.</SelectItem>
     </SelectContent></Select>
   </div>}>
-    <p className="mb-3 text-xs text-muted-foreground">Contratos vigentes + reajustes projetados (Focus)</p>
+    <p className="mb-3 text-xs text-muted-foreground">Contratos Vigentes + reajustes projetados (Focus)</p>
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={r.barras}>
         <CartesianGrid vertical={false} stroke={CORES.borda} />
@@ -208,7 +208,7 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
       </BarChart>
     </ResponsiveContainer>
     <div className="mt-4"><table className={cn(tableClasses.table)}><thead><tr className={tableClasses.head}>
-      <th className={tableClasses.th}>Ano</th><th className={cn(tableClasses.th, "text-right")}>Receita projetada (R$)</th><th className={cn(tableClasses.th, "text-right")}>Variação vs ano anterior</th>
+      <th className={tableClasses.th}>Ano</th><th className={cn(tableClasses.th, "text-right")}>Receita Projetada (R$)</th><th className={cn(tableClasses.th, "text-right")}>Variação Anual</th>
     </tr></thead><tbody>{r.anos.map((a) => <tr key={a.y}><td className={tableClasses.td}>{a.y}</td><td className={tableClasses.num}>{num2(a.v)}</td><td className={cn(tableClasses.num, a.varPct < 0 && "text-destructive")}>{pct(a.varPct)}</td></tr>)}</tbody></table></div>
     <div className="mt-4"><Button size="sm" variant="outline" aria-pressed={detalhe} onClick={() => setDetalhe((x) => !x)}>{detalhe ? "Ocultar detalhe por unidade" : "Ver detalhe por unidade"}</Button></div>
     {detalhe && <div className={cn(tableClasses.wrap, "mt-4")}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
@@ -239,16 +239,15 @@ function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
   return <Bloco titulo={`Mudanças em ${ano}`}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar.</p> :
     <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Tipo", "Data", "Valor Mensal (R$)", "Pontos de Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Tipo", "Data", "Valor Mensal (R$)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
-      {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhuma mudança.</td></tr>}
+      {linhas.length === 0 && <tr><td colSpan={5} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhuma mudança.</td></tr>}
       {linhas.map((x, i) => <tr key={`${x.contrato_id}-${i}`}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.unidades ?? "—"}</td>
         <td className={cn(tableClasses.td, "zen-txt")}>{x.locatario ?? "—"}</td>
         <td className={tableClasses.td}>{x.tipo}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(x.data_decisao)}</td>
         <td className={tableClasses.num}>{num2(Number(x.valor_mensal ?? 0))}</td>
-        <td className={cn(tableClasses.td, "zen-txt")}>{x.observacao ?? "—"}</td>
       </tr>)}
     </tbody></table></div>}
   </Bloco>;

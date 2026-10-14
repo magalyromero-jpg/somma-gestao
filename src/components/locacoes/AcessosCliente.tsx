@@ -49,7 +49,7 @@ export function AcessosCliente({ edificioId }: { edificioId: string }) {
   };
 
   return (
-    <Bloco titulo="Clientes com acesso (somente leitura)">
+    <Bloco titulo="Acesso de Clientes">
       <form className="mb-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); conceder(); }}>
         <Input type="email" autoComplete="off" name="email-cliente-acesso" placeholder="e-mail do cliente" value={email} onChange={(e) => setEmail(e.target.value)} className="max-w-xs" />
         <Button type="submit" disabled={salvando}>Liberar acesso</Button>
@@ -65,7 +65,7 @@ export function AcessosCliente({ edificioId }: { edificioId: string }) {
           <td className={tableClasses.td}><Button size="sm" variant="ghost" onClick={() => revogar(a.user_id)}>Remover</Button></td>
         </tr>)}</tbody></table></div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">O cliente vê apenas Visão geral, Contratos e Fluxo de Caixa deste edifício.</p>
+      <p className="mt-2 text-xs text-muted-foreground">O cliente vê apenas Visão Geral, Contratos e Fluxo de Caixa deste edifício.</p>
     </Bloco>
   );
 }
@@ -101,7 +101,7 @@ export function AcessoEdificios({ userId }: { userId: string }) {
   };
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   return <div className="space-y-2">
-    <h3 className="text-[15px] font-medium">Acesso a edifícios</h3>
+    <h3 className="text-[15px] font-medium">Acesso a Edifícios</h3>
     <table className="w-full text-[13px]"><thead><tr className="border-b text-left text-[11px] font-bold uppercase tracking-[0.04em] text-secondary">
       <th className="px-[10px] py-2">Edifício</th><th className="px-[10px] py-2">Papel</th><th className="px-[10px] py-2">Situação</th><th className="px-[10px] py-2"></th>
     </tr></thead><tbody>{(data?.edificios ?? []).map((e: any) => {
