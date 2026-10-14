@@ -3573,6 +3573,16 @@ export type Database = {
           mes: string
         }[]
       }
+      loc_em_aberto_mensal_contrato: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          contrato_id: string
+          em_aberto: number
+          locatario: string
+          mes: string
+          unidades: string
+        }[]
+      }
       loc_fluxo: {
         Args: { p_ate?: string; p_cenario?: string; p_edificio: string }
         Returns: {
