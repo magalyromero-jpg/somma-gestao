@@ -103,7 +103,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
           <td className={tableClasses.num}>{brl(n(m.previsto_contratual))}</td>
           <td className={tableClasses.num}>{valOuTraco(n(m.recebido_da_competencia))}</td>
           <td className={cn(tableClasses.num, m.novo > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.novo)}</td>
-          <td className={cn(tableClasses.num, m.reg > 0.004 && "font-medium text-[hsl(var(--positive))]")}>{valOuTraco(m.reg)}</td>
+          <td className={cn(tableClasses.num, m.reg > 0.004 && "num-positive")}>{valOuTraco(m.reg)}</td>
           <td className={cn(tableClasses.num, m.acum > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
         </tr>; })}
         <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
