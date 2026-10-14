@@ -59,6 +59,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       toast({ title: "Formato não permitido", description: "Envie pagamentos em .xlsx, .xls ou .csv.", variant: "destructive" });
       return;
     }
+    console.log("[importar] passo formato ok");
     setOcupado(true);
     try {
       const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
@@ -70,12 +71,14 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       const linhas = rows.slice(hi + 1).filter((r) => r[idx[0]] != null && r[idx[3]]).map((r) => ({
         codigo: String(r[idx[0]]).trim(), imovel: r[idx[1]] ?? null, vencimento: paraData(r[idx[2]]), pagamento: paraData(r[idx[3]]), bruto: paraNum(r[idx[4]]), liquido: paraNum(r[idx[5]]),
       }));
+      console.log("[importar] linhas", linhas.length);
       const { data: out, error } = await db.rpc("loc_importar_pagamentos", { p_edificio: data.edificio.id, p_arquivo: f.name, p_linhas: linhas });
       if (error) throw error;
       setRes(out);
       await carregarCodigos();
       qc.invalidateQueries({ queryKey: ["loc-edificio"] });
     } catch (e) {
+      console.log("[importar] erro", (e as Error).message);
       toast({ title: "Não foi possível importar", description: (e as Error).message, variant: "destructive" });
     } finally { setOcupado(false); }
   };
