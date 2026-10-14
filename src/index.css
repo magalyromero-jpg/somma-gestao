@@ -58,6 +58,12 @@
     --warning: 39 100% 27%;              /* #9A6B0A */
     --warning-foreground: 0 0% 100%;
     --warning-bg: 42 85% 90%;
+    --reforecast-above-bg: #E3F1E6;
+    --reforecast-above-text: #1E6B34;
+    --reforecast-below-bg: #F8DEDB;
+    --reforecast-below-text: #B3261E;
+    --reforecast-new-bg: #FBEFD3;
+    --reforecast-new-text: #8A5A00;
 
     --info: 197 33% 37%;                /* #185FA5 */
     --info-foreground: 0 0% 100%;
@@ -208,3 +214,6 @@
 .zen-portal .zen-table td.zen-un { white-space: normal; min-width: 3.5rem; }
 .zen-portal .zen-table td.zen-txt .op-tag { white-space: normal; }
 .zen-portal .zen-wide th { letter-spacing: .02em; font-size: 10.5px; }
+.reforecast-acima { background: var(--reforecast-above-bg); color: var(--reforecast-above-text); }
+.reforecast-abaixo { background: var(--reforecast-below-bg); color: var(--reforecast-below-text); }
+.reforecast-novo { background: var(--reforecast-new-bg); color: var(--reforecast-new-text); }

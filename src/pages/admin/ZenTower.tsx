@@ -46,7 +46,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_pagamentos").select("id,codigo,imovel_nome,data_vencimento,data_pagamento,valor_liquido,contrato_id,dias_atraso").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(5000),
     db.rpc("loc_orcado_caixa", { p_edificio: id, p_ano: ano }),
     db.from("loc_v_metragem").select("*").eq("edificio_id", id),
-    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,valor_mensal,area_contrato_m2,indice,mes_reajuste").eq("edificio_id", id),
+    db.from("loc_vigencias").select("id,contrato_id,seq,tipo,inicio,fim,valor_mensal,area_contrato_m2,indice,mes_reajuste,no_orcamento,observacao,data_documento").eq("edificio_id", id),
     db.from("loc_v_alerta_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_auditoria_reajuste").select("*").eq("edificio_id", id),
     db.from("loc_v_evolucao").select("*").eq("edificio_id", id),
