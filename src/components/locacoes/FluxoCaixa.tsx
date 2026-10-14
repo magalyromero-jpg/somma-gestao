@@ -239,7 +239,7 @@ function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
   return <Bloco titulo={`O que mudou em ${ano}`}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar.</p> :
     <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Tipo", "Data", "Valor mensal (R$)", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Tipo", "Data", "Valor mensal (R$)", "Pontos de atenção"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhuma mudança.</td></tr>}
       {linhas.map((x, i) => <tr key={`${x.contrato_id}-${i}`}>
@@ -258,29 +258,34 @@ function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number
   const q = useQuery({
     queryKey: ["loc-reforecast-vs-orcado", edificioId, ano],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("loc_reforecast_vs_orcado", { p_edificio: edificioId, p_ano: ano });
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const [r, m] = await Promise.all([
+        (supabase as any).rpc("loc_reforecast_vs_orcado", { p_edificio: edificioId, p_ano: ano }),
+        (supabase as any).from("loc_v_mudancas_ano").select("contrato_id").eq("edificio_id", edificioId),
+      ]);
+      if (r.error) throw r.error;
+      if (m.error) throw m.error;
+      const dec = new Set(((m.data ?? []) as any[]).map((x) => x.contrato_id));
+      return ((r.data ?? []) as any[]).map((x) => ({ ...x, decisao: dec.has(x.contrato_id) }));
     },
   });
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   if (q.error) return <p className="text-sm text-destructive">Não foi possível carregar o reforecast.</p>;
-  const grupos = new Map<string, { un: string; loc: string; locPeso: number; o: number[]; r: number[] }>();
+  const grupos = new Map<string, { un: string; loc: string; locPeso: number; o: number[]; r: number[]; d: number[] }>();
   for (const x of q.data ?? []) {
     const un = x.unidades ?? "—";
-    const g = grupos.get(un) ?? { un, loc: "—", locPeso: -1, o: Array(12).fill(0), r: Array(12).fill(0) };
+    const g = grupos.get(un) ?? { un, loc: "—", locPeso: -1, o: Array(12).fill(0), r: Array(12).fill(0), d: Array(12).fill(0) };
     const i = Number(String(x.mes).slice(5, 7)) - 1;
     g.o[i] += Number(x.orcado ?? 0); g.r[i] += Number(x.reforecast ?? 0);
+    if (x.decisao) g.d[i] += Number(x.diferenca ?? 0);
     const peso = Number(x.reforecast ?? 0) * 100 + i;
     if (Number(x.reforecast) > 0 && peso > g.locPeso && x.locatario) { g.loc = x.locatario; g.locPeso = peso; }
     grupos.set(un, g);
   }
   const linhas = [...grupos.values()].filter((g) => g.o.some(Boolean) || g.r.some(Boolean)).sort((a, b) => a.un.localeCompare(b.un, "pt-BR", { numeric: true }));
   const soma = (v: number[]) => v.reduce((s, n) => s + n, 0);
-  const cel = (orcado: number, ref: number, key?: number) => {
-    const c = compararReforecast(orcado, ref);
-    const cor = c.estado !== "igual";
-    return <td key={key} className={cn(tableClasses.num, cor && `reforecast-${c.estado}`)} title={cor ? `Orçado: ${brl(orcado)} · Reforecast: ${brl(ref)} · Diferença: ${brl(c.diferenca)}` : undefined}>{ref === 0 ? "—" : inteiro(ref)}</td>;
+  const cel = (orcado: number, ref: number, d: number, key?: number) => {
+    const cls = d >= 1 ? "reforecast-acima" : d <= -1 ? "reforecast-abaixo" : "";
+    return <td key={key} className={cn(tableClasses.num, cls)} title={cls ? `Orçado: ${brl(orcado)} · Reforecast: ${brl(ref)} · Diferença: ${brl(ref - orcado)}` : undefined}>{ref === 0 ? "—" : inteiro(ref)}</td>;
   };
   const dif = (orcado: number, ref: number) => {
     const c = compararReforecast(orcado, ref);
@@ -290,16 +295,16 @@ function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number
   const tO = Array.from({ length: 12 }, (_, i) => linhas.reduce((s, g) => s + g.o[i], 0));
   const tR = Array.from({ length: 12 }, (_, i) => linhas.reduce((s, g) => s + g.r[i], 0));
   return <>
-    <p className="mb-3 text-xs text-muted-foreground">Verde: aumento em relação ao orçado · Vermelho: redução · Âmbar: contrato novo em {ano}</p>
+    <p className="mb-3 text-xs text-muted-foreground">Verde: acima do orçado · Vermelho: abaixo do orçado</p>
     <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
       <th className={cn(tableClasses.th, "text-right")}>Orçado {ano}</th><th className={cn(tableClasses.th, "text-right")}>Reforecast {ano}</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
     </tr></thead><tbody>
       {linhas.map((g) => <tr key={g.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{g.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{g.loc}</td>
-        {g.r.map((n, i) => cel(g.o[i], n, i))}
+        {g.r.map((n, i) => cel(g.o[i], n, g.d[i], i))}
         <td className={tableClasses.num}>{num2(soma(g.o))}</td><td className={cn(tableClasses.num, "font-bold")}>{num2(soma(g.r))}</td>{dif(soma(g.o), soma(g.r))}</tr>)}
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />
-        {tR.map((n, i) => cel(tO[i], n, i))}
+        {tR.map((n, i) => cel(tO[i], n, linhas.reduce((s, g) => s + g.d[i], 0), i))}
         <td className={tableClasses.num}>{num2(soma(tO))}</td><td className={tableClasses.num}>{num2(soma(tR))}</td>{dif(soma(tO), soma(tR))}</tr>
     </tbody></table></div>
   </>;
