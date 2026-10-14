@@ -44,6 +44,7 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
 
   const cols: { k: string; label: string; aberto?: boolean; soAdmin?: boolean }[] = [
     { k: "orcado", label: "Orçado" },
+    { k: "previsto_contratual", label: "Previsto pelos contratos" },
     { k: "recebido_da_competencia", label: "Recebido da competência" },
     { k: "em_aberto", label: "Em aberto", aberto: true },
     { k: "em_aberto_encerrados", label: "Em aberto de contratos encerrados", aberto: true, soAdmin: true },
@@ -51,14 +52,14 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
     { k: "outras_receitas", label: "Outras receitas" },
     { k: "entrou_no_caixa", label: "Entrou no caixa" },
     { k: "de_meses_anteriores", label: "Recebido de meses anteriores" },
-    { k: "recebido_no_mes_seguinte", label: "Recebido no mês seguinte" },
+    { k: "recebido_no_mes_seguinte", label: "Pago no mês seguinte" },
   ].filter((c) => admin || !c.soAdmin);
 
   const ultimoMes = ultimaData ? `${MESES_LONGOS[Number(ultimaData.slice(5, 7)) - 1]} de ${ultimaData.slice(0, 4)}` : "—";
 
   const tabelaAberto = (linhas: any[], enc: boolean) => (
     <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Valor orçado do ano", "Recebido", "Saldo em aberto", "Competências em aberto"].map((h, i) =>
+      {["Unidade", "Locatário", "Previsto no ano", "Recebido", "Saldo em aberto", "Competências em aberto"].map((h, i) =>
         <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 4 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhum valor em aberto.</td></tr>}
@@ -69,18 +70,18 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
           <tr className="cursor-pointer" aria-expanded={exp} onClick={() => setAberto(exp ? null : e.contrato_id)}>
             <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? "—"}{enc && " (encerrado)"}</td>
             <td className={cn(tableClasses.td, "zen-txt")}>{e.locatario ?? "—"}</td>
-            <td className={tableClasses.num}>{brl(e.orcado)}</td>
+            <td className={tableClasses.num}>{brl(e.previsto)}</td>
             <td className={tableClasses.num}>{brl(e.recebido)}</td>
             <td className={tableClasses.num}><Aberto v={n(e.saldo)} /></td>
             <td className={cn(tableClasses.td, "zen-txt tabular-nums")}>{e.competencias ?? "—"}</td>
           </tr>
           {exp && <tr><td colSpan={6} className="border-b bg-muted/40 px-[10px] py-3">
             <table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-              {["Competência", "Orçado", "Recebido", "Data do pagamento", "Saldo", "Situação"].map((h, i) =>
+              {["Competência", "Previsto", "Recebido", "Data do pagamento", "Saldo", "Situação"].map((h, i) =>
                 <th key={h} className={cn(tableClasses.th, [1, 2, 4].includes(i) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{meses.map((m) => <tr key={m.mes}>
               <td className={cn(tableClasses.td, "tabular-nums")}>{mesLabel(m.mes)}</td>
-              <td className={tableClasses.num}>{brl(m.orcado)}</td>
+              <td className={tableClasses.num}>{brl(m.previsto)}</td>
               <td className={tableClasses.num}>{valOuTraco(n(m.recebido))}</td>
               <td className={cn(tableClasses.td, "tabular-nums")}>{dt(m.pago_em)}</td>
               <td className={tableClasses.num}>{n(m.saldo) > 2 ? <Aberto v={n(m.saldo)} /> : valOuTraco(n(m.saldo))}</td>
@@ -97,7 +98,7 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
       <SelectTrigger className="h-8 w-28 text-xs" aria-label="Ano"><SelectValue /></SelectTrigger>
       <SelectContent>{[anoAtual - 1, anoAtual].map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
     </Select>}>
-    <p className="mb-4 text-[13px] text-muted-foreground">Pagamentos importados até {ultimoMes}. Meses posteriores ainda não têm pagamentos lançados.</p>
+    <p className="mb-4 text-[13px] text-muted-foreground">Pagamentos importados até {ultimoMes}.</p>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p> : <div className="space-y-6">
       <div className="portal-kpis">
         <div className="portal-kpi"><div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Em aberto (contratos ativos)</div><div className="mt-1 text-2xl font-extralight tabular-nums">{totAtivos > 0 ? <span className="text-warning">{brl(totAtivos)}</span> : "—"}</div></div>
@@ -116,11 +117,11 @@ export function RealizadoEmAberto({ edificioId, admin, ultimaData }: { edificioI
           <tr className="font-bold"><td className={tableClasses.td}>Total</td>
             {cols.map((c) => { const t = caixa.reduce((s, m) => s + n(m[c.k]), 0); return <td key={c.k} className={tableClasses.num}>{c.aberto ? <Aberto v={t} /> : valOuTraco(t)}</td>; })}</tr>
         </tbody></table></div>
-        <p className="mt-2 text-xs text-muted-foreground">Competência é o mês do vencimento do boleto. Entrou no caixa considera a data do pagamento. "Recebido de meses anteriores" mostra o que entrou neste mês referente a vencimentos anteriores; "Recebido no mês seguinte" mostra o que venceu neste mês e só foi pago depois.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Previsto pelos contratos considera os valores vigentes hoje, inclusive aditivos e contratos novos. Competência é o mês do vencimento do boleto; "Entrou no caixa" considera a data do pagamento.</p>
       </div>
 
       <div>
-        <h4 className="mb-2 text-[15px] font-medium">Valores em aberto</h4>
+        <h4 className="mb-2 text-[15px] font-medium">Valores em aberto por contrato</h4>
         {tabelaAberto(ativos, false)}
       </div>
       {admin && <div>

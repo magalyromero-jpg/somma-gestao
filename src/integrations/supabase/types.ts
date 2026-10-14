@@ -1291,6 +1291,7 @@ export type Database = {
         Row: {
           carencia_meses: number
           competencia: Database["public"]["Enums"]["loc_competencia"]
+          conferir_recebimento: boolean
           contrato_anterior_id: string | null
           created_at: string | null
           data_assinatura: string | null
@@ -1319,6 +1320,7 @@ export type Database = {
         Insert: {
           carencia_meses?: number
           competencia?: Database["public"]["Enums"]["loc_competencia"]
+          conferir_recebimento?: boolean
           contrato_anterior_id?: string | null
           created_at?: string | null
           data_assinatura?: string | null
@@ -1347,6 +1349,7 @@ export type Database = {
         Update: {
           carencia_meses?: number
           competencia?: Database["public"]["Enums"]["loc_competencia"]
+          conferir_recebimento?: boolean
           contrato_anterior_id?: string | null
           created_at?: string | null
           data_assinatura?: string | null
@@ -2269,6 +2272,7 @@ export type Database = {
           indice: Database["public"]["Enums"]["loc_indice"]
           inicio: string
           mes_reajuste: number | null
+          no_orcamento: boolean
           observacao: string | null
           seq: number
           tipo: string
@@ -2286,6 +2290,7 @@ export type Database = {
           indice?: Database["public"]["Enums"]["loc_indice"]
           inicio: string
           mes_reajuste?: number | null
+          no_orcamento?: boolean
           observacao?: string | null
           seq: number
           tipo: string
@@ -2303,6 +2308,7 @@ export type Database = {
           indice?: Database["public"]["Enums"]["loc_indice"]
           inicio?: string
           mes_reajuste?: number | null
+          no_orcamento?: boolean
           observacao?: string | null
           seq?: number
           tipo?: string
@@ -3302,6 +3308,7 @@ export type Database = {
           mes: string
           orcado: number
           outras_receitas: number
+          previsto_contratual: number
           recebido_a_maior: number
           recebido_da_competencia: number
           recebido_no_mes_seguinte: number
@@ -3332,8 +3339,8 @@ export type Database = {
           encerrado: boolean
           locatario: string
           mes: string
-          orcado: number
           pago_em: string
+          previsto: number
           recebido: number
           saldo: number
           situacao: string
@@ -3352,7 +3359,7 @@ export type Database = {
           contrato_id: string
           encerrado: boolean
           locatario: string
-          orcado: number
+          previsto: number
           recebido: number
           saldo: number
           unidades: string
@@ -3403,12 +3410,24 @@ export type Database = {
         }[]
       }
       loc_pode_ver: { Args: { p_edificio: string }; Returns: boolean }
+      loc_previsto_caixa: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          contrato_id: string
+          mes: string
+          valor: number
+        }[]
+      }
       loc_remapear_pagamentos: { Args: { p_edificio: string }; Returns: number }
       loc_revogar_acesso: {
         Args: { p_edificio: string; p_user: string }
         Returns: undefined
       }
       loc_valor_em: {
+        Args: { p_contrato: string; p_ref: string }
+        Returns: number
+      }
+      loc_valor_orcado_em: {
         Args: { p_contrato: string; p_ref: string }
         Returns: number
       }
