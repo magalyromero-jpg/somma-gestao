@@ -7,6 +7,7 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MESES, MESES_LONGOS, brl, dt, mil, num2 } from "@/lib/locacoes";
+import { useSaldoEmAberto } from "@/hooks/useSaldoEmAberto";
 
 const db = supabase as any;
 const n = (v: any) => Number(v ?? 0);
@@ -86,18 +87,19 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
     },
   });
 
+  const saldo = useSaldoEmAberto(edificioId, ano, ultimaData, admin);
   const limite = ultimaData.slice(0, 7);
-  const caixa = (q.data?.caixa ?? []).filter((m) => !limite || m.mes.slice(0, 7) <= limite).sort((a, b) => a.mes.localeCompare(b.mes));
-  const encerrados = admin ? (q.data?.encerrados ?? []).filter((e) => n(e.alugueis_em_aberto) > 0.004) : [];
-  const abertoEncerrados = encerrados.reduce((s, e) => s + n(e.alugueis_em_aberto), 0);
+  const caixa = saldo.caixa;
+  const encerrados = saldo.encerradosComSaldo;
+  const abertoEncerrados = saldo.naoAtivos;
   const contratos = [
-    ...(q.data?.emAberto ?? []).filter((e) => !e.encerrado).map((e) => ({ ...e, ativo: true })),
+    ...saldo.emAbertoAtivos.map((e) => ({ ...e, ativo: true })),
     ...encerrados.map((e) => ({ contrato_id: e.contrato_id, unidades: e.unidades, locatario: e.locatario, saldo: e.alugueis_em_aberto, competencias: `Encerrado em ${dt(e.data_saida)}`, ativo: false })),
   ].sort((a, b) => n(b.saldo) - n(a.saldo));
-  const previsto = caixa.reduce((s, m) => s + n(m.previsto_contratual), 0);
+  const previsto = saldo.previstoAtivos;
   const recebido = caixa.reduce((s, m) => s + n(m.recebido_da_competencia), 0);
-  const aberto = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).reduce((s, e) => s + n(e.saldo), 0);
-  const abertoTotal = aberto + abertoEncerrados;
+  const aberto = saldo.ativos;
+  const abertoTotal = saldo.total;
   const porMes = new Map((q.data?.mensal ?? []).map((m) => [m.mes.slice(0, 7), m]));
   const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.em_aberto), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
   const nomes = new Map((q.data?.emAberto ?? []).map((e) => [e.contrato_id, e.locatario]));
