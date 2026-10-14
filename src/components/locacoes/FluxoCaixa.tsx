@@ -53,7 +53,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
         <th className={tableClasses.th}>Mês</th>{["Orçado (R$)", "Reforecast (R$)", "Realizado (R$)", "Diferença (R$)", "Variação (%)"].map((h) => <th key={h} className={cn(tableClasses.th, "text-right")}>{h}</th>)}<th className={tableClasses.th}>Situação</th>
       </tr></thead><tbody>{meses.map((m) => {
         const rf = prevMes(m.key), dif = m.realizado - rf;
-        const sit = !m.fechado ? ["A Receber", "op-tag-gray"] : dif < -1 ? ["Abaixo do Reforecast", "op-tag-red"] : ["Dentro", "op-tag-green"];
+        const sit = !m.fechado ? ["A Receber", "op-tag-gray"] : dif < -1 ? ["▼ Abaixo", "op-tag-red"] : ["▲ Dentro", "op-tag-green"];
         const cor = m.fechado && (dif < -1 ? "text-destructive" : "text-success");
         return <tr key={m.key}>
           <td className={tableClasses.td}>{m.mes}/{ano}</td>
