@@ -141,6 +141,13 @@
       "when": 1792005441458,
       "tag": "0019_loc_codigo_sucessao",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792005609172,
+      "tag": "0020_fix_loc_importar_pagamentos",
+      "breakpoints": true
     }
   ]
 }
