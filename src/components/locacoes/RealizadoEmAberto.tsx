@@ -26,13 +26,14 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const q = useQuery({
     queryKey: ["loc-recebimentos", edificioId, ano],
     queryFn: async () => {
-      const [cx, ea, enc] = await Promise.all([
+      const [cx, ea, enc, em] = await Promise.all([
         db.rpc("loc_caixa_mensal", { p_edificio: edificioId, p_ano: ano }),
         db.rpc("loc_em_aberto", { p_edificio: edificioId, p_ano: ano }),
         admin ? db.from("loc_v_encerrados").select("contrato_id,unidades,locatario,data_saida,alugueis_em_aberto").eq("edificio_id", edificioId) : Promise.resolve({ data: [], error: null }),
+        db.rpc("loc_em_aberto_mensal", { p_edificio: edificioId, p_ano: ano }),
       ]);
-      for (const r of [cx, ea, enc]) if (r.error) throw r.error;
-      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], encerrados: (enc.data ?? []) as any[] };
+      for (const r of [cx, ea, enc, em]) if (r.error) throw r.error;
+      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], encerrados: (enc.data ?? []) as any[], mensal: (em.data ?? []) as any[] };
     },
   });
 
@@ -46,10 +47,12 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   ].sort((a, b) => n(b.saldo) - n(a.saldo));
   const previsto = caixa.reduce((s, m) => s + n(m.previsto_contratual), 0);
   const recebido = caixa.reduce((s, m) => s + n(m.recebido_da_competencia), 0);
-  const aberto = caixa.reduce((s, m) => s + n(m.em_aberto), 0);
+  const aberto = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).reduce((s, e) => s + n(e.saldo), 0);
   const abertoTotal = aberto + abertoEncerrados;
-  let acum = 0;
-  const mensal = caixa.map((m) => { acum += n(m.em_aberto); return { ...m, acum, label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
+  const porMes = new Map((q.data?.mensal ?? []).map((m) => [m.mes.slice(0, 7), m]));
+  const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.novo_em_aberto), reg: n(e.regularizado), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
+  const totalNovo = mensal.reduce((s, m) => s + m.novo - m.reg, 0);
+  const ultimoAcum = mensal.length ? mensal[mensal.length - 1].acum : 0;
 
   return <Bloco titulo="Recebimentos e Saldo em Aberto" acao={<div className="flex gap-2">
     {([["acum", "Acumulado"], ["mensal", "Mensal"]] as const).map(([v, l]) => <Button key={v} size="sm" variant={aba === v ? "default" : "outline"} aria-pressed={aba === v} onClick={() => setAba(v)}>{l}</Button>)}
@@ -87,22 +90,23 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: CORES.texto }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 10, fill: CORES.texto }} axisLine={false} tickLine={false} tickFormatter={(v) => mil(v)} width={44} />
           <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => brl(v)} cursor={{ fill: "hsl(var(--muted))" }} />
-          <Bar dataKey="em_aberto" name="Em Aberto" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
-            <LabelList dataKey="em_aberto" position="top" formatter={(v: number) => (v > 0.004 ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
+          <Bar dataKey="acum" name="Em Aberto Acumulado" fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]}>
+            <LabelList dataKey="acum" position="top" formatter={(v: number) => (v > 0.004 ? mil(v) : "")} style={{ fontSize: 10, fill: CORES.texto }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Mês", "Previsto", "Recebido", "Em Aberto", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
+        {["Mês", "Previsto", "Recebido", "Em Aberto", "Regularizado", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
-        {mensal.map((m) => { const sem = n(m.em_aberto) <= 0.004; return <tr key={m.mes} className={cn(sem && "text-muted-foreground")}>
+        {mensal.map((m) => { const sem = m.novo <= 0.004 && m.acum <= 0.004; return <tr key={m.mes} className={cn(sem && "text-muted-foreground")}>
           <td className={tableClasses.td}>{mesExtenso(m.mes)}</td>
           <td className={tableClasses.num}>{brl(n(m.previsto_contratual))}</td>
           <td className={tableClasses.num}>{valOuTraco(n(m.recebido_da_competencia))}</td>
-          <td className={cn(tableClasses.num, !sem && "font-bold text-destructive")}>{valOuTraco(n(m.em_aberto))}</td>
-          <td className={cn(tableClasses.num, m.acum > 0.004 && !sem && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
+          <td className={cn(tableClasses.num, m.novo > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.novo)}</td>
+          <td className={cn(tableClasses.num, m.reg > 0.004 && "num-positive")}>{valOuTraco(m.reg)}</td>
+          <td className={cn(tableClasses.num, m.acum > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
         </tr>; })}
-        <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(aberto)}</td><td className={tableClasses.num} /></tr>
+        <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
     </div>}
   </Bloco>;
