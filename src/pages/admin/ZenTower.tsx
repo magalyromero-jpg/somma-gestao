@@ -52,6 +52,22 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   ]);
   for (const r of rs) if (r.error) throw r.error;
   const [vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras] = rs.map((r) => r.data ?? []);
+  // contratos do orçado que não estão vigentes (ex.: encerrados) — o orçado é fixo
+  const vigC = new Set(vig.map((v: any) => v.contrato_id));
+  const foraIds = [...new Set(orcado.map((o: any) => o.contrato_id))].filter((c: any) => !vigC.has(c));
+  let orcFora: any[] = [];
+  if (foraIds.length) {
+    const [cs, cu, lc] = await Promise.all([
+      db.from("loc_contratos").select("id,locatario_id,data_saida,status").in("id", foraIds),
+      db.from("loc_contrato_unidades").select("contrato_id,loc_unidades(nome,tipo)").in("contrato_id", foraIds),
+      db.from("loc_v_locatarios_cliente").select("id,nome").eq("edificio_id", id),
+    ]);
+    const nomes = new Map<string, string>((lc.data ?? []).map((l: any) => [l.id, l.nome]));
+    orcFora = (cs.data ?? []).map((c: any) => ({
+      contrato_id: c.id, data_saida: c.data_saida, locatario: nomes.get(c.locatario_id) ?? "—",
+      unidades: (cu.data ?? []).filter((x: any) => x.contrato_id === c.id && x.loc_unidades?.tipo !== "garagem").map((x: any) => x.loc_unidades?.nome).sort().join(" + ") || "—",
+    }));
+  }
   const vigIds = vigencias.map((v: any) => v.id);
   const deg = vigIds.length ? await db.from("loc_vigencia_degraus").select("*").in("vigencia_id", vigIds) : { data: [] };
   if (deg.error) throw deg.error;
@@ -63,7 +79,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
-  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin };
+  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin, orcFora };
 }
 
 export type DadosZen = NonNullable<Awaited<ReturnType<typeof carregar>>>;
