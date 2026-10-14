@@ -100,6 +100,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const abertoTotal = aberto + abertoEncerrados;
   const porMes = new Map((q.data?.mensal ?? []).map((m) => [m.mes.slice(0, 7), m]));
   const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.em_aberto), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
+  const nomes = new Map((q.data?.emAberto ?? []).map((e) => [e.contrato_id, e.locatario]));
   const totalNovo = mensal.reduce((s, m) => s + m.novo, 0);
   const ultimoAcum = mensal.length ? mensal[mensal.length - 1].acum : 0;
 
@@ -165,7 +166,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
         </tr>; })}
         <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
-      <PorCliente linhas={q.data?.porContrato ?? []} limite={limite} />
+      <PorCliente linhas={(q.data?.porContrato ?? []).map((r) => ({ ...r, locatario: r.locatario ?? nomes.get(r.contrato_id) }))} limite={limite} />
       </div>
     </div>}
     </div>}
