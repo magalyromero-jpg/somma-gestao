@@ -285,9 +285,8 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
 function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   const resultado = (a: any) => {
     const p = String(a.parecer ?? "").toLowerCase();
-    if (p === "ok") return { label: "Conforme", cls: "op-tag-green" };
-    if (p === "divergente") return Number(a.diferenca) < 0 ? { label: "▼ A Menor", cls: "op-tag-red" } : { label: "▲ A Maior", cls: "op-tag-red" };
-    return { label: "Pendente", cls: "op-tag-amber" };
+    if (p === "pendente") return { label: "Pendente", cls: "op-tag-amber" };
+    return { label: "Atualizado", cls: "op-tag-green" };
   };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
