@@ -75,8 +75,8 @@ export function EncerrarContrato({ contratoId, edificioId, unidade }: { contrato
         <Campo label="Data de saída *"><Input type="date" value={f.saida} onChange={(e) => setF({ ...f, saida: e.target.value })} /></Campo>
         <Campo label="Motivo"><Select value={f.motivo} onValueChange={(v) => setF({ ...f, motivo: v })}><SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{MOTIVOS.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}</SelectContent></Select></Campo>
-        <Campo label="Condomínio em aberto (R$)"><Input inputMode="decimal" value={f.cond} onChange={(e) => setF({ ...f, cond: e.target.value })} /></Campo>
-        <Campo label="Em pauta para locação desde"><Input type="date" value={f.pauta} onChange={(e) => setF({ ...f, pauta: e.target.value })} /></Campo>
+        <Campo label="Condomínio em Aberto (R$)"><Input inputMode="decimal" value={f.cond} onChange={(e) => setF({ ...f, cond: e.target.value })} /></Campo>
+        <Campo label="Disponível desde"><Input type="date" value={f.pauta} onChange={(e) => setF({ ...f, pauta: e.target.value })} /></Campo>
       </div>
       <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={salvar} disabled={salvando}>Encerrar contrato</Button></DialogFooter>
     </DialogContent></Dialog>

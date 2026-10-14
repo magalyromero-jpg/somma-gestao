@@ -122,18 +122,18 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
     <div className="op-theme zen-portal space-y-6">
       <PageHeader
         title={data.edificio.nome}
-        subtitle="Gestão de locações"
+        subtitle="Gestão de Locações"
         actions={d.ultimaData ? <div className="rounded-md border bg-card px-4 py-2 text-xs text-muted-foreground">Pagamentos importados até <span className="font-medium text-foreground tabular-nums">{dt(d.ultimaData)}</span></div> : undefined}
       />
       <Tabs defaultValue="geral" className="space-y-4">
         <div className="overflow-x-auto"><TabsList>
-          <TabsTrigger value="geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
-          <TabsTrigger value="evolucao">Evolução do aluguel</TabsTrigger>
+          <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
           {equipe && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
-          {admin && <TabsTrigger value="importar">Importar pagamentos</TabsTrigger>}
+          {admin && <TabsTrigger value="importar">Importar Pagamentos</TabsTrigger>}
         </TabsList></div>
 
         <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
@@ -141,7 +141,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="caixa" className="space-y-4"><FluxoCaixa data={data} linhas={d.linhas} meses={d.meses} ultimoMes={d.ultimoMes} /></TabsContent>
 
         <TabsContent value="contratos">
-          <Bloco titulo="Contratos vigentes" acao={<div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>{admin && <NovoContrato edificioId={data.edificio.id} locatarios={data.locs} unidades={data.ocup} />}</div>}>
+          <Bloco titulo="Contratos Vigentes" acao={<div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>{admin && <NovoContrato edificioId={data.edificio.id} locatarios={data.locs} unidades={data.ocup} />}</div>}>
             <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
               {["Unidade", "Locatário", "Matrícula", "Índice", "Valor vigente", "m² contrato", "m² matrícula", "Início", "Fim", "Ciclo", "R$/m²", ...(admin ? [""] : [])].map((h, i) => <th key={h} className={cn(tableClasses.th, ((i >= 4 && i <= 6) || i === 10) && "text-right")}>{h}</th>)}
             </tr></thead><tbody>{d.linhas.map((l: any) => {
@@ -170,7 +170,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
 
         {equipe && <TabsContent value="conferencia" className="space-y-4">
-          <Bloco titulo="Metragem: contrato × matrícula" acao={<label className="flex items-center gap-2 text-xs text-muted-foreground"><Switch checked={soDivergentes} onCheckedChange={setSoDivergentes} />Só divergentes</label>}>
+          <Bloco titulo="Metragem: Contrato × Matrícula" acao={<label className="flex items-center gap-2 text-xs text-muted-foreground"><Switch checked={soDivergentes} onCheckedChange={setSoDivergentes} />Só divergentes</label>}>
             <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
               <th className={tableClasses.th}>Unidades</th><th className={tableClasses.th}>Matrículas</th><th className={cn(tableClasses.th, "text-right")}>m² contrato</th><th className={cn(tableClasses.th, "text-right")}>m² matrícula</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
             </tr></thead><tbody>{data.metragem.filter((m: any) => !soDivergentes || (m.diferenca_m2 != null && Math.abs(m.diferenca_m2) > 1)).map((m: any) => <tr key={m.contrato_id}>
@@ -246,7 +246,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
 
   return <>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card label="Unidades em administração" className="sm:col-span-2">
+      <Card label="Unidades Administradas" className="sm:col-span-2">
         <div className="grid grid-cols-4 gap-4">
           <div><Valor>{total}</Valor><div className="mt-2 text-xs text-muted-foreground">total</div></div>
           <div><Valor className="text-success">{locadas}</Valor><div className="mt-2 text-xs text-muted-foreground">locadas</div></div>
@@ -254,8 +254,8 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
           <div><Valor>{total ? Math.round(locadas / total * 100) : 0}%</Valor><div className="mt-2 text-xs text-muted-foreground">ocupação</div></div>
         </div>
       </Card>
-      <Card label="Valor médio do m² locado: salas"><Valor>{brl(m2Medio("Sala"))}</Valor></Card>
-      <Card label="Valor médio do m² locado: lojas"><Valor>{brl(m2Medio("Loja"))}</Valor></Card>
+      <Card label="Valor Médio do m² — Salas"><Valor>{brl(m2Medio("Sala"))}</Valor></Card>
+      <Card label="Valor Médio do m² — Lojas"><Valor>{brl(m2Medio("Loja"))}</Valor></Card>
       <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i] : "—"}`}>
         <Valor>{brl(ultimo?.realizado ?? 0)}</Valor>
         {ultimo && ultimo.realizado < ultimo.orcado && <div className="mt-2 text-xs text-destructive">{num2((1 - ultimo.realizado / ultimo.orcado) * 100)}% abaixo do previsto ({brl(ultimo.orcado)})</div>}
@@ -264,11 +264,11 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
         <Valor>{brl(acumR)}</Valor>
         {acumO > 0 && <div className="mt-2 text-xs text-muted-foreground">{num2(acumR / acumO * 100)}% do previsto ({brl(acumO)})</div>}
       </Card>
-      <Card label="Vencido em aberto"><Valor className={vencido > 0 ? "text-destructive" : undefined}>{brl(vencido)}</Valor></Card>
+      <Card label="Vencido em Aberto"><Valor className={vencido > 0 ? "text-destructive" : undefined}>{brl(vencido)}</Valor></Card>
       <Card label={`Reajustes até ${MESES[lm - 1]}/${la}`}><Valor>{nReaj}</Valor><div className="mt-2 text-xs text-muted-foreground">contratos</div></Card>
-      <Card label="Contratos que vencem em 12 meses"><Valor>{vencem}</Valor></Card>
+      <Card label="Vencimentos em 12 Meses"><Valor>{vencem}</Valor></Card>
     </div>
-    <Bloco titulo="Próximos reajustes">
+    <Bloco titulo="Próximos Reajustes">
       {proximos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste com valor definido nos próximos meses.</p> :
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Regra</th><th className={tableClasses.th}>Boleto</th><th className={cn(tableClasses.th, "text-right")}>Novo valor</th>
@@ -291,7 +291,7 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
-  return <Bloco titulo="Verificação dos reajustes">
+  return <Bloco titulo="Conferência de Reajustes">
     <p className="mb-4 text-[13px] text-muted-foreground">Conferência, a cada aniversário do contrato, entre o aluguel aplicado e o valor resultante do índice de reajuste. Tolerância de R$ 2,00.</p>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste a verificar.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
@@ -323,11 +323,11 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
   const STATUS: Record<string, string> = { vigente: "Vigente", vencido: "Vencido", encerrado: "Encerrado", "vence em até 180 dias": "Vence em até 180 dias" };
   return <div className="space-y-4">
     <div className="grid gap-4 sm:grid-cols-3">
-      <Card label="R$/m² inicial (média ponderada)"><Valor>{brl(ini)}</Valor></Card>
-      <Card label="R$/m² atual (média ponderada)"><Valor>{brl(atu)}</Valor></Card>
+      <Card label="R$/m² Inicial (Média Ponderada)"><Valor>{brl(ini)}</Valor></Card>
+      <Card label="R$/m² Atual (Média Ponderada)"><Valor>{brl(atu)}</Valor></Card>
       <Card label="Variação do R$/m²"><Valor>{ini && atu ? pct((atu / ini - 1) * 100) : "—"}</Valor><div className="mt-2 text-xs text-muted-foreground">{comArea.length} salas com área ({m2(area)})</div></Card>
     </div>
-    <Bloco titulo="Evolução do aluguel por unidade">
+    <Bloco titulo="Evolução do Aluguel">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Unidade", "Locatário", "Início do contrato inicial", "Início do aditivo", "Fim da vigência atual", "Aluguel inicial", "Aluguel atual", "Variação %", "Possui aditivo?", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, [5, 6, 7].includes(i) && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>

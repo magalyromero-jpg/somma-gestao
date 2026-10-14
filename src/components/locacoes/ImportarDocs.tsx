@@ -98,7 +98,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       {[["Linhas lidas", res?.linhas], ["Novas", res?.novas], ["Repetidas ignoradas", res?.duplicadas], ["Sem contrato", res?.sem_mapeamento]].map(([l, v]) =>
         <div key={l} className="rounded-md border bg-card p-5"><div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{l}</div><div className="mt-3 text-[32px] font-extralight leading-none tabular-nums">{v ?? "—"}</div></div>)}
     </div>
-    <Bloco titulo="Códigos para vincular">
+    <Bloco titulo="Códigos a Vincular">
       {!codigos?.length ? <p className="text-sm text-muted-foreground">Nenhum código pendente.</p> :
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           <th className={tableClasses.th}>Código</th><th className={tableClasses.th}>Nome no Lidderar</th><th className={cn(tableClasses.th, "text-right")}>Linhas</th><th className={tableClasses.th}>Vincular a</th>
@@ -113,7 +113,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
         </tr>)}</tbody></table></div>}
       <p className="mt-3 text-xs text-muted-foreground">Reenviar o mesmo arquivo não duplica pagamentos: só acrescenta o que ainda não existe.</p>
     </Bloco>
-    <Bloco titulo="Pagamentos recebidos" acao={<span className="text-xs text-muted-foreground">{data.pags.length} pagamentos</span>}>
+    <Bloco titulo="Pagamentos Recebidos" acao={<span className="text-xs text-muted-foreground">{data.pags.length} pagamentos</span>}>
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Pagamento", "Vencimento", "Código", "Imóvel", "Contrato", "Atraso", "Valor líquido"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 5 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{data.pags.map((p: any) => <tr key={p.id}>

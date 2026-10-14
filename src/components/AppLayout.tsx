@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useEdificios } from "@/hooks/useEdificios";
 
 const nav: Array<{ to: string; label: string; icon: any; allowed?: AppRole[]; grupo?: string }> = [
-  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor", "consulta"], grupo: "Visão geral" },
-  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "consulta"], grupo: "Visão geral" },
+  { to: "/dashboard",            label: "Dashboard",           icon: LayoutDashboard, allowed: ["admin", "gestor", "consulta"], grupo: "Visão Geral" },
+  { to: "/operacional",          label: "Operacional",         icon: ListTodo,          allowed: ["admin", "gestor", "consulta"], grupo: "Visão Geral" },
   { to: "@carteira", label: "", icon: Landmark, grupo: "Carteira" },
   { to: "/mercado",              label: "Mercado",             icon: LineChart, allowed: ["admin", "gestor", "consulta"], grupo: "Inteligência de mercado" },
   { to: "/pesquisa-mercado",     label: "Pesquisa de Mercado", icon: Search, allowed: ["admin", "gestor", "consulta"], grupo: "Inteligência de mercado" },
