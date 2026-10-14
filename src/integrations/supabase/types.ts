@@ -3568,10 +3568,9 @@ export type Database = {
       loc_em_aberto_mensal: {
         Args: { p_ano: number; p_edificio: string }
         Returns: {
+          em_aberto: number
           em_aberto_acumulado: number
           mes: string
-          novo_em_aberto: number
-          regularizado: number
         }[]
       }
       loc_fluxo: {

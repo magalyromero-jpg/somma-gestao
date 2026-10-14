@@ -50,8 +50,8 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const aberto = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).reduce((s, e) => s + n(e.saldo), 0);
   const abertoTotal = aberto + abertoEncerrados;
   const porMes = new Map((q.data?.mensal ?? []).map((m) => [m.mes.slice(0, 7), m]));
-  const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.novo_em_aberto), reg: n(e.regularizado), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
-  const totalNovo = mensal.reduce((s, m) => s + m.novo - m.reg, 0);
+  const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.em_aberto), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
+  const totalNovo = mensal.reduce((s, m) => s + m.novo, 0);
   const ultimoAcum = mensal.length ? mensal[mensal.length - 1].acum : 0;
 
   return <Bloco titulo="Recebimentos e Saldo em Aberto" acao={<div className="flex gap-2">
@@ -90,7 +90,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
       </section>
     </div>
     : <div className="space-y-6">
-      <p className="text-[13px] text-muted-foreground">Contratos ativos.{admin && abertoEncerrados > 0.004 ? ` O saldo dos contratos não ativos (${brl(abertoEncerrados)}) está em Por Contrato.` : ""}</p>
+      <p className="text-[13px] text-muted-foreground">Contratos ativos. Mostra o que continua em aberto hoje em cada mês.{admin && abertoEncerrados > 0.004 ? ` O saldo dos contratos não ativos (${brl(abertoEncerrados)}) está em Por Contrato.` : ""}</p>
       <div className="text-[11px] text-muted-foreground">Contratos Ativos</div>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={mensal} margin={{ top: 20 }}>
@@ -104,17 +104,16 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
         </BarChart>
       </ResponsiveContainer>
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Mês", "Previsto", "Recebido", "Em Aberto", "Regularizado", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
+        {["Mês", "Previsto", "Recebido", "Em Aberto", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
         {mensal.map((m) => { const sem = m.novo <= 0.004 && m.acum <= 0.004; return <tr key={m.mes} className={cn(sem && "text-muted-foreground")}>
           <td className={tableClasses.td}>{mesExtenso(m.mes)}</td>
           <td className={tableClasses.num}>{brl(n(m.previsto_contratual))}</td>
           <td className={tableClasses.num}>{valOuTraco(n(m.recebido_da_competencia))}</td>
           <td className={cn(tableClasses.num, m.novo > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.novo)}</td>
-          <td className={cn(tableClasses.num, m.reg > 0.004 && "num-positive")}>{valOuTraco(m.reg)}</td>
           <td className={cn(tableClasses.num, m.acum > 0.004 && "font-bold text-destructive")}>{valOuTraco(m.acum)}</td>
         </tr>; })}
-        <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={tableClasses.num} /><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
+        <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
     </div>}
     </div>}
