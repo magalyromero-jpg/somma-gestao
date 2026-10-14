@@ -53,6 +53,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
   if (codigos === null) void carregarCodigos();
 
   const importar = async (files: File[]) => {
+    console.log("[importar] arquivos", files.length, files[0]?.name);
     const f = files[0]; if (!f) return;
     if (files.some((file) => !formatoPagamentoPermitido(file.name))) {
       toast({ title: "Formato não permitido", description: "Envie pagamentos em .xlsx, .xls ou .csv.", variant: "destructive" });
