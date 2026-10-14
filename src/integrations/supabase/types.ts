@@ -3533,6 +3533,18 @@ export type Database = {
           valor: number
         }[]
       }
+      loc_reforecast_vs_orcado: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          contrato_id: string
+          diferenca: number
+          locatario: string
+          mes: string
+          orcado: number
+          reforecast: number
+          unidades: string
+        }[]
+      }
       loc_remapear_pagamentos: { Args: { p_edificio: string }; Returns: number }
       loc_revogar_acesso: {
         Args: { p_edificio: string; p_user: string }
