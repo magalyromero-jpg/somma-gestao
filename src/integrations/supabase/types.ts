@@ -1127,6 +1127,91 @@ export type Database = {
           },
         ]
       }
+      loc_codigo_sucessao: {
+        Row: {
+          a_partir_vencimento: string
+          codigo: string
+          contrato_id: string
+          edificio_id: string
+        }
+        Insert: {
+          a_partir_vencimento: string
+          codigo: string
+          contrato_id: string
+          edificio_id: string
+        }
+        Update: {
+          a_partir_vencimento?: string
+          codigo?: string
+          contrato_id?: string
+          edificio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_evolucao"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_metragem"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_mudancas_ano"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_codigo_sucessao_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loc_codigos_lidderar: {
         Row: {
           codigo: string

@@ -134,6 +134,13 @@
       "when": 1792004078947,
       "tag": "0018_loc_em_aberto_mensal",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792005441458,
+      "tag": "0019_loc_codigo_sucessao",
+      "breakpoints": true
     }
   ]
 }
