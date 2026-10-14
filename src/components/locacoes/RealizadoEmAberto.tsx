@@ -59,9 +59,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   </div>}>
     {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar os valores.</p>
     : <div className="space-y-6">
-      <div className={cn("grid grid-cols-2 gap-4", admin ? "lg:grid-cols-6" : "lg:grid-cols-4")}>
-        <Quadro label={admin ? "Previsto (Carteira Ativa)" : "Previsto"} valor={brl(previsto)} />
-        <Quadro label="Recebido" valor={brl(recebido)} />
+      <div className={cn("grid grid-cols-2 gap-4", admin ? "lg:grid-cols-4" : "lg:grid-cols-2")}>
         <Quadro label={admin ? "Em Aberto Ativos" : "Em Aberto"} valor={valOuTraco(aberto)} tom="vermelho" />
         {admin && <Quadro label="Em Aberto Não Ativos" valor={valOuTraco(abertoEncerrados)} tom="cinza" />}
         {admin && <Quadro label="Total em Aberto" valor={valOuTraco(abertoTotal)} forte />}
