@@ -50,8 +50,8 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   const aberto = (q.data?.emAberto ?? []).filter((e) => !e.encerrado).reduce((s, e) => s + n(e.saldo), 0);
   const abertoTotal = aberto + abertoEncerrados;
   const porMes = new Map((q.data?.mensal ?? []).map((m) => [m.mes.slice(0, 7), m]));
-  const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.novo_em_aberto), reg: n(e.regularizado), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
-  const totalNovo = mensal.reduce((s, m) => s + m.novo - m.reg, 0);
+  const mensal = caixa.map((m) => { const e: any = porMes.get(m.mes.slice(0, 7)) ?? {}; return { ...m, novo: n(e.em_aberto), acum: n(e.em_aberto_acumulado), label: MESES[Number(m.mes.slice(5, 7)) - 1] }; });
+  const totalNovo = mensal.reduce((s, m) => s + m.novo, 0);
   const ultimoAcum = mensal.length ? mensal[mensal.length - 1].acum : 0;
 
   return <Bloco titulo="Recebimentos e Saldo em Aberto" acao={<div className="flex gap-2">
@@ -90,7 +90,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
       </section>
     </div>
     : <div className="space-y-6">
-      <p className="text-[13px] text-muted-foreground">Contratos ativos.{admin && abertoEncerrados > 0.004 ? ` O saldo dos contratos não ativos (${brl(abertoEncerrados)}) está em Por Contrato.` : ""}</p>
+      <p className="text-[13px] text-muted-foreground">Contratos ativos. Mostra o que continua em aberto hoje em cada mês.{admin && abertoEncerrados > 0.004 ? ` O saldo dos contratos não ativos (${brl(abertoEncerrados)}) está em Por Contrato.` : ""}</p>
       <div className="text-[11px] text-muted-foreground">Contratos Ativos</div>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={mensal} margin={{ top: 20 }}>
