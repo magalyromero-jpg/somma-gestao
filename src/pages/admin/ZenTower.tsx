@@ -314,32 +314,56 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
 function Evolucao({ data, d }: { data: DadosZen; d: any }) {
   const linhas = data.evolucao.map((e: any) => ({ ...e, l: d.porContrato.get(e.contrato_id) })).filter((e: any) => e.l)
     .sort((a: any, b: any) => (a.l.unidades ?? "").localeCompare(b.l.unidades ?? "", "pt-BR", { numeric: true }));
-  const comArea = linhas.filter((e: any) => Number(e.l.area_matricula_m2) > 0 && Number(e.aluguel_inicial) > 0 && Number(e.aluguel_atual) > 0);
-  const area = comArea.reduce((s: number, e: any) => s + Number(e.l.area_matricula_m2), 0);
-  const ini = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_inicial), 0) / area : null;
-  const atu = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_atual), 0) / area : null;
+  const ehLoja = (e: any) => String(e.unidades ?? e.l.unidades ?? "").trim().startsWith("Loja");
+  const grupos = [
+    { titulo: "Salas", sing: "sala", plur: "salas", itens: linhas.filter((e: any) => !ehLoja(e)) },
+    { titulo: "Lojas", sing: "loja", plur: "lojas", itens: linhas.filter(ehLoja) },
+  ];
   const STATUS: Record<string, string> = { vigente: "Vigente", vencido: "Vencido", encerrado: "Encerrado", "vence em até 180 dias": "Vence em até 180 dias" };
+  const cab = ["Unidade", "Locatário", "Início do contrato inicial", "Início do aditivo", "Fim da vigência atual", "Aluguel inicial", "Aluguel atual", "Variação %", "Possui aditivo?", "Situação"];
   return <div className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Card label="R$/m² Inicial (Média Ponderada)"><Valor>{brl(ini)}</Valor></Card>
-      <Card label="R$/m² Atual (Média Ponderada)"><Valor>{brl(atu)}</Valor></Card>
-      <Card label="Variação do R$/m²"><Valor>{ini && atu ? pct((atu / ini - 1) * 100) : "—"}</Valor><div className="mt-2 text-xs text-muted-foreground">{comArea.length} salas com área ({m2(area)})</div></Card>
-    </div>
-    <Bloco titulo="Evolução do Aluguel">
-      <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Unidade", "Locatário", "Início do contrato inicial", "Início do aditivo", "Fim da vigência atual", "Aluguel inicial", "Aluguel atual", "Variação %", "Possui aditivo?", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, [5, 6, 7].includes(i) && "text-right")}>{h}</th>)}
-      </tr></thead><tbody>{linhas.map((e: any) => <tr key={e.contrato_id}>
-        <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? e.l.unidades}</td>
-        <td className={cn(tableClasses.td, "zen-txt")}>{e.locatario ?? e.l.locatario}</td>
-        <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_inicial)}</td>
-        <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_aditivo)}</td>
-        <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.fim_vigente)}</td>
-        <td className={tableClasses.num}>{brl(e.aluguel_inicial)}</td>
-        <td className={tableClasses.num}>{brl(e.aluguel_atual)}</td>
-        <td className={cn(tableClasses.num, Number(e.variacao_pct) < 0 && "text-destructive")}>{pct(e.variacao_pct)}</td>
-        <td className={tableClasses.td}>{e.tem_aditivo ? "Sim" : "Não"}</td>
-        <td className={cn(tableClasses.td, "zen-txt")}>{STATUS[e.status] ?? e.status ?? "—"}</td>
-      </tr>)}</tbody></table></div>
-    </Bloco>
+    {grupos.map((g) => {
+      const comArea = g.itens.filter((e: any) => Number(e.l.area_matricula_m2) > 0 && Number(e.aluguel_inicial) > 0 && Number(e.aluguel_atual) > 0);
+      const area = comArea.reduce((s: number, e: any) => s + Number(e.l.area_matricula_m2), 0);
+      const ini = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_inicial), 0) / area : null;
+      const atu = area ? comArea.reduce((s: number, e: any) => s + Number(e.aluguel_atual), 0) / area : null;
+      return <div key={g.titulo}>
+        <div className="mb-2 text-[15px] font-medium">{g.titulo}</div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card label="R$/m² Inicial"><Valor>{brl(ini)}</Valor></Card>
+          <Card label="R$/m² Atual"><Valor>{brl(atu)}</Valor></Card>
+          <Card label="Variação do R$/m²"><Valor>{ini && atu ? pct((atu / ini - 1) * 100) : "—"}</Valor><div className="mt-2 text-xs text-muted-foreground">{comArea.length} {comArea.length === 1 ? g.sing : g.plur} com área ({m2(area)})</div></Card>
+        </div>
+      </div>;
+    })}
+    {grupos.map((g) => {
+      const tIni = g.itens.reduce((s: number, e: any) => s + Number(e.aluguel_inicial || 0), 0);
+      const tAtu = g.itens.reduce((s: number, e: any) => s + Number(e.aluguel_atual || 0), 0);
+      const tVar = tIni ? (tAtu / tIni - 1) * 100 : null;
+      return <Bloco key={g.titulo} titulo={`Evolução do Aluguel · ${g.titulo}`}>
+        <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+          {cab.map((h, i) => <th key={h} className={cn(tableClasses.th, [5, 6, 7].includes(i) && "text-right")}>{h}</th>)}
+        </tr></thead><tbody>{g.itens.map((e: any) => <tr key={e.contrato_id}>
+          <td className={cn(tableClasses.td, "font-medium zen-un")}>{e.unidades ?? e.l.unidades}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{e.locatario ?? e.l.locatario}</td>
+          <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_inicial)}</td>
+          <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.inicio_aditivo)}</td>
+          <td className={cn(tableClasses.td, "tabular-nums")}>{dt(e.fim_vigente)}</td>
+          <td className={tableClasses.num}>{brl(e.aluguel_inicial)}</td>
+          <td className={tableClasses.num}>{brl(e.aluguel_atual)}</td>
+          <td className={cn(tableClasses.num, Number(e.variacao_pct) < 0 && "text-destructive")}>{pct(e.variacao_pct)}</td>
+          <td className={tableClasses.td}>{e.tem_aditivo ? "Sim" : "Não"}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{STATUS[e.status] ?? e.status ?? "—"}</td>
+        </tr>)}
+          <tr className="font-medium">
+            <td className={tableClasses.td} colSpan={5}>Total</td>
+            <td className={tableClasses.num}>{brl(tIni)}</td>
+            <td className={tableClasses.num}>{brl(tAtu)}</td>
+            <td className={cn(tableClasses.num, tVar != null && tVar < 0 && "text-destructive")}>{tVar == null ? "—" : pct(tVar)}</td>
+            <td className={tableClasses.td} colSpan={2}></td>
+          </tr>
+        </tbody></table></div>
+      </Bloco>;
+    })}
   </div>;
 }
