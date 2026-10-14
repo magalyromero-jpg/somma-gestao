@@ -285,17 +285,16 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
 function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   const resultado = (a: any) => {
     const p = String(a.parecer ?? "").toLowerCase();
-    if (p === "ok") return { label: "Conforme", cls: "op-tag-green" };
-    if (p === "divergente") return Number(a.diferenca) < 0 ? { label: "▼ A Menor", cls: "op-tag-red" } : { label: "▲ A Maior", cls: "op-tag-red" };
-    return { label: "Pendente", cls: "op-tag-amber" };
+    if (p === "pendente") return { label: "Pendente", cls: "op-tag-amber" };
+    return { label: "Atualizado", cls: "op-tag-green" };
   };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
   return <Bloco titulo="Conferência de Reajustes">
-    <p className="mb-4 text-[13px] text-muted-foreground">Aluguel aplicado × valor pelo índice. Tolerância de R$ 2,00.</p>
+    <p className="mb-4 text-[13px] text-muted-foreground">Reajuste do aniversário do contrato: atualizado ou pendente.</p>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste a verificar.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Unidade", "Índice", "Referência", "Base", "Pelo Índice", "Aplicado", "Diferença (R$)", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 6 && "text-right")}>{h}</th>)}
+        {["Unidade", "Índice", "Referência", "Base", "Pelo Índice", "Aplicado", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 5 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{linhas.map((a: any, i: number) => {
         const p = resultado(a);
         return <tr key={i}>
@@ -305,7 +304,6 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
           <td className={tableClasses.num}>{brl(a.valor_anterior)}</td>
           <td className={tableClasses.num}>{brl(a.valor_calculado)}</td>
           <td className={tableClasses.num}>{brl(a.valor_aplicado)}</td>
-          <td className={cn(tableClasses.num, Number(a.diferenca) < 0 && "text-destructive")}>{brl(a.diferenca)}</td>
           <td className={tableClasses.td}><span className={cn("op-tag", p.cls)}>{p.label}</span></td>
         </tr>;
       })}</tbody></table></div>}
