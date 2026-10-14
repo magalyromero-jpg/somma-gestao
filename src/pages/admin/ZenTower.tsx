@@ -304,7 +304,6 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
           <td className={tableClasses.num}>{brl(a.valor_anterior)}</td>
           <td className={tableClasses.num}>{brl(a.valor_calculado)}</td>
           <td className={tableClasses.num}>{brl(a.valor_aplicado)}</td>
-          <td className={cn(tableClasses.num, Number(a.diferenca) < 0 && "text-destructive")}>{brl(a.diferenca)}</td>
           <td className={tableClasses.td}><span className={cn("op-tag", p.cls)}>{p.label}</span></td>
         </tr>;
       })}</tbody></table></div>}
