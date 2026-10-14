@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { RealizadoEmAberto } from "@/components/locacoes/RealizadoEmAberto";
 import { MESES, addMes, brl, dt, m2, mil, num2, pct, projetarContrato } from "@/lib/locacoes";
+import { compararReforecast, motivoReforecast, previstoPorMes } from "@/lib/reforecast";
 const inteiro = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
 type Mes = { mes: string; key: string; i: number; orcado: number; realizado: number; fechado: boolean };
@@ -98,7 +99,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const soma = (arr: any[], ids: Set<string>, m: number, campo = "valor", data_campo = "mes") => arr.filter((o: any) => ids.has(o.contrato_id) && String(o[data_campo]).startsWith(mk(m))).reduce((s: number, o: any) => s + Number(o[campo] ?? 0), 0);
   // agrupa por unidade
   const porUn = new Map<string, any[]>();
-  for (const c of contratos) { if (!porUn.has(c.unidades)) porUn.set(c.unidades, []); porUn.get(c.unidades)!.push(c); }
+  for (const c of contratos) { const grupo = porUn.get(c.unidades) ?? []; grupo.push(c); porUn.set(c.unidades, grupo); }
   const unidades = [...porUn.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { numeric: true })).map(([un, cs]) => {
     const recente = [...cs].sort((a, b) => String(b.data_inicio ?? "").localeCompare(String(a.data_inicio ?? "")))[0];
     const orcC = cs.filter((c) => c.no_orcamento && c.tipo === "locacao");
@@ -106,9 +107,21 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
     const meses12 = Array.from({ length: 12 }, (_, i) => i + 1);
     const orc = meses12.map((m) => soma(data.orcado, orcIds, m));
     const real = meses12.map((m) => (m <= u ? soma(data.pags, ids, m, "valor_liquido", "data_pagamento") : null));
-    const ref = meses12.map((m, i) => (m <= u ? real[i] : soma(data.previsto ?? [], ids, m)));
-    return { un, locRecente: recente?.locatario ?? "—", locOrc: (orcC[0] ?? recente)?.locatario ?? "—", temOrc: orcC.length > 0, orc, real, ref };
+    const ref = previstoPorMes(data.previsto ?? [], ids, ano);
+    const totalRef = ref.reduce((s, n) => s + n, 0);
+    const totalOrc = orc.reduce((s, n) => s + n, 0);
+    return { un, locRecente: recente?.locatario ?? "—", locOrc: (orcC[0] ?? recente)?.locatario ?? "—", temOrc: orcC.length > 0, orc, real, ref, totalRef, totalOrc, diferenca: compararReforecast(totalOrc, totalRef).diferenca, motivo: motivoReforecast(cs, data.vigencias ?? []) };
   });
+  const celulaRef = (orcado: number, previsto: number, diferenca = false, key?: number) => {
+    const comparacao = compararReforecast(orcado, previsto);
+    const colorida = comparacao.estado !== "igual";
+    return <td key={key} className={cn(tableClasses.num, colorida && `reforecast-${comparacao.estado}`)} title={colorida ? `Orçado: ${brl(orcado)} · Reforecast: ${brl(previsto)} · Diferença: ${brl(comparacao.diferenca)}` : undefined}>
+      {diferenca ? (comparacao.diferenca === 0 ? "—" : num2(comparacao.diferenca)) : (previsto === 0 ? "—" : inteiro(previsto))}
+    </td>;
+  };
+  const totaisRef = Array.from({ length: 12 }, (_, i) => unidades.reduce((s, x) => s + x.ref[i], 0));
+  const totaisOrc = Array.from({ length: 12 }, (_, i) => unidades.reduce((s, x) => s + x.orc[i], 0));
+  const totalRef = totaisRef.reduce((s, n) => s + n, 0), totalOrc = totaisOrc.reduce((s, n) => s + n, 0);
   const fmt = (v: number | null) => (v == null || Math.round(v) === 0 ? "—" : inteiro(v));
   const mensal = (lista: typeof unidades, get: (x: typeof unidades[number]) => (number | null)[], loc: (x: typeof unidades[number]) => string) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
@@ -126,7 +139,21 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   </div>}>
     {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
       : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente)
-      : visao === "ref" ? mensal(unidades, (x) => x.ref, (x) => x.locRecente)
+      : visao === "ref" ? <>
+        <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+          {([["acima", "Acima do orçado"], ["abaixo", "Abaixo do orçado"], ["novo", "Contrato novo, sem orçado"]] as const).map(([estado, label]) => <span key={estado} className="inline-flex items-center gap-2"><span aria-hidden="true" className={cn("h-3 w-3 border border-current", `reforecast-${estado}`)} />{label}</span>)}
+        </div>
+        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
+          <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th><th className={cn(tableClasses.th, "text-right")}>Diferença no ano</th>
+        </tr></thead><tbody>
+          {unidades.map((x) => <tr key={x.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locRecente}</td>{x.ref.map((n, i) => celulaRef(x.orc[i], n, false, i))}<td className={cn(tableClasses.num, "font-bold")}>{x.totalRef ? inteiro(x.totalRef) : "—"}</td>{celulaRef(x.totalOrc, x.totalRef, true)}</tr>)}
+          <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />{totaisRef.map((n, i) => celulaRef(totaisOrc[i], n, false, i))}<td className={tableClasses.num}>{inteiro(totalRef)}</td>{celulaRef(totalOrc, totalRef, true)}</tr>
+        </tbody></table></div>
+        <h3 className="mb-3 mt-6 text-sm font-medium">O que mudou em relação ao orçado</h3>
+        <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}><th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th><th className={tableClasses.th}>Motivo</th><th className={cn(tableClasses.th, "text-right")}>Impacto no ano (R$)</th></tr></thead><tbody>
+          {unidades.filter((x) => x.diferenca !== 0).map((x) => <tr key={x.un}><td className={cn(tableClasses.td, "zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locRecente}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.motivo}</td>{celulaRef(x.totalOrc, x.totalRef, true)}</tr>)}
+        </tbody></table></div>
+      </>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
