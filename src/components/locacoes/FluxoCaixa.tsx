@@ -143,15 +143,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
     {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
       : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente)
       : visao === "ref" ? <>
-        <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-          {([["acima", "Acima do orçado"], ["abaixo", "Abaixo do orçado"], ["novo", "Contrato novo, sem orçado"]] as const).map(([estado, label]) => <span key={estado} className="inline-flex items-center gap-2"><span aria-hidden="true" className={cn("h-3 w-3 border border-current", `reforecast-${estado}`)} />{label}</span>)}
-        </div>
-        <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-          <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th><th className={cn(tableClasses.th, "text-right")}>Diferença no ano</th>
-        </tr></thead><tbody>
-          {unidades.map((x) => <tr key={x.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locRecente}</td>{x.ref.map((n, i) => celulaRef(x.orc[i], n, false, i))}<td className={cn(tableClasses.num, "font-bold")}>{x.totalRef ? inteiro(x.totalRef) : "—"}</td>{celulaRef(x.totalOrc, x.totalRef, true)}</tr>)}
-          <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />{totaisRef.map((n, i) => celulaRef(totaisOrc[i], n, false, i))}<td className={tableClasses.num}>{inteiro(totalRef)}</td>{celulaRef(totalOrc, totalRef, true)}</tr>
-        </tbody></table></div>
+        <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
       </>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       {["Unidade", "Locatário", "Orçado", "Realizado", "Diferença", "% realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && i <= 5 && "text-right")}>{h}</th>)}
@@ -260,4 +252,55 @@ function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
       </tr>)}
     </tbody></table></div>}
   </Bloco>;
+}
+
+function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number }) {
+  const q = useQuery({
+    queryKey: ["loc-reforecast-vs-orcado", edificioId, ano],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("loc_reforecast_vs_orcado", { p_edificio: edificioId, p_ano: ano });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
+  if (q.error) return <p className="text-sm text-destructive">Não foi possível carregar o reforecast.</p>;
+  const grupos = new Map<string, { un: string; loc: string; locPeso: number; o: number[]; r: number[] }>();
+  for (const x of q.data ?? []) {
+    const un = x.unidades ?? "—";
+    const g = grupos.get(un) ?? { un, loc: "—", locPeso: -1, o: Array(12).fill(0), r: Array(12).fill(0) };
+    const i = Number(String(x.mes).slice(5, 7)) - 1;
+    g.o[i] += Number(x.orcado ?? 0); g.r[i] += Number(x.reforecast ?? 0);
+    const peso = Number(x.reforecast ?? 0) * 100 + i;
+    if (Number(x.reforecast) > 0 && peso > g.locPeso && x.locatario) { g.loc = x.locatario; g.locPeso = peso; }
+    grupos.set(un, g);
+  }
+  const linhas = [...grupos.values()].filter((g) => g.o.some(Boolean) || g.r.some(Boolean)).sort((a, b) => a.un.localeCompare(b.un, "pt-BR", { numeric: true }));
+  const soma = (v: number[]) => v.reduce((s, n) => s + n, 0);
+  const cel = (orcado: number, ref: number, key?: number) => {
+    const c = compararReforecast(orcado, ref);
+    const cor = c.estado !== "igual";
+    return <td key={key} className={cn(tableClasses.num, cor && `reforecast-${c.estado}`)} title={cor ? `Orçado: ${brl(orcado)} · Reforecast: ${brl(ref)} · Diferença: ${brl(c.diferenca)}` : undefined}>{ref === 0 ? "—" : inteiro(ref)}</td>;
+  };
+  const dif = (orcado: number, ref: number) => {
+    const c = compararReforecast(orcado, ref);
+    const cls = c.diferenca > 0 ? "reforecast-acima" : c.diferenca < 0 ? "reforecast-abaixo" : "";
+    return <td className={cn(tableClasses.num, cls)}>{c.diferenca === 0 ? "—" : num2(c.diferenca)}</td>;
+  };
+  const tO = Array.from({ length: 12 }, (_, i) => linhas.reduce((s, g) => s + g.o[i], 0));
+  const tR = Array.from({ length: 12 }, (_, i) => linhas.reduce((s, g) => s + g.r[i], 0));
+  return <>
+    <p className="mb-3 text-xs text-muted-foreground">Verde: aumento em relação ao orçado · Vermelho: redução · Âmbar: contrato novo em {ano}</p>
+    <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
+      <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
+      <th className={cn(tableClasses.th, "text-right")}>Orçado {ano}</th><th className={cn(tableClasses.th, "text-right")}>Reforecast {ano}</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
+    </tr></thead><tbody>
+      {linhas.map((g) => <tr key={g.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{g.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{g.loc}</td>
+        {g.r.map((n, i) => cel(g.o[i], n, i))}
+        <td className={tableClasses.num}>{num2(soma(g.o))}</td><td className={cn(tableClasses.num, "font-bold")}>{num2(soma(g.r))}</td>{dif(soma(g.o), soma(g.r))}</tr>)}
+      <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />
+        {tR.map((n, i) => cel(tO[i], n, i))}
+        <td className={tableClasses.num}>{num2(soma(tO))}</td><td className={tableClasses.num}>{num2(soma(tR))}</td>{dif(soma(tO), soma(tR))}</tr>
+    </tbody></table></div>
+  </>;
 }
