@@ -50,15 +50,18 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
 
     <Bloco titulo="Mensal">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        <th className={tableClasses.th}>Mês</th><th className={cn(tableClasses.th, "text-right")}>Orçado (R$)</th><th className={cn(tableClasses.th, "text-right")}>Realizado (R$)</th><th className={cn(tableClasses.th, "text-right")}>Diferença (R$)</th><th className={tableClasses.th}>Situação</th>
+        <th className={tableClasses.th}>Mês</th>{["Orçado (R$)", "Reforecast (R$)", "Realizado (R$)", "Diferença (R$)", "Variação (%)"].map((h) => <th key={h} className={cn(tableClasses.th, "text-right")}>{h}</th>)}<th className={tableClasses.th}>Situação</th>
       </tr></thead><tbody>{meses.map((m) => {
-        const dif = m.realizado - m.orcado;
-        const sit = !m.fechado ? ["A receber", "op-tag-gray"] : dif < -1 ? ["Abaixo do orçado", "op-tag-red"] : ["Dentro", "op-tag-green"];
+        const rf = prevMes(m.key), dif = m.realizado - rf;
+        const sit = !m.fechado ? ["A Receber", "op-tag-gray"] : dif < -1 ? ["Abaixo do Reforecast", "op-tag-red"] : ["Dentro", "op-tag-green"];
+        const cor = m.fechado && (dif < -1 ? "text-destructive" : "text-success");
         return <tr key={m.key}>
           <td className={tableClasses.td}>{m.mes}/{ano}</td>
           <td className={tableClasses.num}>{num2(m.orcado)}</td>
+          <td className={tableClasses.num}>{num2(rf)}</td>
           <td className={tableClasses.num}>{m.fechado ? num2(m.realizado) : "—"}</td>
-          <td className={cn(tableClasses.num, m.fechado && dif < 0 && "text-destructive")}>{m.fechado ? num2(dif) : "—"}</td>
+          <td className={cn(tableClasses.num, cor)}>{m.fechado ? num2(dif) : "—"}</td>
+          <td className={cn(tableClasses.num, cor)}>{m.fechado && rf ? pct(dif / rf * 100) : "—"}</td>
           <td className={tableClasses.td}><span className={cn("op-tag", sit[1])}>{sit[0]}</span></td>
         </tr>;
       })}</tbody></table></div>
@@ -68,10 +71,27 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
       <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}></th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
       </tr></thead><tbody>
-        {([["Orçado", (m: Mes) => m.orcado, tot.o], ["Realizado", (m: Mes) => (m.fechado ? m.realizado : null), tot.r], ["Diferença", (m: Mes) => (m.fechado ? m.realizado - m.orcado : null), tot.r - meses.filter((m) => m.fechado).reduce((s, m) => s + m.orcado, 0)]] as const).map(([rot, f, t]) =>
-          <tr key={rot}><td className={cn(tableClasses.td, "font-medium")}>{rot}</td>
-            {meses.map((m) => { const v = f(m); return <td key={m.key} className={cn(tableClasses.num, rot === "Diferença" && v != null && v < 0 && "text-destructive")}>{v == null ? "—" : inteiro(v)}</td>; })}
-            <td className={cn(tableClasses.num, "font-medium", rot === "Diferença" && t < 0 && "text-destructive")}>{inteiro(t)}</td></tr>)}
+        {(() => {
+          const rfF = meses.filter((m) => m.fechado).reduce((s, m) => s + prevMes(m.key), 0);
+          const totRf = meses.reduce((s, m) => s + prevMes(m.key), 0);
+          const linhasG: [string, (m: Mes) => number | null, number, boolean][] = [
+            ["Orçado", (m) => m.orcado, tot.o, false],
+            ["Reforecast", (m) => prevMes(m.key), totRf, false],
+            ["Realizado", (m) => (m.fechado ? m.realizado : null), tot.r, false],
+            ["Diferença", (m) => (m.fechado ? m.realizado - prevMes(m.key) : null), tot.r - rfF, true],
+          ];
+          const varM = (m: Mes) => { const rf = prevMes(m.key); return m.fechado && rf ? (m.realizado - rf) / rf * 100 : null; };
+          const varT = rfF ? (tot.r - rfF) / rfF * 100 : null;
+          const corV = (v: number | null) => v == null ? undefined : v < -0.01 ? "text-destructive" : "text-success";
+          return <>
+            {linhasG.map(([rot, f, t, colore]) => <tr key={rot}><td className={cn(tableClasses.td, "font-medium")}>{rot}</td>
+              {meses.map((m) => { const v = f(m); return <td key={m.key} className={cn(tableClasses.num, colore && v != null && (v < -1 ? "text-destructive" : "text-success"))}>{v == null ? "—" : inteiro(v)}</td>; })}
+              <td className={cn(tableClasses.num, "font-medium", colore && (t < -1 ? "text-destructive" : "text-success"))}>{inteiro(t)}</td></tr>)}
+            <tr><td className={cn(tableClasses.td, "font-medium")}>Variação (%)</td>
+              {meses.map((m) => { const v = varM(m); return <td key={m.key} className={cn(tableClasses.num, corV(v))}>{v == null ? "—" : pct(v)}</td>; })}
+              <td className={cn(tableClasses.num, "font-medium", corV(varT))}>{varT == null ? "—" : pct(varT)}</td></tr>
+          </>;
+        })()}
       </tbody></table></div>
     </Bloco>
 
@@ -81,6 +101,8 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     <Projecao data={data} linhas={linhas} />
   </>;
 }
+
+export const VISOES_DETALHE = [["orc", "Orçado"], ["ref", "Reforecast"], ["real", "Realizado"], ["or", "Orçado × Realizado"]] as const;
 
 const PERIODOS: { v: string; label: string; meses: (u: number) => number[] }[] = [
   { v: "ytd", label: "Year to Date", meses: (u) => Array.from({ length: Math.max(u, 0) }, (_, i) => i + 1) },
@@ -137,7 +159,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0);
   return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
     {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
-    {([["orc", "Orçado"], ["real", "Realizado"], ["or", "Orçado × Realizado"], ["ref", "Reforecast"]] as const).map(([v, l]) =>
+    {VISOES_DETALHE.map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
   </div>}>
     {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
@@ -146,7 +168,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
         <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
       </>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-      {["Unidade", "Locatário", "Orçado", "Reforecast", "Realizado", "Diferença", "% Realizado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && "text-right")}>{h}</th>)}
+      {["Unidade", "Locatário", "Orçado", "Reforecast", "Realizado", "Diferença (R$)", "Variação (%)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 2 && "text-right")}>{h}</th>)}
     </tr></thead><tbody>
       {ox.map(({ x, o, r, f }) => <tr key={x.un}>
         <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locOrc}</td>
