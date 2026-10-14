@@ -88,6 +88,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
   });
 
   const saldo = useSaldoEmAberto(edificioId, ano, ultimaData, admin);
+  const limite = ultimaData.slice(0, 7);
   const caixa = saldo.caixa;
   const encerrados = saldo.encerradosComSaldo;
   const abertoEncerrados = saldo.naoAtivos;
