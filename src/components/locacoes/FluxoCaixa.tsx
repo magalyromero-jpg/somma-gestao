@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart } from "recharts";
 import {  Bloco,  CORES,  LegendaTexto,  chartTooltipStyle,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
@@ -74,6 +76,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     </Bloco>
 
     <DetalheUnidade data={data} linhas={linhas} ultimoMes={ultimoMes} />
+    <MudancasAno edificioId={data.edificio.id} ano={ano} />
     <RealizadoEmAberto ano={data.ano} edificioId={data.edificio.id} admin={!!data.admin} ultimaData={data.pags.reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "")} />
     <Projecao data={data} linhas={linhas} />
   </>;
@@ -148,10 +151,6 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
         </tr></thead><tbody>
           {unidades.map((x) => <tr key={x.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locRecente}</td>{x.ref.map((n, i) => celulaRef(x.orc[i], n, false, i))}<td className={cn(tableClasses.num, "font-bold")}>{x.totalRef ? inteiro(x.totalRef) : "—"}</td>{celulaRef(x.totalOrc, x.totalRef, true)}</tr>)}
           <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />{totaisRef.map((n, i) => celulaRef(totaisOrc[i], n, false, i))}<td className={tableClasses.num}>{inteiro(totalRef)}</td>{celulaRef(totalOrc, totalRef, true)}</tr>
-        </tbody></table></div>
-        <h3 className="mb-3 mt-6 text-sm font-medium">O que mudou em relação ao orçado</h3>
-        <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}><th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th><th className={tableClasses.th}>Motivo</th><th className={cn(tableClasses.th, "text-right")}>Impacto no ano (R$)</th></tr></thead><tbody>
-          {unidades.filter((x) => x.diferenca !== 0).map((x) => <tr key={x.un}><td className={cn(tableClasses.td, "zen-un")}>{x.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.locRecente}</td><td className={cn(tableClasses.td, "zen-txt")}>{x.motivo}</td>{celulaRef(x.totalOrc, x.totalRef, true)}</tr>)}
         </tbody></table></div>
       </>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
@@ -231,6 +230,34 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
       </tr>)}
       <tr className="font-medium"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} colSpan={5}></td>
         <td className={tableClasses.num}>{num2(r.porContrato.reduce((s, x) => s + x.a2027, 0))}</td><td className={tableClasses.num}>{num2(r.porContrato.reduce((s, x) => s + x.a2028, 0))}</td><td className={tableClasses.num}>{num2(r.porContrato.reduce((s, x) => s + x.a2029, 0))}</td></tr>
+    </tbody></table></div>}
+  </Bloco>;
+}
+
+function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
+  const q = useQuery({
+    queryKey: ["loc-mudancas-ano", edificioId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("loc_v_mudancas_ano").select("contrato_id, unidades, locatario, tipo, data_decisao, valor_mensal, observacao").eq("edificio_id", edificioId).order("data_decisao");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const linhas = (q.data ?? []).filter((x) => String(x.data_decisao ?? "").startsWith(String(ano)));
+  return <Bloco titulo={`O que mudou em ${ano}`}>
+    {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : q.error ? <p className="text-sm text-destructive">Não foi possível carregar.</p> :
+    <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+      {["Unidade", "Locatário", "Tipo", "Data", "Valor mensal (R$)", "Observação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 4 && "text-right")}>{h}</th>)}
+    </tr></thead><tbody>
+      {linhas.length === 0 && <tr><td colSpan={6} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhuma mudança.</td></tr>}
+      {linhas.map((x, i) => <tr key={`${x.contrato_id}-${i}`}>
+        <td className={cn(tableClasses.td, "font-medium zen-un")}>{x.unidades ?? "—"}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{x.locatario ?? "—"}</td>
+        <td className={tableClasses.td}>{x.tipo}</td>
+        <td className={cn(tableClasses.td, "tabular-nums")}>{dt(x.data_decisao)}</td>
+        <td className={tableClasses.num}>{num2(Number(x.valor_mensal ?? 0))}</td>
+        <td className={cn(tableClasses.td, "zen-txt")}>{x.observacao ?? "—"}</td>
+      </tr>)}
     </tbody></table></div>}
   </Bloco>;
 }
