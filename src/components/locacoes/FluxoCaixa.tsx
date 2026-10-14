@@ -73,7 +73,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     </Bloco>
 
     <DetalheUnidade data={data} linhas={linhas} ultimoMes={ultimoMes} />
-    <RealizadoEmAberto edificioId={data.edificio.id} admin={!!data.admin} ultimaData={data.pags.reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "")} />
+    <RealizadoEmAberto ano={data.ano} edificioId={data.edificio.id} admin={!!data.admin} ultimaData={data.pags.reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "")} />
     <Projecao data={data} linhas={linhas} />
   </>;
 }
@@ -150,7 +150,7 @@ function Projecao({ data, linhas }: { data: any; linhas: any[] }) {
     for (const f of data.focus) (focus as any)[f.indice] && ((focus as any)[f.indice][f.ano] = Number(f.valor));
     const vigAtual = new Map<string, any>();
     for (const v of data.vigencias) { const c = vigAtual.get(v.contrato_id); if (!c || v.seq > c.seq) vigAtual.set(v.contrato_id, v); }
-    const hoje = new Date().toISOString().slice(0, 7);
+    const hoje = String(data.hoje ?? new Date().toISOString()).slice(0, 7);
     const regras = new Map<string, any>(data.regras.map((x: any) => [x.contrato_id, x]));
     const elegiveis = linhas.filter((l) => l.contrato?.tipo !== "eventual" && !/estacionamento|audit|heliponto|rooftop/i.test(l.unidades ?? ""));
     const porContrato = elegiveis.map((l) => {
