@@ -21,19 +21,68 @@ function Quadro({ label, valor, tom, forte, children }: { label: string; valor?:
   </div>;
 }
 
+function PorCliente({ linhas, limite }: { linhas: any[]; limite: string }) {
+  const [abertos, setAbertos] = useState<Set<string>>(new Set());
+  const rows = linhas.filter((r) => n(r.em_aberto) > 0.004 && (!limite || r.mes.slice(0, 7) <= limite));
+  const meses = [...new Set(rows.map((r) => r.mes.slice(0, 7)))].sort();
+  const grupos = new Map<string, { nome: string; total: number; meses: Map<string, number>; contratos: Map<string, { unidades: string; total: number; meses: Map<string, number> }> }>();
+  for (const r of rows) {
+    const nome = r.locatario ?? "—"; const m = r.mes.slice(0, 7); const v = n(r.em_aberto);
+    const g = grupos.get(nome) ?? { nome, total: 0, meses: new Map(), contratos: new Map() };
+    g.total += v; g.meses.set(m, (g.meses.get(m) ?? 0) + v);
+    const c = g.contratos.get(r.contrato_id) ?? { unidades: r.unidades ?? "—", total: 0, meses: new Map() };
+    c.total += v; c.meses.set(m, (c.meses.get(m) ?? 0) + v); g.contratos.set(r.contrato_id, c);
+    grupos.set(nome, g);
+  }
+  const lista = [...grupos.values()].sort((a, b) => b.total - a.total);
+  const totMes = (m: string) => rows.filter((r) => r.mes.slice(0, 7) === m).reduce((s, r) => s + n(r.em_aberto), 0);
+  const total = rows.reduce((s, r) => s + n(r.em_aberto), 0);
+  const ordUn = (a: string, b: string) => a.localeCompare(b, "pt-BR", { numeric: true });
+  return <section>
+    <h4 className="mb-3 text-[15px] font-medium">Em Aberto por Cliente</h4>
+    <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+      <th className={tableClasses.th}>Locatário</th>
+      {meses.map((m) => <th key={m} className={cn(tableClasses.th, "text-right")}>{mesExtenso(m + "-01")}</th>)}
+      <th className={cn(tableClasses.th, "text-right")}>Total</th>
+    </tr></thead><tbody>
+      {lista.length === 0 && <tr><td colSpan={meses.length + 2} className={cn(tableClasses.td, "text-muted-foreground")}>Nenhum valor em aberto.</td></tr>}
+      {lista.map((g) => { const aberto = abertos.has(g.nome); const cs = [...g.contratos.values()].sort((a, b) => ordUn(a.unidades, b.unidades)); return [
+        <tr key={g.nome}>
+          <td className={tableClasses.td}>
+            <button type="button" className="text-left font-medium hover:underline" aria-expanded={aberto}
+              onClick={() => setAbertos((s) => { const x = new Set(s); x.has(g.nome) ? x.delete(g.nome) : x.add(g.nome); return x; })}>{aberto ? "▾" : "▸"} {g.nome}</button>
+            <div className="text-[11px] text-muted-foreground">{cs.map((c) => c.unidades).join(" · ")}</div>
+          </td>
+          {meses.map((m) => <td key={m} className={cn(tableClasses.num, (g.meses.get(m) ?? 0) > 0.004 && "text-destructive")}>{valOuTraco(g.meses.get(m) ?? 0)}</td>)}
+          <td className={cn(tableClasses.num, "font-bold text-destructive")}>{brl(g.total)}</td>
+        </tr>,
+        ...(aberto ? cs.map((c, i) => <tr key={g.nome + i} className="text-[12px] text-muted-foreground">
+          <td className={cn(tableClasses.td, "pl-6 zen-un")}>{c.unidades}</td>
+          {meses.map((m) => <td key={m} className={tableClasses.num}>{valOuTraco(c.meses.get(m) ?? 0)}</td>)}
+          <td className={tableClasses.num}>{brl(c.total)}</td>
+        </tr>) : []),
+      ]; })}
+      <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td>
+        {meses.map((m) => <td key={m} className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totMes(m))}</td>)}
+        <td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(total)}</td></tr>
+    </tbody></table></div>
+  </section>;
+}
+
 export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano: number; edificioId: string; admin: boolean; ultimaData: string }) {
   const [aba, setAba] = useState<"contrato" | "mes">("contrato");
   const q = useQuery({
     queryKey: ["loc-recebimentos", edificioId, ano],
     queryFn: async () => {
-      const [cx, ea, enc, em] = await Promise.all([
+      const [cx, ea, enc, em, pc] = await Promise.all([
         db.rpc("loc_caixa_mensal", { p_edificio: edificioId, p_ano: ano }),
         db.rpc("loc_em_aberto", { p_edificio: edificioId, p_ano: ano }),
         admin ? db.from("loc_v_encerrados").select("contrato_id,unidades,locatario,data_saida,alugueis_em_aberto").eq("edificio_id", edificioId) : Promise.resolve({ data: [], error: null }),
         db.rpc("loc_em_aberto_mensal", { p_edificio: edificioId, p_ano: ano }),
+        db.rpc("loc_em_aberto_mensal_contrato", { p_edificio: edificioId, p_ano: ano }),
       ]);
-      for (const r of [cx, ea, enc, em]) if (r.error) throw r.error;
-      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], encerrados: (enc.data ?? []) as any[], mensal: (em.data ?? []) as any[] };
+      for (const r of [cx, ea, enc, em, pc]) if (r.error) throw r.error;
+      return { caixa: (cx.data ?? []) as any[], emAberto: (ea.data ?? []) as any[], encerrados: (enc.data ?? []) as any[], mensal: (em.data ?? []) as any[], porContrato: (pc.data ?? []) as any[] };
     },
   });
 
@@ -103,6 +152,7 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Mês", "Previsto", "Recebido", "Em Aberto", "Em Aberto Acumulado"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
@@ -115,6 +165,8 @@ export function RealizadoEmAberto({ ano, edificioId, admin, ultimaData }: { ano:
         </tr>; })}
         <tr className="font-bold"><td className={tableClasses.td}>Total Contratos Ativos</td><td className={tableClasses.num}>{brl(previsto)}</td><td className={tableClasses.num}>{brl(recebido)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(totalNovo)}</td><td className={cn(tableClasses.num, "text-destructive")}>{valOuTraco(ultimoAcum)}</td></tr>
       </tbody></table></div>
+      <PorCliente linhas={q.data?.porContrato ?? []} limite={limite} />
+      </div>
     </div>}
     </div>}
   </Bloco>;
