@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
@@ -90,9 +91,11 @@ export default function ZenTower() {
 }
 
 export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo: "admin" | "consulta" | "cliente" }) {
-  const admin = modo === "admin";
-  const equipe = modo !== "cliente";
-  const { data, isLoading, error } = useQuery({ queryKey: ["loc-edificio", edificioId ?? "zen", modo], queryFn: () => carregar(edificioId, admin) });
+  const [comoCliente, setComoCliente] = useState(false);
+  const operar = modo === "admin" && !comoCliente;
+  const equipe = modo !== "cliente" && !comoCliente;
+  const admin = operar;
+  const { data, isLoading, error } = useQuery({ queryKey: ["loc-edificio", edificioId ?? "zen", modo], queryFn: () => carregar(edificioId, true) });
   const [soDivergentes, setSoDivergentes] = useState(true);
 
   const d = useMemo(() => {
@@ -124,9 +127,12 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
       <PageHeader
         title={data.edificio.nome}
         subtitle="Gestão de Locações"
-        actions={d.ultimaData ? <div className="rounded-md border bg-card px-4 py-2 text-xs text-muted-foreground">Pagamentos importados até <span className="font-medium text-foreground tabular-nums">{dt(d.ultimaData)}</span></div> : undefined}
+        actions={<>
+          {d.ultimaData && <div className="rounded-md border bg-card px-4 py-2 text-xs text-muted-foreground">Pagamentos importados até <span className="font-medium text-foreground tabular-nums">{dt(d.ultimaData)}</span></div>}
+          {modo === "admin" && <Button variant="outline" size="sm" onClick={() => setComoCliente((v) => !v)}>{comoCliente ? "Voltar para Admin" : "Ver como Cliente"}</Button>}
+        </>}
       />
-      <Tabs defaultValue="geral" className="space-y-4">
+      <Tabs key={comoCliente ? "cli" : "adm"} defaultValue="geral" className="space-y-4">
         <div className="overflow-x-auto"><TabsList>
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
