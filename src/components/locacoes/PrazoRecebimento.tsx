@@ -5,7 +5,6 @@ import { dt, MESES } from "@/lib/locacoes";
 
 const um = (n: number | null) => (n == null || !isFinite(n) ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 const dias = (a: string, b: string) => Math.round((Date.parse(a.slice(0, 10)) - Date.parse(b.slice(0, 10))) / 86400000);
-const corPrazo = (n: number | null) => (n == null ? undefined : n <= 0 ? "text-[hsl(var(--success,142_60%_30%))]" : n > 5 ? "text-destructive" : undefined);
 const cap = (m: string) => m[0].toUpperCase() + m.slice(1);
 
 type Boleto = { contrato_id: string; prazo: number; venc: string; pag: string };
@@ -38,7 +37,6 @@ export function PrazoRecebimento({ data }: { data: any }) {
   const maiorC = total.maior ? info.get(total.maior.contrato_id) : null;
   const verde = "text-[#1E6B34]";
   const cor = (n: number | null) => (n == null ? undefined : n <= 0 ? verde : n > 5 ? "text-destructive" : undefined);
-  void corPrazo;
 
   const cards: [string, string, string?][] = [
     ["Prazo Médio (dias)", um(total.media)],

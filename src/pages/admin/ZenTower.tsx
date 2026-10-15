@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
+import { PrazoRecebimento } from "@/components/locacoes/PrazoRecebimento";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
@@ -136,6 +137,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <div className="overflow-x-auto"><TabsList>
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="prazo">Prazo de Recebimento</TabsTrigger>
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
@@ -146,6 +148,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
 
         <TabsContent value="caixa" className="space-y-4"><FluxoCaixa data={data} linhas={d.linhas} meses={d.meses} ultimoMes={d.ultimoMes} /></TabsContent>
+
+        <TabsContent value="prazo" className="space-y-4"><PrazoRecebimento data={data} /></TabsContent>
 
         <TabsContent value="contratos">
           <Bloco titulo="Contratos Vigentes" acao={<div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{d.linhas.length} contratos</span>{admin && <NovoContrato edificioId={data.edificio.id} locatarios={data.locs} unidades={data.ocup} />}</div>}>
