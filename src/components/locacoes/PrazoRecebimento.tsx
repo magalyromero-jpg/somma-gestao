@@ -1,107 +1,130 @@
+import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
-import { dt, MESES } from "@/lib/locacoes";
+import { brl, dt, mil, MESES } from "@/lib/locacoes";
+import { useSaldoEmAberto } from "@/hooks/useSaldoEmAberto";
 
 const um = (n: number | null) => (n == null || !isFinite(n) ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-const dias = (a: string, b: string) => Math.round((Date.parse(a.slice(0, 10)) - Date.parse(b.slice(0, 10))) / 86400000);
+const ms = (s: string) => Date.parse(s.slice(0, 10) + "T00:00:00Z");
 const cap = (m: string) => m[0].toUpperCase() + m.slice(1);
 
-type Boleto = { contrato_id: string; prazo: number; venc: string; pag: string };
+const FAIXAS = [
+  { k: "f0", label: "No Prazo", cor: "#2E7D46", ok: (d: number) => d <= 0 },
+  { k: "f1", label: "1 a 5 Dias", cor: "#B8C2C6", ok: (d: number) => d >= 1 && d <= 5 },
+  { k: "f2", label: "6 a 15 Dias", cor: "#7D8E95", ok: (d: number) => d >= 6 && d <= 15 },
+  { k: "f3", label: "16 a 30 Dias", cor: "#D9776B", ok: (d: number) => d >= 16 && d <= 30 },
+  { k: "f4", label: "Acima de 30 Dias", cor: "#B3261E", ok: (d: number) => d > 30 },
+];
 
-function indicadores(bs: Boleto[]) {
-  if (!bs.length) return { n: 0, media: null as number | null, emDia: null as number | null, maior: null as Boleto | null, ultimo: "" };
-  const maior = bs.reduce((m, b) => (b.prazo > m.prazo ? b : m), bs[0]);
-  return {
-    n: bs.length,
-    media: bs.reduce((s, b) => s + b.prazo, 0) / bs.length,
-    emDia: (bs.filter((b) => b.prazo <= 0).length / bs.length) * 100,
-    maior,
-    ultimo: bs.reduce((m, b) => (b.pag > m ? b.pag : m), ""),
-  };
+/** Vencimento de referência: dia contratual no mês do boleto; sem dia contratual, o vencimento do boleto. */
+function vencRef(venc: string, dia?: number | null) {
+  if (!dia) return venc.slice(0, 10);
+  const y = Number(venc.slice(0, 4)), m = Number(venc.slice(5, 7));
+  const ult = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${venc.slice(0, 7)}-${String(Math.min(dia, ult)).padStart(2, "0")}`;
+}
+
+type B = { contrato_id: string; valor: number; prazo: number; venc: string; pag: string; mes: number };
+
+function resumo(bs: B[]) {
+  const rec = bs.reduce((s, b) => s + b.valor, 0);
+  const atr = bs.filter((b) => b.prazo > 0).reduce((s, b) => s + b.valor, 0);
+  const pond = bs.reduce((s, b) => s + b.valor * Math.max(b.prazo, 0), 0);
+  const maior = bs.length ? bs.reduce((m, b) => (b.prazo > m.prazo ? b : m), bs[0]) : null;
+  return { rec, atr, noPrazo: rec - atr, media: rec ? pond / rec : null, maior };
 }
 
 export function PrazoRecebimento({ data }: { data: any }) {
   const ano = String(data.ano);
   const info = new Map<string, any>((data.contratosInfo ?? []).map((c: any) => [c.id, c]));
-  const boletos: Boleto[] = (data.pags ?? [])
+  const ultimaData = (data.pags ?? []).reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "");
+  const saldo = useSaldoEmAberto(data.edificio.id, data.ano, ultimaData, true);
+
+  const bs: B[] = (data.pags ?? [])
     .filter((p: any) => p.contrato_id && p.data_vencimento?.startsWith(ano) && p.data_pagamento)
-    .map((p: any) => ({ contrato_id: p.contrato_id, prazo: dias(p.data_pagamento, p.data_vencimento), venc: p.data_vencimento.slice(0, 10), pag: p.data_pagamento.slice(0, 10) }));
-  const total = indicadores(boletos);
-  const grupos = new Map<string, Boleto[]>();
-  for (const b of boletos) grupos.set(b.contrato_id, [...(grupos.get(b.contrato_id) ?? []), b]);
-  const linhas = [...grupos.entries()].map(([id, bs]) => {
-    const c = info.get(id);
-    return { id, unidade: c?.unidades || "—", locatario: c?.locatario ?? "—", dia: c?.dia_vencimento, bs, ind: indicadores(bs) };
-  }).sort((a, b) => a.unidade.localeCompare(b.unidade, "pt-BR", { numeric: true }));
-  const maiorC = total.maior ? info.get(total.maior.contrato_id) : null;
-  const verde = "text-[#1E6B34]";
-  const cor = (n: number | null) => (n == null ? undefined : n <= 0 ? verde : n > 5 ? "text-destructive" : undefined);
+    .map((p: any) => {
+      const ref = vencRef(p.data_vencimento, info.get(p.contrato_id)?.dia_vencimento);
+      return { contrato_id: p.contrato_id, valor: Number(p.valor_liquido ?? 0), prazo: Math.round((ms(p.data_pagamento) - ms(ref)) / 86400000), venc: ref, pag: p.data_pagamento.slice(0, 10), mes: Number(p.data_vencimento.slice(5, 7)) };
+    });
+  const t = resumo(bs);
+  const mc = t.maior ? info.get(t.maior.contrato_id) : null;
+  const pc = (v: number) => (t.rec ? `${um((v / t.rec) * 100)}% do total recebido` : undefined);
+
+  const ultimoMes = Math.max(0, ...bs.map((b) => b.mes));
+  const grafico = MESES.slice(0, ultimoMes).map((m, i) => {
+    const row: any = { mes: cap(m), total: 0 };
+    for (const f of FAIXAS) {
+      row[f.k] = bs.filter((b) => b.mes === i + 1 && f.ok(b.prazo)).reduce((s, b) => s + b.valor, 0);
+      row.total += row[f.k];
+    }
+    return row;
+  });
+
+  const grupos = new Map<string, B[]>();
+  for (const b of bs) grupos.set(b.contrato_id, [...(grupos.get(b.contrato_id) ?? []), b]);
+  const linhas = [...grupos.entries()].map(([id, g]) => ({ id, c: info.get(id), r: resumo(g), g }))
+    .filter((l) => l.r.atr > 0.004).sort((a, b) => b.r.atr - a.r.atr);
+  const tl = resumo(linhas.flatMap((l) => l.g));
+  const corMedia = (n: number | null) => (n != null && n > 5 ? "text-destructive" : undefined);
 
   const cards: [string, string, string?][] = [
-    ["Prazo Médio (dias)", um(total.media)],
-    ["Pagos em Dia", total.emDia == null ? "—" : `${um(total.emDia)}%`],
-    ["Pagos com Atraso", total.emDia == null ? "—" : `${um(100 - total.emDia)}%`],
-    ["Maior Atraso (dias)", total.maior ? String(total.maior.prazo) : "—", total.maior ? `${maiorC?.unidades ?? "—"} · ${maiorC?.locatario ?? "—"} · Vencimento ${dt(total.maior.venc)}` : undefined],
-    ["Boletos Pagos", String(total.n)],
+    ["Recebido no Prazo (R$)", brl(t.noPrazo), pc(t.noPrazo)],
+    ["Recebido com Atraso (R$)", brl(t.atr), pc(t.atr)],
+    ["Prazo Médio (dias)", um(t.media)],
+    ["Maior Atraso (dias)", t.maior ? String(Math.max(t.maior.prazo, 0)) : "—", t.maior ? `${mc?.unidades ?? "—"} · ${mc?.locatario ?? "—"} · Vencimento ${dt(t.maior.venc)} · Pagamento ${dt(t.maior.pag)}` : undefined],
+    ["Total em Aberto", saldo.isLoading ? "—" : brl(saldo.total)],
   ];
-
-  const mesBol = (bs: Boleto[], i: number) => bs.filter((b) => Number(b.venc.slice(5, 7)) === i + 1);
 
   return <>
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
       {cards.map(([l, v, dica]) => <div key={l} title={dica} className="rounded-md border bg-card p-5">
         <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{l}</div>
-        <div className="mt-3 text-[32px] font-extralight leading-none tabular-nums text-foreground">{v}</div>
+        <div className={cn("mt-3 text-[26px] font-extralight leading-none tabular-nums text-foreground", l === "Total em Aberto" && saldo.total > 0 && "text-destructive")}>{v}</div>
       </div>)}
     </div>
 
-    <Bloco titulo="Prazo por Contrato">
+    <Bloco titulo="Recebimento por Faixa de Prazo">
+      <div className="h-80 w-full">
+        <ResponsiveContainer>
+          <BarChart data={grafico} margin={{ top: 24, right: 8, left: 8, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+            <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} />
+            <YAxis tickFormatter={(v) => mil(v)} tickLine={false} axisLine={false} fontSize={12} width={48} />
+            <Tooltip formatter={(v: number, k: string) => [brl(v), FAIXAS.find((f) => f.k === k)?.label ?? k]} />
+            {FAIXAS.map((f, i) => <Bar key={f.k} dataKey={f.k} stackId="a" fill={f.cor}>
+              {i === FAIXAS.length - 1 && <LabelList dataKey="total" position="top" fontSize={11} formatter={(v: number) => mil(v)} />}
+            </Bar>)}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {FAIXAS.map((f) => <span key={f.k} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: f.cor }} />{f.label}</span>)}
+        <span>Valores em R$ mil</span>
+      </div>
+    </Bloco>
+
+    <Bloco titulo="Resumo por Cliente">
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Unidade", "Locatário", "Vencimento", "Boletos Pagos", "Prazo Médio (dias)", "Maior Atraso (dias)", "Pagos em Dia (%)", "Último Pagamento"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 6 && "text-right")}>{h}</th>)}
+        {["Unidade", "Locatário", "Vencimento", "Recebido (R$)", "Com Atraso (R$)", "Com Atraso (%)", "Prazo Médio (dias)", "Maior Atraso (dias)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
-        {linhas.map((l) => <tr key={l.id}>
-          <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidade}</td>
-          <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
-          <td className={tableClasses.td}>{l.dia ? `Dia ${l.dia}` : "—"}</td>
-          <td className={tableClasses.num}>{l.ind.n}</td>
-          <td className={cn(tableClasses.num, cor(l.ind.media))}>{um(l.ind.media)}</td>
-          <td className={tableClasses.num}>{l.ind.maior?.prazo ?? "—"}</td>
-          <td className={tableClasses.num}>{um(l.ind.emDia)}</td>
-          <td className={cn(tableClasses.td, "tabular-nums")}>{dt(l.ind.ultimo)}</td>
+        {linhas.map(({ id, c, r }) => <tr key={id}>
+          <td className={cn(tableClasses.td, "font-medium zen-un")}>{c?.unidades || "—"}</td>
+          <td className={cn(tableClasses.td, "zen-txt")}>{c?.locatario ?? "—"}</td>
+          <td className={tableClasses.td}>{c?.dia_vencimento ? `Dia ${c.dia_vencimento}` : "—"}</td>
+          <td className={tableClasses.num}>{brl(r.rec)}</td>
+          <td className={tableClasses.num}>{brl(r.atr)}</td>
+          <td className={tableClasses.num}>{r.rec ? `${um((r.atr / r.rec) * 100)}%` : "—"}</td>
+          <td className={cn(tableClasses.num, corMedia(r.media))}>{um(r.media)}</td>
+          <td className={tableClasses.num}>{r.maior ? Math.max(r.maior.prazo, 0) : "—"}</td>
         </tr>)}
         <tr className="font-medium">
           <td className={tableClasses.td} colSpan={3}>Total</td>
-          <td className={tableClasses.num}>{total.n}</td>
-          <td className={cn(tableClasses.num, cor(total.media))}>{um(total.media)}</td>
-          <td className={tableClasses.num}>{total.maior?.prazo ?? "—"}</td>
-          <td className={tableClasses.num}>{um(total.emDia)}</td>
-          <td className={cn(tableClasses.td, "tabular-nums")}>{dt(total.ultimo)}</td>
-        </tr>
-      </tbody></table></div>
-    </Bloco>
-
-    <Bloco titulo="Prazo por Mês de Vencimento">
-      <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-        <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>
-        {MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right")}>{cap(m)}</th>)}
-      </tr></thead><tbody>
-        {linhas.map((l) => <tr key={l.id}>
-          <td className={cn(tableClasses.td, "font-medium zen-un")}>{l.unidade}</td>
-          <td className={cn(tableClasses.td, "zen-txt")}>{l.locatario}</td>
-          {MESES.map((m, i) => {
-            const bs = mesBol(l.bs, i);
-            const v = bs.length ? Math.max(...bs.map((b) => b.prazo)) : null;
-            return <td key={m} className={cn(tableClasses.num, cor(v))}>{v ?? "—"}</td>;
-          })}
-        </tr>)}
-        <tr className="font-medium">
-          <td className={tableClasses.td} colSpan={2}>Média do Mês</td>
-          {MESES.map((m, i) => {
-            const bs = mesBol(boletos, i);
-            const v = bs.length ? bs.reduce((s, b) => s + b.prazo, 0) / bs.length : null;
-            return <td key={m} className={cn(tableClasses.num, cor(v))}>{um(v)}</td>;
-          })}
+          <td className={tableClasses.num}>{brl(tl.rec)}</td>
+          <td className={tableClasses.num}>{brl(tl.atr)}</td>
+          <td className={tableClasses.num}>{tl.rec ? `${um((tl.atr / tl.rec) * 100)}%` : "—"}</td>
+          <td className={cn(tableClasses.num, corMedia(tl.media))}>{um(tl.media)}</td>
+          <td className={tableClasses.num}>{tl.maior ? Math.max(tl.maior.prazo, 0) : "—"}</td>
         </tr>
       </tbody></table></div>
     </Bloco>
