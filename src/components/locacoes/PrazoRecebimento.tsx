@@ -17,12 +17,13 @@ const FAIXAS = [
   { k: "f4", label: "Acima de 30 Dias", cor: "#B3261E", ok: (d: number) => d > 30 },
 ];
 
-/** Vencimento de referência: dia contratual no mês do boleto; sem dia contratual, o vencimento do boleto. */
+/** Vencimento de referência: o mais tarde entre o dia contratual no mês do boleto e o vencimento do boleto. */
 function vencRef(venc: string, dia?: number | null) {
   if (!dia) return venc.slice(0, 10);
   const y = Number(venc.slice(0, 4)), m = Number(venc.slice(5, 7));
   const ult = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return `${venc.slice(0, 7)}-${String(Math.min(dia, ult)).padStart(2, "0")}`;
+  const contratual = `${venc.slice(0, 7)}-${String(Math.min(dia, ult)).padStart(2, "0")}`;
+  return contratual > venc.slice(0, 10) ? contratual : venc.slice(0, 10);
 }
 
 type B = { contrato_id: string; valor: number; prazo: number; venc: string; pag: string; mes: number };
