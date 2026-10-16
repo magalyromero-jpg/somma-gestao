@@ -7,6 +7,8 @@ import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { VisorPdf } from "@/components/locacoes/VisorPdf";
 
 const db = supabase as any;
@@ -162,7 +164,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const ESTADO: Record<Fila["estado"], string> = { aguardando: "", enviando: "Enviando…", enviado: "Enviado", existia: "Já existia", erro: "Erro" };
 
   return <div className="space-y-4">
-    {admin && <Bloco titulo="Anexar Arquivos">
+    {admin && <Bloco titulo="Anexar Arquivos" className="overflow-visible">
       <div role="button" tabIndex={0}
         onClick={() => refInput.current?.click()} onKeyDown={(e) => e.key === "Enter" && refInput.current?.click()}
         onDragOver={(e) => e.preventDefault()}
@@ -218,16 +220,20 @@ function SeletorImovel({ imoveis, onEscolher }: { imoveis: Imovel[]; onEscolher:
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
   const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
-  return <div className="relative">
-    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={busca}
-      onFocus={() => setAberto(true)} onBlur={() => setTimeout(() => setAberto(false), 150)}
-      onChange={(e) => { setBusca(e.target.value); setAberto(true); }}
-      onKeyDown={(e) => { if (e.key === "Enter" && filtrados[0]) { onEscolher(filtrados[0].k); setAberto(false); } }}
-      className="w-[220px] rounded border border-input bg-card px-2 py-1 text-xs text-foreground" />
-    {aberto && <div className="absolute left-0 top-full z-20 mt-1 max-h-64 w-[260px] overflow-y-auto rounded border bg-popover py-1 text-xs shadow-md">
-      {filtrados.length === 0 ? <div className="px-2 py-1 text-muted-foreground">Nenhum imóvel</div> :
-        filtrados.map((i) => <button key={i.k} type="button" className="block w-full px-2 py-1 text-left hover:bg-muted"
-          onMouseDown={(e) => { e.preventDefault(); onEscolher(i.k); setBusca(""); setAberto(false); }}>{i.rotulo}</button>)}
-    </div>}
-  </div>;
+  return <Popover open={aberto} onOpenChange={setAberto}>
+    <PopoverTrigger asChild>
+      <button type="button" className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground">Imóvel…</button>
+    </PopoverTrigger>
+    <PopoverContent align="start" className="z-[100] w-[max(320px,var(--radix-popover-trigger-width))] p-0">
+      <Command shouldFilter={false}>
+        <CommandInput name="imovel-destino" autoComplete="off" placeholder="Digite para buscar" value={busca} onValueChange={setBusca} />
+        <CommandList className="max-h-[320px] overflow-y-auto">
+          <CommandEmpty>Nenhum imóvel encontrado</CommandEmpty>
+          <CommandGroup>
+            {filtrados.map((i) => <CommandItem key={i.k} value={i.k} onSelect={() => { onEscolher(i.k); setBusca(""); setAberto(false); }}>{i.rotulo}</CommandItem>)}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </PopoverContent>
+  </Popover>;
 }
