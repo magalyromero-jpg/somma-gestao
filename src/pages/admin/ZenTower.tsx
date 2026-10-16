@@ -178,6 +178,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           {admin && <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>}
         </TabsContent>
 
+        <TabsContent value="documentos" className="space-y-4"><Documentos data={data} admin={admin} /></TabsContent>
+
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
