@@ -310,13 +310,13 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   </div>;
 }
 
-function SeletorImovel({ imoveis, onEscolher }: { imoveis: Imovel[]; onEscolher: (k: string) => void }) {
+function SeletorImovel({ imoveis, onEscolher, desabilitado }: { imoveis: Imovel[]; onEscolher: (k: string) => void; desabilitado?: boolean }) {
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
   const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
   return <Popover open={aberto} onOpenChange={setAberto}>
     <PopoverTrigger asChild>
-      <button type="button" className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground">Imóvel…</button>
+      <button type="button" disabled={desabilitado} className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground disabled:opacity-50">Imóvel…</button>
     </PopoverTrigger>
     <PopoverContent align="start" className="z-[100] w-[max(320px,var(--radix-popover-trigger-width))] p-0">
       <Command shouldFilter={false}>
