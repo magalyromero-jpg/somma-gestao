@@ -20,9 +20,15 @@ const semExt = (n: string) => n.replace(/\.[^.]+$/, "");
 const chaveSegura = (n: string) =>
   n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9._\-() ]+/g, "_").replace(/\s+/g, " ").trim();
 const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.\s]/g, "");
+/** Lojas primeiro, depois Salas em ordem numérica; o bloco sem contrato vai por último. */
+const grupo = (i: Imovel) => (i.k === SEM ? 2 : /^\s*loja/i.test(i.cabecalho) ? 0 : 1);
+const primeiroNum = (s: string) => Number((s.match(/\d+/) ?? ["0"])[0]);
+const ordemImovel = (a: Imovel, b: Imovel) =>
+  grupo(a) - grupo(b) || primeiroNum(a.cabecalho) - primeiroNum(b.cabecalho) || a.cabecalho.localeCompare(b.cabecalho, "pt-BR", { numeric: true });
+
 
 type Arquivo = { caminho: string; pasta: string; nome: string; enviadoEm: string | null; docId: string | null; titulo: string; visivel: boolean };
-type Imovel = { k: string; rotulo: string };
+type Imovel = { k: string; cabecalho: string; rotulo: string };
 type Fila = { id: number; nome: string; blob: Blob; imovel: string; estado: "aguardando" | "enviando" | "enviado" | "existia" | "erro"; erro?: string };
 
 async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]> {
@@ -58,10 +64,14 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const [fila, setFila] = useState<Fila[]>([]);
 
   const imoveis: Imovel[] = useMemo(() => {
-    const arr = (data.contratosInfo ?? []).map((c: any) => ({ k: c.id as string, rotulo: `${c.unidades ?? "—"} · ${c.locatario ?? "—"}` }));
-    arr.sort((a: Imovel, b: Imovel) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true }));
-    return [...arr, { k: SEM, rotulo: "Garagens e Estacionamento" }];
+    const arr = (data.contratosInfo ?? []).map((c: any) => {
+      const unidades = String(c.unidades ?? "—");
+      return { k: c.id as string, cabecalho: unidades, rotulo: `${unidades} · ${c.locatario ?? "—"}` };
+    });
+    arr.sort(ordemImovel);
+    return [...arr, { k: SEM, cabecalho: "Garagens e Estacionamento", rotulo: "Garagens e Estacionamento" }];
   }, [data.contratosInfo]);
+
 
   const chave = ["loc-documentos", edificioId, imoveis.length];
   const { data: arquivos, isLoading } = useQuery({ queryKey: chave, queryFn: () => carregar(edificioId, imoveis.map((i) => i.k)) });
@@ -170,10 +180,10 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       </tr></thead><tbody>
         {blocos.map((b) => <Fragment key={b.k}>
           <tr><td colSpan={admin ? 4 : 3} className="border-b bg-muted/40 px-[10px] py-2 text-xs font-medium text-muted-foreground">
-            {b.rotulo} · {b.lista.length} {b.lista.length === 1 ? "documento" : "documentos"}
+            {b.cabecalho} · {b.lista.length} {b.lista.length === 1 ? "documento" : "documentos"}
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
-            <td className={cn(tableClasses.td, "font-medium")}>{a.titulo}</td>
+            <td className={cn(tableClasses.td, "font-medium break-all")}>{a.nome}</td>
             <td className={cn(tableClasses.td, "tabular-nums")}>{a.enviadoEm ? dt(a.enviadoEm.slice(0, 10)) : "—"}</td>
             {admin && <td className={tableClasses.td}><Switch checked={a.visivel} onCheckedChange={(v) => alternarVisivel(a, v)} /></td>}
             <td className={tableClasses.td}><button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => abrir(a)}>Abrir</button></td>
