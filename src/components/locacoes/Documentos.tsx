@@ -176,7 +176,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           onChange={(e) => { adicionar([...(e.target.files ?? [])]); e.target.value = ""; }} />
       </div>
       {fila.length > 0 && <div className="mt-3 space-y-2 text-xs">
-        {fila.some((f) => f.estado === "aguardando") && <div className="flex flex-wrap items-center gap-2">
+        {fila.length >= 2 && fila.some((f) => f.estado === "aguardando") && <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">Aplicar o Mesmo Imóvel a Todos:</span>
           <SeletorImovel imoveis={imoveis} onEscolher={aplicarTodos} />
         </div>}
