@@ -141,7 +141,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
-          {equipe && <TabsTrigger value="conferencia">Conferência</TabsTrigger>}
+          <TabsTrigger value="conferencia">Conferência</TabsTrigger>
           {admin && <TabsTrigger value="importar">Importar Pagamentos</TabsTrigger>}
         </TabsList></div>
 
@@ -180,7 +180,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
 
-        {equipe && <TabsContent value="conferencia" className="space-y-4">
+        <TabsContent value="conferencia" className="space-y-4">
           <Bloco titulo="Metragem: Contrato × Matrícula" acao={<label className="flex items-center gap-2 text-xs text-muted-foreground"><Switch checked={soDivergentes} onCheckedChange={setSoDivergentes} />Só divergentes</label>}>
             <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
               <th className={tableClasses.th}>Unidades</th><th className={tableClasses.th}>Matrículas</th><th className={cn(tableClasses.th, "text-right")}>m² contrato</th><th className={cn(tableClasses.th, "text-right")}>m² matrícula</th><th className={cn(tableClasses.th, "text-right")}>Diferença</th>
@@ -192,7 +192,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
               <td className={cn(tableClasses.num, m.diferenca_m2 != null && Math.abs(m.diferenca_m2) > 1 && "font-semibold text-destructive")}>{m2(m.diferenca_m2)}</td>
             </tr>)}</tbody></table></div>
           </Bloco>
-        </TabsContent>}
+        </TabsContent>
 
       </Tabs>
     </div>
