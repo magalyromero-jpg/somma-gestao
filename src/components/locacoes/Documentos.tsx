@@ -150,12 +150,50 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
   };
 
+  const imoveis = useMemo(() => {
+    const arr = (data.contratosInfo ?? []).map((c: any) => ({ k: c.id as string, rotulo: `${c.unidades ?? "—"} · ${c.locatario ?? "—"}` }));
+    arr.sort((a: any, b: any) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true }));
+    return [...arr, { k: "_sem", rotulo: "Garagens e Estacionamento" }] as { k: string; rotulo: string }[];
+  }, [data.contratosInfo]);
+
+  const tirarDaLista = (idx: number) =>
+    setResumo((r) => r ? { ...r, enviados: r.enviados + 1, semCadastro: r.semCadastro.filter((_, j) => j !== idx) } : r);
+
   const vincular = async (idx: number, itemId: string) => {
     const s = resumo?.semCadastro[idx];
     const item = (itens ?? []).find((i) => i.id === itemId);
     if (!s || !item) return;
     const ok = await anexarNaLinha(item, new File([s.blob], s.nome));
-    if (ok) setResumo((r) => r ? { ...r, enviados: r.enviados + 1, semCadastro: r.semCadastro.filter((_, j) => j !== idx) } : r);
+    if (ok) tirarDaLista(idx);
+  };
+
+  const vincularNovo = async (idx: number, contratoKey: string, grupo: string, descricao: string, dataRef: string | null) => {
+    const s = resumo?.semCadastro[idx];
+    if (!s) return;
+    try {
+      const contratoId = contratoKey === "_sem" ? null : contratoKey;
+      const ext = s.nome.split(".").pop();
+      const prefixo = dataRef ? dataRef.replace(/-/g, ".") : "sem-data";
+      const caminho = `${edificioId}/${contratoId ?? "_sem_contrato"}/${prefixo}_-_${slugArquivo(descricao)}.${ext}`;
+      const r = await enviar(caminho, new File([s.blob], s.nome));
+      if (r === "existente") { toast({ title: "Arquivo já existia", description: nomeArquivo(caminho) }); return; }
+      const { data: novo, error } = await db.from("loc_documentos").insert({
+        edificio_id: edificioId, contrato_id: contratoId, tipo: TIPO_DOC[grupo] ?? "outro",
+        titulo: descricao, storage_path: caminho, revisado: true,
+        visivel_cliente: !(grupo === "encerramento" || grupo === "outro"),
+      }).select("id").single();
+      if (error) throw error;
+      const { error: e2 } = await db.from("loc_documentos_esperados").insert({
+        edificio_id: edificioId, contrato_id: contratoId, grupo, descricao, data_ref: dataRef,
+        situacao: "necessario", documento_id: novo.id,
+      });
+      if (e2) throw e2;
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+      toast({ title: "Documento anexado" });
+      tirarDaLista(idx);
+    } catch (e) {
+      toast({ title: "Não foi possível anexar", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
   const anexarNaLinha = async (item: ItemComFlag, file: File): Promise<boolean> => {
@@ -238,17 +276,8 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       {progresso && <div className="mt-3 h-1.5 w-full rounded bg-muted"><div className="h-1.5 rounded bg-gold transition-all" style={{ width: `${progresso.total ? (progresso.feitos / progresso.total) * 100 : 0}%` }} /></div>}
       {resumo && <div className="mt-3 text-xs text-muted-foreground">
         <p>Enviados: {resumo.enviados} · Já existiam: {resumo.existentes} · Sem cadastro: {resumo.semCadastro.length}</p>
-        {resumo.semCadastro.map((s, idx) => <div key={idx + s.nome} className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="break-all">{s.nome}</span>
-          <select name="vincular-doc" autoComplete="off" defaultValue="" onChange={(e) => e.target.value && vincular(idx, e.target.value)}
-            className="rounded border border-input bg-card px-2 py-1 text-xs text-foreground">
-            <option value="">Vincular a…</option>
-            {(itens ?? []).filter((i) => situacaoDe(i) !== "Anexado").map((i) => {
-              const c = info.get(i.contrato_id ?? "");
-              return <option key={i.id} value={i.id}>{c?.unidades ?? "Garagens e Estacionamento"} · {i.descricao} · {i.data_ref ? dt(i.data_ref) : "—"}</option>;
-            })}
-          </select>
-        </div>)}
+        {resumo.semCadastro.map((s, idx) => <Vincular key={idx + s.nome} nome={s.nome} imoveis={imoveis} itens={itens ?? []}
+          onPendente={(itemId) => vincular(idx, itemId)} onNovo={(c, t, d, dr) => vincularNovo(idx, c, t, d, dr)} />)}
       </div>}
     </Bloco>}
 
