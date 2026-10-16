@@ -288,12 +288,8 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold">Mover Documento</h3>
         <p className="mt-1 break-all text-xs text-muted-foreground">{movendo.nome}</p>
-        <div className="mt-3">
-          <SeletorImovel imoveis={imoveis.filter((i) => i.k !== movendo.pasta)} onEscolher={(k) => mover(movendo, k)} desabilitado={ocupado} />
-        </div>
-        <div className="mt-4 flex justify-end">
-          <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={() => setMovendo(null)}>Cancelar</button>
-        </div>
+        <ListaMover imoveis={imoveis.filter((i) => i.k !== movendo.pasta)} ocupado={ocupado}
+          onMover={(k) => mover(movendo, k)} onCancelar={() => setMovendo(null)} />
       </div>
     </div>}
 
@@ -310,6 +306,28 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   </div>;
 }
 
+function ListaMover({ imoveis, ocupado, onMover, onCancelar }: { imoveis: Imovel[]; ocupado: boolean; onMover: (k: string) => void; onCancelar: () => void }) {
+  const [busca, setBusca] = useState("");
+  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
+  return <>
+    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={busca}
+      onChange={(e) => { setBusca(e.target.value); setEscolhido(null); }}
+      className="mt-3 w-full rounded border border-input bg-card px-2 py-1.5 text-xs" />
+    <div className="mt-2 max-h-[240px] overflow-y-auto rounded border border-input">
+      {filtrados.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">Nenhum imóvel encontrado</p> :
+        filtrados.map((i) => <button key={i.k} type="button" disabled={ocupado}
+          onClick={() => { setEscolhido(i.k); setBusca(i.rotulo); }}
+          className={cn("block w-full px-2 py-1.5 text-left text-xs hover:bg-muted", escolhido === i.k && "bg-muted font-medium")}>{i.rotulo}</button>)}
+    </div>
+    <div className="mt-4 flex justify-end gap-2">
+      <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={onCancelar}>Cancelar</button>
+      <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+        disabled={!escolhido || ocupado} onClick={() => escolhido && onMover(escolhido)}>{ocupado ? "Movendo…" : "Mover"}</button>
+    </div>
+  </>;
+}
+
 function SeletorImovel({ imoveis, onEscolher, desabilitado }: { imoveis: Imovel[]; onEscolher: (k: string) => void; desabilitado?: boolean }) {
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
@@ -318,7 +336,7 @@ function SeletorImovel({ imoveis, onEscolher, desabilitado }: { imoveis: Imovel[
     <PopoverTrigger asChild>
       <button type="button" disabled={desabilitado} className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground disabled:opacity-50">Imóvel…</button>
     </PopoverTrigger>
-    <PopoverContent align="start" className="z-[100] w-[max(320px,var(--radix-popover-trigger-width))] p-0">
+    <PopoverContent align="start" className="z-[120] w-[max(320px,var(--radix-popover-trigger-width))] p-0">
       <Command shouldFilter={false}>
         <CommandInput name="imovel-destino" autoComplete="off" placeholder="Digite para buscar" value={busca} onValueChange={setBusca} />
         <CommandList className="max-h-[320px] overflow-y-auto">
