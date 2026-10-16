@@ -7,6 +7,7 @@ import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { VisorPdf } from "@/components/locacoes/VisorPdf";
 
 const db = supabase as any;
 const BUCKET = "loc-docs";
@@ -36,7 +37,7 @@ const ordemImovel = (a: Imovel, b: Imovel) =>
   grupo(a) - grupo(b) || primeiroNum(a.cabecalho) - primeiroNum(b.cabecalho) || a.cabecalho.localeCompare(b.cabecalho, "pt-BR", { numeric: true });
 
 
-type Arquivo = { caminho: string; pasta: string; nome: string; data: string; exibido: string };
+type Arquivo = { caminho: string; pasta: string; nome: string; data: string; exibido: string; salvarComo: string };
 type Imovel = { k: string; cabecalho: string; rotulo: string };
 type Fila = { id: number; nome: string; blob: Blob; imovel: string; estado: "aguardando" | "enviando" | "enviado" | "existia" | "erro"; erro?: string };
 
@@ -52,7 +53,8 @@ async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]
       const r = porCaminho.get(caminho);
       const d = dataDoNome(a.name);
       const base = r?.titulo ? String(r.titulo) : nomeLegivel(a.name);
-      out.push({ caminho, pasta: p, nome: a.name, data: d?.iso ?? "", exibido: d ? `${d.br} · ${base}` : base });
+      out.push({ caminho, pasta: p, nome: a.name, data: d?.iso ?? "", exibido: d ? `${d.br} · ${base}` : base,
+        salvarComo: r?.titulo && /\.[a-z0-9]+$/i.test(String(r.titulo)) ? String(r.titulo) : a.name });
     }
   }));
   return out;
@@ -65,6 +67,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const refInput = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
   const [fila, setFila] = useState<Fila[]>([]);
+  const [visor, setVisor] = useState<{ titulo: string; blob: Blob } | null>(null);
 
   const imoveis: Imovel[] = useMemo(() => {
     const arr = (data.contratosInfo ?? []).map((c: any) => {
@@ -124,21 +127,31 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
 
   const aplicarTodos = (imovel: string) => { for (const it of fila) if (it.estado === "aguardando") enviar(it, imovel); };
 
-  const abrir = async (a: Arquivo) => {
-    const pdf = /\.pdf$/i.test(a.nome);
-    const aba = pdf ? window.open("", "_blank") : null;
+  const baixarBytes = async (a: Arquivo) => {
     const { data: blob, error } = await supabase.storage.from(BUCKET).download(a.caminho);
     if (error || !blob) {
-      aba?.close();
-      return toast({ title: "Não foi possível abrir o arquivo", description: error?.message ?? "Arquivo não encontrado", variant: "destructive" });
+      toast({ title: "Não foi possível abrir o arquivo", description: error?.message ?? "Arquivo não encontrado", variant: "destructive" });
+      return null;
     }
-    const url = URL.createObjectURL(blob);
-    if (aba) aba.location.href = url;
-    else {
+    return blob;
+  };
+
+  const baixar = async (a: Arquivo) => {
+    const blob = await baixarBytes(a);
+    if (!blob) return;
+    try {
+      const url = URL.createObjectURL(blob);
       const el = document.createElement("a");
-      el.href = url; el.download = a.nome; document.body.appendChild(el); el.click(); el.remove();
+      el.href = url; el.download = a.salvarComo; document.body.appendChild(el); el.click(); el.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      toast({ title: "Seu navegador bloqueou o download. Libere downloads para este site ou use outro navegador.", variant: "destructive" });
     }
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
+  const ver = async (a: Arquivo) => {
+    const blob = await baixarBytes(a);
+    if (blob) setVisor({ titulo: a.exibido, blob });
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
@@ -184,11 +197,12 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
             <td className={cn(tableClasses.td, "font-medium")}>{a.exibido}</td>
-            <td className={tableClasses.td}><button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => abrir(a)}>Abrir</button></td>
+            <td className={tableClasses.td}><div className="flex gap-3">{/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}<button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button></div></td>
           </tr>)}
         </Fragment>)}
       </tbody></table></div>}
     </Bloco>
+    <VisorPdf titulo={visor?.titulo ?? ""} blob={visor?.blob ?? null} onFechar={() => setVisor(null)} />
   </div>;
 }
 
