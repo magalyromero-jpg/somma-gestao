@@ -205,7 +205,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       } else {
         const ext = file.name.split(".").pop();
         const dataRef = item.data_ref ?? new Date().toISOString().slice(0, 10);
-        caminho = `${edificioId}/${item.contrato_id}/${dataRef.replace(/-/g, ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
+        caminho = `${edificioId}/${item.contrato_id ?? "_sem_contrato"}/${dataRef.replace(/-/g, ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
         const { data: novo, error } = await db.from("loc_documentos").insert({
           edificio_id: edificioId, contrato_id: item.contrato_id, tipo: TIPO_DOC[item.grupo] ?? "outro",
           titulo: item.descricao, storage_path: caminho, revisado: true,
@@ -319,4 +319,57 @@ function FragmentGroup({ g, admin, abrir, naoExiste, pedirArquivo }: {
       </tr>;
     })}
   </>;
+}
+
+const TIPOS_NOVO = [
+  { v: "contrato", l: "Contrato" }, { v: "aditivo", l: "Aditivo" }, { v: "encerramento", l: "Distrato" },
+  { v: "encerramento_termo", l: "Termo de Encerramento" }, { v: "outro", l: "Outro" },
+];
+const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.\s]/g, "");
+
+function Vincular({ nome, imoveis, itens, onPendente, onNovo }: {
+  nome: string; imoveis: { k: string; rotulo: string }[]; itens: ItemComFlag[];
+  onPendente: (itemId: string) => void; onNovo: (contrato: string, grupo: string, descricao: string, dataRef: string | null) => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const [imovel, setImovel] = useState("");
+  const [doc, setDoc] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [desc, setDesc] = useState(() => nome.replace(/\.[^.]+$/, "").replace(/^\d{4}[.\-_ ]\d{2}[.\-_ ]\d{2}\s*[·\-_ ]*\s*/, "").trim());
+  const [dataTxt, setDataTxt] = useState("");
+  const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
+  const pendentes = itens.filter((i) => (i.contrato_id ?? "_sem") === imovel && situacaoDe(i) !== "Anexado")
+    .sort((a, b) => (a.data_ref ?? "9999").localeCompare(b.data_ref ?? "9999"));
+  const m = dataTxt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const dataOk = !dataTxt || !!m;
+  const cls = "rounded border border-input bg-card px-2 py-1 text-xs text-foreground";
+  const confirmar = () => {
+    if (!tipo || !desc.trim() || !dataOk) return;
+    onNovo(imovel, tipo === "encerramento_termo" ? "encerramento" : tipo, desc.trim(), m ? `${m[3]}-${m[2]}-${m[1]}` : null);
+  };
+  return <div className="mt-2 flex flex-wrap items-center gap-2">
+    <span className="break-all">{nome}</span>
+    <input name="vincular-busca" autoComplete="off" placeholder="Vincular a… (buscar imóvel)" value={busca}
+      onChange={(e) => setBusca(e.target.value)} className={cls} />
+    <select name="vincular-imovel" autoComplete="off" value={imovel} onChange={(e) => { setImovel(e.target.value); setDoc(""); }} className={cls}>
+      <option value="">Imóvel…</option>
+      {filtrados.map((i) => <option key={i.k} value={i.k}>{i.rotulo}</option>)}
+    </select>
+    {imovel && <select name="vincular-doc" autoComplete="off" value={doc}
+      onChange={(e) => { const v = e.target.value; setDoc(v); if (v && v !== "_novo") onPendente(v); }} className={cls}>
+      <option value="">Documento…</option>
+      {pendentes.map((i) => <option key={i.id} value={i.id}>{i.descricao} · {i.data_ref ? dt(i.data_ref) : "—"} · {situacaoDe(i)}</option>)}
+      <option value="_novo">Outro documento deste imóvel…</option>
+    </select>}
+    {doc === "_novo" && <>
+      <select name="vincular-tipo" autoComplete="off" value={tipo} onChange={(e) => setTipo(e.target.value)} className={cls}>
+        <option value="">Tipo…</option>
+        {TIPOS_NOVO.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+      </select>
+      <input name="vincular-descricao" autoComplete="off" placeholder="Descrição" value={desc} onChange={(e) => setDesc(e.target.value)} className={cn(cls, "min-w-[200px]")} />
+      <input name="vincular-data" autoComplete="off" placeholder="dd/mm/aaaa" value={dataTxt} onChange={(e) => setDataTxt(e.target.value)} className={cn(cls, "w-[100px]", !dataOk && "border-destructive")} />
+      <button className="font-medium text-foreground underline-offset-2 hover:underline disabled:opacity-50"
+        disabled={!tipo || !desc.trim() || !dataOk} onClick={confirmar}>Confirmar</button>
+    </>}
+  </div>;
 }
