@@ -283,6 +283,30 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       </tbody></table></div>}
     </Bloco>
     <VisorPdf titulo={visor?.titulo ?? ""} blob={visor?.blob ?? null} onFechar={() => setVisor(null)} />
+
+    {movendo && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setMovendo(null)}>
+      <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">Mover Documento</h3>
+        <p className="mt-1 break-all text-xs text-muted-foreground">{movendo.nome}</p>
+        <div className="mt-3">
+          <SeletorImovel imoveis={imoveis.filter((i) => i.k !== movendo.pasta)} onEscolher={(k) => mover(movendo, k)} desabilitado={ocupado} />
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={() => setMovendo(null)}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
+
+    {apagando && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setApagando(null)}>
+      <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">Apagar Documento</h3>
+        <p className="mt-2 break-all text-sm">Apagar este documento? <span className="font-medium">{apagando.nome}</span>. Esta ação não pode ser desfeita.</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={() => setApagando(null)}>Cancelar</button>
+          <button className="rounded bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground" disabled={ocupado} onClick={() => apagar(apagando)}>{ocupado ? "Apagando…" : "Apagar"}</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }
 
