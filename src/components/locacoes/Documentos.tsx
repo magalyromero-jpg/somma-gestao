@@ -70,6 +70,9 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const seq = useRef(0);
   const [fila, setFila] = useState<Fila[]>([]);
   const [visor, setVisor] = useState<{ titulo: string; blob: Blob } | null>(null);
+  const [movendo, setMovendo] = useState<Arquivo | null>(null);
+  const [apagando, setApagando] = useState<Arquivo | null>(null);
+  const [ocupado, setOcupado] = useState(false);
 
   const imoveis: Imovel[] = useMemo(() => {
     const arr = (data.contratosInfo ?? []).map((c: any) => {
@@ -159,6 +162,68 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     if (blob) setVisor({ titulo: a.exibido, blob });
   };
 
+  const limparVinculos = async (docId: string) => {
+    const { error: e1 } = await db.from("loc_vigencias").update({ documento_id: null }).eq("documento_id", docId);
+    if (e1) throw e1;
+    const { error: e2 } = await db.from("loc_documentos_esperados").update({ documento_id: null }).eq("documento_id", docId);
+    if (e2) throw e2;
+  };
+
+  const registroDo = async (caminho: string) => {
+    const { data } = await db.from("loc_documentos").select("id").eq("storage_path", caminho).maybeSingle();
+    return data?.id as string | undefined;
+  };
+
+  const mover = async (a: Arquivo, destino: string) => {
+    setOcupado(true);
+    try {
+      const caminhoNovo = `${edificioId}/${destino}/${a.nome}`;
+      const { data: ja } = await supabase.storage.from(BUCKET).list(`${edificioId}/${destino}`, { limit: 1000, search: a.nome });
+      if ((ja ?? []).some((x) => x.id && x.name === a.nome)) {
+        toast({ title: "Já existe um arquivo com esse nome nesse imóvel", variant: "destructive" });
+        return;
+      }
+      const { error } = await supabase.storage.from(BUCKET).move(a.caminho, caminhoNovo);
+      if (error) throw error;
+      const docId = await registroDo(a.caminho);
+      if (docId) {
+        await limparVinculos(docId);
+        const { error: e2 } = await db.from("loc_documentos").update({
+          contrato_id: destino === SEM ? null : destino, storage_path: caminhoNovo,
+        }).eq("id", docId);
+        if (e2) throw e2;
+      }
+      setMovendo(null);
+      toast({ title: `Documento movido para ${imoveis.find((i) => i.k === destino)?.cabecalho ?? destino}` });
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+    } catch (e) {
+      toast({ title: "Não foi possível mover", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const apagar = async (a: Arquivo) => {
+    setOcupado(true);
+    try {
+      const docId = await registroDo(a.caminho);
+      if (docId) {
+        await limparVinculos(docId);
+        const { error: e1 } = await db.from("loc_documentos").delete().eq("id", docId);
+        if (e1) throw e1;
+      }
+      const { error } = await supabase.storage.from(BUCKET).remove([a.caminho]);
+      if (error) throw error;
+      setApagando(null);
+      toast({ title: "Documento apagado" });
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
 
   const ESTADO: Record<Fila["estado"], string> = { aguardando: "", enviando: "Enviando…", enviado: "Enviado", existia: "Já existia", erro: "Erro" };
@@ -207,22 +272,51 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
             <td className={cn(tableClasses.td, "font-medium")}>{a.exibido}</td>
-            <td className={tableClasses.td}><div className="flex gap-3">{/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}<button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button></div></td>
+            <td className={tableClasses.td}><div className="flex gap-3">
+              {/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}
+              <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button>
+              {admin && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setMovendo(a)}>Mover</button>}
+              {admin && <button className="text-xs font-medium text-destructive underline-offset-2 hover:underline" onClick={() => setApagando(a)}>Apagar</button>}
+            </div></td>
           </tr>)}
         </Fragment>)}
       </tbody></table></div>}
     </Bloco>
     <VisorPdf titulo={visor?.titulo ?? ""} blob={visor?.blob ?? null} onFechar={() => setVisor(null)} />
+
+    {movendo && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setMovendo(null)}>
+      <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">Mover Documento</h3>
+        <p className="mt-1 break-all text-xs text-muted-foreground">{movendo.nome}</p>
+        <div className="mt-3">
+          <SeletorImovel imoveis={imoveis.filter((i) => i.k !== movendo.pasta)} onEscolher={(k) => mover(movendo, k)} desabilitado={ocupado} />
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={() => setMovendo(null)}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
+
+    {apagando && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setApagando(null)}>
+      <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">Apagar Documento</h3>
+        <p className="mt-2 break-all text-sm">Apagar este documento? <span className="font-medium">{apagando.nome}</span>. Esta ação não pode ser desfeita.</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={() => setApagando(null)}>Cancelar</button>
+          <button className="rounded bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground" disabled={ocupado} onClick={() => apagar(apagando)}>{ocupado ? "Apagando…" : "Apagar"}</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }
 
-function SeletorImovel({ imoveis, onEscolher }: { imoveis: Imovel[]; onEscolher: (k: string) => void }) {
+function SeletorImovel({ imoveis, onEscolher, desabilitado }: { imoveis: Imovel[]; onEscolher: (k: string) => void; desabilitado?: boolean }) {
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
   const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
   return <Popover open={aberto} onOpenChange={setAberto}>
     <PopoverTrigger asChild>
-      <button type="button" className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground">Imóvel…</button>
+      <button type="button" disabled={desabilitado} className="w-[320px] rounded border border-input bg-card px-2 py-1 text-left text-xs text-muted-foreground disabled:opacity-50">Imóvel…</button>
     </PopoverTrigger>
     <PopoverContent align="start" className="z-[100] w-[max(320px,var(--radix-popover-trigger-width))] p-0">
       <Command shouldFilter={false}>
