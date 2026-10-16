@@ -307,19 +307,24 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
 }
 
 function ListaMover({ imoveis, ocupado, onMover, onCancelar }: { imoveis: Imovel[]; ocupado: boolean; onMover: (k: string) => void; onCancelar: () => void }) {
-  const [busca, setBusca] = useState("");
+  const [texto, setTexto] = useState("");
+  const [filtro, setFiltro] = useState("");
   const [escolhido, setEscolhido] = useState<string | null>(null);
-  const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
+  const [aberto, setAberto] = useState(false);
+  const filtrados = imoveis.filter((i) => !filtro || normBusca(i.rotulo).includes(normBusca(filtro)));
   return <>
-    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={busca}
-      onChange={(e) => { setBusca(e.target.value); setEscolhido(null); }}
+    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={texto}
+      onMouseDown={() => { setAberto(true); setFiltro(""); }}
+      onFocus={() => { setAberto(true); setFiltro(""); }}
+      onBlur={() => setAberto(false)}
+      onChange={(e) => { setTexto(e.target.value); setFiltro(e.target.value); setEscolhido(null); }}
       className="mt-3 w-full rounded border border-input bg-card px-2 py-1.5 text-xs" />
-    <div className="mt-2 max-h-[240px] overflow-y-auto rounded border border-input">
+    {aberto && <div className="mt-2 max-h-[240px] overflow-y-auto rounded border border-input">
       {filtrados.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">Nenhum imóvel encontrado</p> :
-        filtrados.map((i) => <button key={i.k} type="button" disabled={ocupado}
-          onClick={() => { setEscolhido(i.k); setBusca(i.rotulo); }}
-          className={cn("block w-full px-2 py-1.5 text-left text-xs hover:bg-muted", escolhido === i.k && "bg-muted font-medium")}>{i.rotulo}</button>)}
-    </div>
+        filtrados.map((i) => <button key={i.k} type="button" disabled={ocupado} onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { setEscolhido(i.k); setTexto(i.rotulo); setFiltro(""); setAberto(false); }}
+          className="block w-full px-2 py-1.5 text-left text-xs hover:bg-muted">{i.rotulo}</button>)}
+    </div>}
     <div className="mt-4 flex justify-end gap-2">
       <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={onCancelar}>Cancelar</button>
       <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
