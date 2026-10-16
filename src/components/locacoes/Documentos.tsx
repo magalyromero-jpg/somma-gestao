@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import JSZip from "jszip";
 import { Upload } from "lucide-react";
@@ -311,20 +311,51 @@ function ListaMover({ imoveis, ocupado, onMover, onCancelar }: { imoveis: Imovel
   const [filtro, setFiltro] = useState("");
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const [aberto, setAberto] = useState(false);
+  const [ativo, setAtivo] = useState(-1);
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const listaRef = useRef<HTMLDivElement>(null);
   const filtrados = imoveis.filter((i) => !filtro || normBusca(i.rotulo).includes(normBusca(filtro)));
+
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => { if (caixaRef.current && !caixaRef.current.contains(e.target as Node)) setAberto(false); };
+    document.addEventListener("mousedown", fora);
+    return () => document.removeEventListener("mousedown", fora);
+  }, [aberto]);
+
+  useEffect(() => {
+    if (ativo < 0 || !listaRef.current) return;
+    (listaRef.current.children[ativo] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+  }, [ativo]);
+
+  const abrir = () => { if (!aberto) { setAberto(true); setFiltro(""); setAtivo(-1); } };
+  const escolher = (i: Imovel) => { setEscolhido(i.k); setTexto(i.rotulo); setFiltro(""); setAberto(false); setAtivo(-1); };
+  const teclas = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") { if (aberto) { e.preventDefault(); e.stopPropagation(); setAberto(false); } return; }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!aberto) { abrir(); return; }
+      if (!filtrados.length) return;
+      setAtivo((a) => e.key === "ArrowDown" ? Math.min(a + 1, filtrados.length - 1) : Math.max(a - 1, 0));
+      return;
+    }
+    if (e.key === "Enter" && aberto && ativo >= 0 && filtrados[ativo]) { e.preventDefault(); escolher(filtrados[ativo]); }
+  };
+
   return <>
-    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={texto}
-      onMouseDown={() => { setAberto(true); setFiltro(""); }}
-      onFocus={() => { setAberto(true); setFiltro(""); }}
-      onBlur={() => setAberto(false)}
-      onChange={(e) => { setTexto(e.target.value); setFiltro(e.target.value); setEscolhido(null); }}
-      className="mt-3 w-full rounded border border-input bg-card px-2 py-1.5 text-xs" />
-    {aberto && <div className="mt-2 max-h-[240px] overflow-y-auto rounded border border-input">
-      {filtrados.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">Nenhum imóvel encontrado</p> :
-        filtrados.map((i) => <button key={i.k} type="button" disabled={ocupado} onMouseDown={(e) => e.preventDefault()}
-          onClick={() => { setEscolhido(i.k); setTexto(i.rotulo); setFiltro(""); setAberto(false); }}
-          className="block w-full px-2 py-1.5 text-left text-xs hover:bg-muted">{i.rotulo}</button>)}
-    </div>}
+    <div ref={caixaRef}>
+      <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={texto}
+        onClick={abrir} onFocus={abrir} onKeyDown={teclas}
+        onChange={(e) => { setTexto(e.target.value); setFiltro(e.target.value); setEscolhido(null); setAberto(true); setAtivo(-1); }}
+        className="mt-3 w-full rounded border border-input bg-card px-2 py-1.5 text-xs" />
+      {aberto && <div ref={listaRef} role="listbox" onMouseDown={(e) => e.preventDefault()}
+        className="mt-2 max-h-[240px] overflow-y-auto rounded border border-input">
+        {filtrados.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">Nenhum imóvel encontrado</p> :
+          filtrados.map((i, idx) => <button key={i.k} type="button" role="option" aria-selected={idx === ativo} disabled={ocupado} tabIndex={-1}
+            onClick={() => escolher(i)} onMouseEnter={() => setAtivo(idx)}
+            className={cn("block w-full px-2 py-1.5 text-left text-xs hover:bg-muted", idx === ativo && "bg-muted")}>{i.rotulo}</button>)}
+      </div>}
+    </div>
     <div className="mt-4 flex justify-end gap-2">
       <button className="rounded border border-input px-3 py-1.5 text-xs font-medium" disabled={ocupado} onClick={onCancelar}>Cancelar</button>
       <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
