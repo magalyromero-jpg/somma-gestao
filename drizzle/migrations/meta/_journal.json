@@ -190,6 +190,13 @@
       "when": 1792162541661,
       "tag": "0026_loc_documentos_leitura_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792180783580,
+      "tag": "0027_loc_docs_admin_write",
+      "breakpoints": true
     }
   ]
 }

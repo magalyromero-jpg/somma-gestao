@@ -70,6 +70,9 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const seq = useRef(0);
   const [fila, setFila] = useState<Fila[]>([]);
   const [visor, setVisor] = useState<{ titulo: string; blob: Blob } | null>(null);
+  const [movendo, setMovendo] = useState<Arquivo | null>(null);
+  const [apagando, setApagando] = useState<Arquivo | null>(null);
+  const [ocupado, setOcupado] = useState(false);
 
   const imoveis: Imovel[] = useMemo(() => {
     const arr = (data.contratosInfo ?? []).map((c: any) => {
