@@ -107,7 +107,10 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     if (!imovel || item.estado === "enviado" || item.estado === "existia" || item.estado === "enviando") return;
     atualizar(item.id, { imovel, estado: "enviando" });
     try {
-      const caminho = `${edificioId}/${imovel}/${chaveSegura(item.nome)}`;
+      const nomeSeguro = chaveSegura(item.nome);
+      const caminho = `${edificioId}/${imovel}/${nomeSeguro}`;
+      const { data: ja } = await supabase.storage.from(BUCKET).list(`${edificioId}/${imovel}`, { limit: 1000, search: nomeSeguro });
+      if ((ja ?? []).some((x) => x.id && x.name === nomeSeguro)) return atualizar(item.id, { estado: "existia" });
       const { error } = await supabase.storage.from(BUCKET).upload(caminho, item.blob, { upsert: false });
       if (error) {
         if (/already exists|Duplicate/i.test(error.message)) return atualizar(item.id, { estado: "existia" });
@@ -179,10 +182,15 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           <span className="break-all">{f.nome}</span>
           {f.estado === "aguardando"
             ? <SeletorImovel imoveis={imoveis} onEscolher={(k) => enviar(f, k)} />
-            : <span className={cn("op-tag", f.estado === "enviado" ? "op-tag-green" : f.estado === "erro" ? "op-tag-red" : "op-tag-gray")}>
+            : <span className={cn("op-tag", f.estado === "enviado" ? "op-tag-green" : f.estado === "erro" ? "op-tag-red" : f.estado === "existia" ? "op-tag-amber" : "op-tag-gray")}>
                 {ESTADO[f.estado]}{f.imovel ? ` · ${imoveis.find((i) => i.k === f.imovel)?.rotulo ?? ""}` : ""}{f.erro ? ` · ${f.erro}` : ""}
               </span>}
         </div>)}
+        {fila.some((f) => ["enviado", "existia", "erro"].includes(f.estado)) && <div className="pt-1 text-muted-foreground">
+          Enviados: {fila.filter((f) => f.estado === "enviado").length} · Já existiam: {fila.filter((f) => f.estado === "existia").length}
+          {fila.some((f) => f.estado === "existia") && ` (${fila.filter((f) => f.estado === "existia").map((f) => f.nome).join(", ")})`}
+          {" "}· Com erro: {fila.filter((f) => f.estado === "erro").length}
+        </div>}
       </div>}
     </Bloco>}
 
@@ -208,13 +216,18 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
 
 function SeletorImovel({ imoveis, onEscolher }: { imoveis: Imovel[]; onEscolher: (k: string) => void }) {
   const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState(false);
   const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
-  const cls = "rounded border border-input bg-card px-2 py-1 text-xs text-foreground";
-  return <>
-    <input name="imovel-busca" autoComplete="off" placeholder="Buscar imóvel" value={busca} onChange={(e) => setBusca(e.target.value)} className={cn(cls, "w-[120px]")} />
-    <select name="imovel-destino" autoComplete="off" value="" onChange={(e) => e.target.value && onEscolher(e.target.value)} className={cls}>
-      <option value="">Imóvel…</option>
-      {filtrados.map((i) => <option key={i.k} value={i.k}>{i.rotulo}</option>)}
-    </select>
-  </>;
+  return <div className="relative">
+    <input name="imovel-destino" autoComplete="off" placeholder="Imóvel…" value={busca}
+      onFocus={() => setAberto(true)} onBlur={() => setTimeout(() => setAberto(false), 150)}
+      onChange={(e) => { setBusca(e.target.value); setAberto(true); }}
+      onKeyDown={(e) => { if (e.key === "Enter" && filtrados[0]) { onEscolher(filtrados[0].k); setAberto(false); } }}
+      className="w-[220px] rounded border border-input bg-card px-2 py-1 text-xs text-foreground" />
+    {aberto && <div className="absolute left-0 top-full z-20 mt-1 max-h-64 w-[260px] overflow-y-auto rounded border bg-popover py-1 text-xs shadow-md">
+      {filtrados.length === 0 ? <div className="px-2 py-1 text-muted-foreground">Nenhum imóvel</div> :
+        filtrados.map((i) => <button key={i.k} type="button" className="block w-full px-2 py-1 text-left hover:bg-muted"
+          onMouseDown={(e) => { e.preventDefault(); onEscolher(i.k); setBusca(""); setAberto(false); }}>{i.rotulo}</button>)}
+    </div>}
+  </div>;
 }
