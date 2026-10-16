@@ -176,6 +176,13 @@
       "when": 1792158476807,
       "tag": "0024_loc_v_encerrados_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792159255945,
+      "tag": "0025_loc_documentos_esperados",
+      "breakpoints": true
     }
   ]
 }
