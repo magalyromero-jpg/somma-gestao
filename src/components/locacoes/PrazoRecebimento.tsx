@@ -78,10 +78,10 @@ export function PrazoRecebimento({ data }: { data: any }) {
   ];
 
   return <>
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {cards.map(([l, v, dica]) => <div key={l} title={dica} className="rounded-md border bg-card p-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
+      {cards.map(([l, v, dica]) => <div key={l} title={dica} className="min-w-0 rounded-md border bg-card p-5">
         <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{l}</div>
-        <div className={cn("mt-3 text-[26px] font-extralight leading-none tabular-nums text-foreground", l === "Total em Aberto" && saldo.total > 0 && "text-destructive")}>{v}</div>
+        <div className={cn("mt-3 whitespace-nowrap text-[clamp(18px,2vw,26px)] font-extralight leading-none tabular-nums text-foreground", l === "Total em Aberto" && saldo.total > 0 && "text-destructive")}>{v}</div>
       </div>)}
     </div>
 
