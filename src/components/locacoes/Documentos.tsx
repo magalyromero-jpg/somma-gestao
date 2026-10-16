@@ -162,6 +162,68 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     if (blob) setVisor({ titulo: a.exibido, blob });
   };
 
+  const limparVinculos = async (docId: string) => {
+    const { error: e1 } = await db.from("loc_vigencias").update({ documento_id: null }).eq("documento_id", docId);
+    if (e1) throw e1;
+    const { error: e2 } = await db.from("loc_documentos_esperados").update({ documento_id: null }).eq("documento_id", docId);
+    if (e2) throw e2;
+  };
+
+  const registroDo = async (caminho: string) => {
+    const { data } = await db.from("loc_documentos").select("id").eq("storage_path", caminho).maybeSingle();
+    return data?.id as string | undefined;
+  };
+
+  const mover = async (a: Arquivo, destino: string) => {
+    setOcupado(true);
+    try {
+      const caminhoNovo = `${edificioId}/${destino}/${a.nome}`;
+      const { data: ja } = await supabase.storage.from(BUCKET).list(`${edificioId}/${destino}`, { limit: 1000, search: a.nome });
+      if ((ja ?? []).some((x) => x.id && x.name === a.nome)) {
+        toast({ title: "Já existe um arquivo com esse nome nesse imóvel", variant: "destructive" });
+        return;
+      }
+      const { error } = await supabase.storage.from(BUCKET).move(a.caminho, caminhoNovo);
+      if (error) throw error;
+      const docId = await registroDo(a.caminho);
+      if (docId) {
+        await limparVinculos(docId);
+        const { error: e2 } = await db.from("loc_documentos").update({
+          contrato_id: destino === SEM ? null : destino, storage_path: caminhoNovo,
+        }).eq("id", docId);
+        if (e2) throw e2;
+      }
+      setMovendo(null);
+      toast({ title: `Documento movido para ${imoveis.find((i) => i.k === destino)?.cabecalho ?? destino}` });
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+    } catch (e) {
+      toast({ title: "Não foi possível mover", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const apagar = async (a: Arquivo) => {
+    setOcupado(true);
+    try {
+      const docId = await registroDo(a.caminho);
+      if (docId) {
+        await limparVinculos(docId);
+        const { error: e1 } = await db.from("loc_documentos").delete().eq("id", docId);
+        if (e1) throw e1;
+      }
+      const { error } = await supabase.storage.from(BUCKET).remove([a.caminho]);
+      if (error) throw error;
+      setApagando(null);
+      toast({ title: "Documento apagado" });
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
 
   const ESTADO: Record<Fila["estado"], string> = { aguardando: "", enviando: "Enviando…", enviado: "Enviado", existia: "Já existia", erro: "Erro" };
