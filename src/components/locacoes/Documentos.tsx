@@ -19,6 +19,8 @@ const TIPO_DOC: Record<string, string> = { contrato: "contrato", aditivo: "aditi
 const nomeArquivo = (p: string) => p.split("/").pop() ?? p;
 const pastaDe = (p: string) => p.split("/").slice(0, -1).join("/");
 const normNome = (s: string) => s.toLowerCase();
+export const chaveNome = (nome: string) =>
+  nomeArquivo(nome).replace(/\.(pdf|docx)$/i, "").normalize("NFC").toLowerCase().replace(/[^a-z0-9]/g, "");
 const slugArquivo = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
 type Item = {
@@ -68,7 +70,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const { data: itens, isLoading } = useQuery({ queryKey: ["loc-documentos", edificioId], queryFn: () => carregarDocumentos(edificioId) });
   const [soPendentes, setSoPendentes] = useState(false);
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
-  const [resumo, setResumo] = useState<{ enviados: number; existentes: number; semCadastro: string[] } | null>(null);
+  const [resumo, setResumo] = useState<{ enviados: number; existentes: number; semCadastro: { nome: string; blob: Blob }[] } | null>(null);
   const refZip = useRef<HTMLInputElement>(null);
   const refRow = useRef<HTMLInputElement>(null);
   const [alvoRow, setAlvoRow] = useState<ItemComFlag | null>(null);
@@ -113,9 +115,9 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     if (!files.length) return;
     const docs: ItemComFlag[] = (itens ?? []).filter((i) => i.storage_path);
     const porNome = new Map<string, ItemComFlag>();
-    for (const d of docs) porNome.set(normNome(nomeArquivo(d.storage_path!)), d);
+    for (const d of docs) porNome.set(chaveNome(d.storage_path!), d);
     let enviados = 0, existentes = 0;
-    const semCadastro: string[] = [];
+    const semCadastro: { nome: string; blob: Blob }[] = [];
     const fila: { caminho: string; blob: Blob; nome: string }[] = [];
 
     for (const f of files) {
@@ -125,11 +127,12 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           if (entrada.dir) continue;
           const nome = nomeArquivo(caminho);
           if (!/\.(pdf|docx)$/i.test(nome)) continue;
-          fila.push({ caminho: `${edificioId}/${caminho.replace(/^\/+/, "")}`, blob: await entrada.async("blob"), nome });
+          const alvo = porNome.get(chaveNome(nome));
+          fila.push({ caminho: alvo ? alvo.storage_path! : `${edificioId}/${caminho.replace(/^\/+/, "")}`, blob: await entrada.async("blob"), nome });
         }
       } else if (/\.(pdf|docx)$/i.test(f.name)) {
-        const alvo = porNome.get(normNome(f.name));
-        if (!alvo) { semCadastro.push(f.name); continue; }
+        const alvo = porNome.get(chaveNome(f.name));
+        if (!alvo) { semCadastro.push({ nome: f.name, blob: f }); continue; }
         fila.push({ caminho: alvo.storage_path!, blob: f, nome: f.name });
       }
     }
@@ -139,7 +142,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       try {
         const r = await enviar(item.caminho, item.blob);
         if (r === "enviado") enviados++; else existentes++;
-      } catch { semCadastro.push(item.nome); }
+      } catch { semCadastro.push({ nome: item.nome, blob: item.blob }); }
       setProgresso((p) => (p ? { ...p, feitos: p.feitos + 1 } : p));
     }
     setProgresso(null);
@@ -147,12 +150,20 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
   };
 
-  const anexarNaLinha = async (item: ItemComFlag, file: File) => {
+  const vincular = async (idx: number, itemId: string) => {
+    const s = resumo?.semCadastro[idx];
+    const item = (itens ?? []).find((i) => i.id === itemId);
+    if (!s || !item) return;
+    const ok = await anexarNaLinha(item, new File([s.blob], s.nome));
+    if (ok) setResumo((r) => r ? { ...r, enviados: r.enviados + 1, semCadastro: r.semCadastro.filter((_, j) => j !== idx) } : r);
+  };
+
+  const anexarNaLinha = async (item: ItemComFlag, file: File): Promise<boolean> => {
     try {
       let docId = item.documento_id;
       let caminho = item.storage_path;
       if (docId && caminho) {
-        if (normNome(nomeArquivo(caminho)) !== normNome(file.name)) toast({ title: "Nome diferente do esperado", description: `Enviado como ${nomeArquivo(caminho)}.` });
+        if (chaveNome(caminho) !== chaveNome(file.name)) toast({ title: "Nome diferente do esperado", description: `Enviado como ${nomeArquivo(caminho)}.` });
       } else {
         const ext = file.name.split(".").pop();
         const dataRef = item.data_ref ?? new Date().toISOString().slice(0, 10);
