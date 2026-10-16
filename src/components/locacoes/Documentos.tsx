@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import JSZip from "jszip";
 import { Upload } from "lucide-react";
@@ -168,8 +168,8 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Nome", "Data de Envio", ...(admin ? ["Visível ao Cliente"] : []), "Arquivo"].map((h) => <th key={h} className={tableClasses.th}>{h}</th>)}
       </tr></thead><tbody>
-        {blocos.map((b) => <>
-          <tr key={b.k}><td colSpan={admin ? 4 : 3} className="border-b bg-muted/40 px-[10px] py-2 text-xs font-medium text-muted-foreground">
+        {blocos.map((b) => <Fragment key={b.k}>
+          <tr><td colSpan={admin ? 4 : 3} className="border-b bg-muted/40 px-[10px] py-2 text-xs font-medium text-muted-foreground">
             {b.rotulo} · {b.lista.length} {b.lista.length === 1 ? "documento" : "documentos"}
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
@@ -178,7 +178,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
             {admin && <td className={tableClasses.td}><Switch checked={a.visivel} onCheckedChange={(v) => alternarVisivel(a, v)} /></td>}
             <td className={tableClasses.td}><button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => abrir(a)}>Abrir</button></td>
           </tr>)}
-        </>)}
+        </Fragment>)}
       </tbody></table></div>}
     </Bloco>
   </div>;
