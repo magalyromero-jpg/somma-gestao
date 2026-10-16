@@ -156,7 +156,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       } else {
         const ext = file.name.split(".").pop();
         const dataRef = item.data_ref ?? new Date().toISOString().slice(0, 10);
-        caminho = `${edificioId}/${item.contrato_id}/${dataRef.replaceAll("-", ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
+        caminho = `${edificioId}/${item.contrato_id}/${dataRef.replace(/-/g, ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
         const { data: novo, error } = await db.from("loc_documentos").insert({
           edificio_id: edificioId, contrato_id: item.contrato_id, tipo: TIPO_DOC[item.grupo] ?? "outro",
           titulo: item.descricao, storage_path: caminho, revisado: true,
