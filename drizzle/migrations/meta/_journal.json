@@ -183,6 +183,13 @@
       "when": 1792159255945,
       "tag": "0025_loc_documentos_esperados",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792162541661,
+      "tag": "0026_loc_documentos_leitura_todos",
+      "breakpoints": true
     }
   ]
 }

@@ -5,17 +5,14 @@ import { Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { dt } from "@/lib/locacoes";
 
 const db = supabase as any;
 const BUCKET = "loc-docs";
 const SEM = "_sem_contrato";
 
 const nomeArquivo = (p: string) => p.split("/").pop() ?? p;
-const semExt = (n: string) => n.replace(/\.[^.]+$/, "");
 /** Nome seguro para o armazenamento (que não aceita acentos e alguns símbolos). */
 const chaveSegura = (n: string) =>
   n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9._\-() ]+/g, "_").replace(/\s+/g, " ").trim();
@@ -23,16 +20,28 @@ const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, 
 /** Lojas primeiro, depois Salas em ordem numérica; o bloco sem contrato vai por último. */
 const grupo = (i: Imovel) => (i.k === SEM ? 2 : /^\s*loja/i.test(i.cabecalho) ? 0 : 1);
 const primeiroNum = (s: string) => Number((s.match(/\d+/) ?? ["0"])[0]);
+/** Data no início do nome do arquivo (AAAA.MM.DD) → { iso, br }. */
+const dataDoNome = (n: string) => {
+  const m = n.match(/^(\d{4})[._-](\d{2})[._-](\d{2})/);
+  return m ? { iso: `${m[1]}-${m[2]}-${m[3]}`, br: `${m[3]}/${m[2]}/${m[1]}` } : null;
+};
+/** Nome legível a partir do nome do arquivo no armazenamento. */
+const nomeLegivel = (n: string) => {
+  const ext = (n.match(/\.[^.]+$/) ?? [""])[0];
+  let b = n.slice(0, n.length - ext.length).replace(/^\d{4}[._-]\d{2}[._-]\d{2}/, "");
+  b = b.replace(/([A-Za-z])__([A-Za-z])/g, "$1$2").replace(/_-_/g, " - ").replace(/_/g, " ").replace(/\s+/g, " ").replace(/^\s*-\s*/, "").trim();
+  return b + ext;
+};
 const ordemImovel = (a: Imovel, b: Imovel) =>
   grupo(a) - grupo(b) || primeiroNum(a.cabecalho) - primeiroNum(b.cabecalho) || a.cabecalho.localeCompare(b.cabecalho, "pt-BR", { numeric: true });
 
 
-type Arquivo = { caminho: string; pasta: string; nome: string; enviadoEm: string | null; docId: string | null; titulo: string; visivel: boolean };
+type Arquivo = { caminho: string; pasta: string; nome: string; data: string; exibido: string };
 type Imovel = { k: string; cabecalho: string; rotulo: string };
 type Fila = { id: number; nome: string; blob: Blob; imovel: string; estado: "aguardando" | "enviando" | "enviado" | "existia" | "erro"; erro?: string };
 
 async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]> {
-  const { data: regs } = await db.from("loc_documentos").select("id,storage_path,titulo,visivel_cliente").eq("edificio_id", edificioId);
+  const { data: regs } = await db.from("loc_documentos").select("storage_path,titulo").eq("edificio_id", edificioId);
   const porCaminho = new Map<string, any>((regs ?? []).map((r: any) => [r.storage_path, r]));
   const out: Arquivo[] = [];
   await Promise.all(pastas.map(async (p) => {
@@ -41,18 +50,12 @@ async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]
       if (!a.id) continue; // subpasta
       const caminho = `${edificioId}/${p}/${a.name}`;
       const r = porCaminho.get(caminho);
-      out.push({ caminho, pasta: p, nome: a.name, enviadoEm: a.created_at ?? null, docId: r?.id ?? null,
-        titulo: r?.titulo ?? semExt(a.name), visivel: !!r?.visivel_cliente });
+      const d = dataDoNome(a.name);
+      const base = r?.titulo ? String(r.titulo) : nomeLegivel(a.name);
+      out.push({ caminho, pasta: p, nome: a.name, data: d?.iso ?? "", exibido: d ? `${d.br} · ${base}` : base });
     }
   }));
   return out;
-}
-
-function Card({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="rounded-md border bg-card p-5">
-    <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{label}</div>
-    <div className="mt-3 text-[32px] font-extralight leading-none tabular-nums text-foreground">{children}</div>
-  </div>;
 }
 
 export function Documentos({ data, admin }: { data: any; admin: boolean }) {
@@ -66,7 +69,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const imoveis: Imovel[] = useMemo(() => {
     const arr = (data.contratosInfo ?? []).map((c: any) => {
       const unidades = String(c.unidades ?? "—");
-      return { k: c.id as string, cabecalho: unidades, rotulo: `${unidades} · ${c.locatario ?? "—"}` };
+      return { k: c.id as string, cabecalho: unidades, rotulo: unidades };
     });
     arr.sort(ordemImovel);
     return [...arr, { k: SEM, cabecalho: "Garagens e Estacionamento", rotulo: "Garagens e Estacionamento" }];
@@ -76,8 +79,8 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const chave = ["loc-documentos", edificioId, imoveis.length];
   const { data: arquivos, isLoading } = useQuery({ queryKey: chave, queryFn: () => carregar(edificioId, imoveis.map((i) => i.k)) });
 
-  const visiveis = (arquivos ?? []).filter((a) => admin || a.visivel);
-  const blocos = imoveis.map((i) => ({ ...i, lista: visiveis.filter((a) => a.pasta === i.k).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { numeric: true })) }))
+  const visiveis = arquivos ?? [];
+  const blocos = imoveis.map((i) => ({ ...i, lista: visiveis.filter((a) => a.pasta === i.k).sort((a, b) => (a.data || "9999").localeCompare(b.data || "9999") || a.nome.localeCompare(b.nome, "pt-BR", { numeric: true })) }))
     .filter((b) => b.lista.length);
 
   const adicionar = async (files: File[]) => {
@@ -109,7 +112,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       }
       const { error: e2 } = await db.from("loc_documentos").insert({
         edificio_id: edificioId, contrato_id: imovel === SEM ? null : imovel, tipo: "outro",
-        titulo: semExt(item.nome), storage_path: caminho, revisado: true, visivel_cliente: false,
+        titulo: item.nome, storage_path: caminho, revisado: true, visivel_cliente: true,
       });
       if (e2) throw e2;
       atualizar(item.id, { estado: "enviado" });
@@ -122,18 +125,20 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const aplicarTodos = (imovel: string) => { for (const it of fila) if (it.estado === "aguardando") enviar(it, imovel); };
 
   const abrir = async (a: Arquivo) => {
-    const { data: s, error } = await supabase.storage.from(BUCKET).createSignedUrl(a.caminho, 300);
-    if (error) return toast({ title: "Não foi possível abrir", description: error.message, variant: "destructive" });
-    window.open(s.signedUrl, "_blank");
-  };
-
-  const alternarVisivel = async (a: Arquivo, v: boolean) => {
-    const { error } = a.docId
-      ? await db.from("loc_documentos").update({ visivel_cliente: v }).eq("id", a.docId)
-      : await db.from("loc_documentos").insert({ edificio_id: edificioId, contrato_id: a.pasta === SEM ? null : a.pasta, tipo: "outro",
-          titulo: a.titulo, storage_path: a.caminho, revisado: true, visivel_cliente: v });
-    if (error) return toast({ title: "Não foi possível alterar", description: error.message, variant: "destructive" });
-    qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+    const pdf = /\.pdf$/i.test(a.nome);
+    const aba = pdf ? window.open("", "_blank") : null;
+    const { data: blob, error } = await supabase.storage.from(BUCKET).download(a.caminho);
+    if (error || !blob) {
+      aba?.close();
+      return toast({ title: "Não foi possível abrir o arquivo", description: error?.message ?? "Arquivo não encontrado", variant: "destructive" });
+    }
+    const url = URL.createObjectURL(blob);
+    if (aba) aba.location.href = url;
+    else {
+      const el = document.createElement("a");
+      el.href = url; el.download = a.nome; document.body.appendChild(el); el.click(); el.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
@@ -141,11 +146,6 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const ESTADO: Record<Fila["estado"], string> = { aguardando: "", enviando: "Enviando…", enviado: "Enviado", existia: "Já existia", erro: "Erro" };
 
   return <div className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Card label="Documentos Anexados">{visiveis.length}</Card>
-      <Card label="Imóveis com Documento">{blocos.length}</Card>
-    </div>
-
     {admin && <Bloco titulo="Anexar Arquivos">
       <div role="button" tabIndex={0}
         onClick={() => refInput.current?.click()} onKeyDown={(e) => e.key === "Enter" && refInput.current?.click()}
@@ -176,16 +176,14 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     <Bloco titulo="Documentos por Imóvel">
       {blocos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum documento.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-        {["Nome", "Data de Envio", ...(admin ? ["Visível ao Cliente"] : []), "Arquivo"].map((h) => <th key={h} className={tableClasses.th}>{h}</th>)}
+        {["Nome", "Arquivo"].map((h) => <th key={h} className={tableClasses.th}>{h}</th>)}
       </tr></thead><tbody>
         {blocos.map((b) => <Fragment key={b.k}>
-          <tr><td colSpan={admin ? 4 : 3} className="border-b bg-muted/40 px-[10px] py-2 text-xs font-medium text-muted-foreground">
+          <tr><td colSpan={2} className="border-b bg-muted/40 px-[10px] py-2 text-xs font-medium text-muted-foreground">
             {b.cabecalho} · {b.lista.length} {b.lista.length === 1 ? "documento" : "documentos"}
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
-            <td className={cn(tableClasses.td, "font-medium break-all")}>{a.nome}</td>
-            <td className={cn(tableClasses.td, "tabular-nums")}>{a.enviadoEm ? dt(a.enviadoEm.slice(0, 10)) : "—"}</td>
-            {admin && <td className={tableClasses.td}><Switch checked={a.visivel} onCheckedChange={(v) => alternarVisivel(a, v)} /></td>}
+            <td className={cn(tableClasses.td, "font-medium")}>{a.exibido}</td>
             <td className={tableClasses.td}><button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => abrir(a)}>Abrir</button></td>
           </tr>)}
         </Fragment>)}
