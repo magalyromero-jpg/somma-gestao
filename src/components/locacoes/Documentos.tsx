@@ -20,9 +20,15 @@ const semExt = (n: string) => n.replace(/\.[^.]+$/, "");
 const chaveSegura = (n: string) =>
   n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9._\-() ]+/g, "_").replace(/\s+/g, " ").trim();
 const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.\s]/g, "");
+/** Lojas primeiro, depois Salas em ordem numérica; o bloco sem contrato vai por último. */
+const grupo = (i: Imovel) => (i.k === SEM ? 2 : /^\s*loja/i.test(i.cabecalho) ? 0 : 1);
+const primeiroNum = (s: string) => Number((s.match(/\d+/) ?? ["0"])[0]);
+const ordemImovel = (a: Imovel, b: Imovel) =>
+  grupo(a) - grupo(b) || primeiroNum(a.cabecalho) - primeiroNum(b.cabecalho) || a.cabecalho.localeCompare(b.cabecalho, "pt-BR", { numeric: true });
+
 
 type Arquivo = { caminho: string; pasta: string; nome: string; enviadoEm: string | null; docId: string | null; titulo: string; visivel: boolean };
-type Imovel = { k: string; rotulo: string };
+type Imovel = { k: string; cabecalho: string; rotulo: string };
 type Fila = { id: number; nome: string; blob: Blob; imovel: string; estado: "aguardando" | "enviando" | "enviado" | "existia" | "erro"; erro?: string };
 
 async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]> {
