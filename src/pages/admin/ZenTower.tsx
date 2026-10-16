@@ -11,6 +11,7 @@ import {  Bloco,   } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
 import { PrazoRecebimento } from "@/components/locacoes/PrazoRecebimento";
+import { Documentos } from "@/components/locacoes/Documentos";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
@@ -139,6 +140,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="prazo">Prazo de Recebimento</TabsTrigger>
           <TabsTrigger value="contratos">Contratos</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
           <TabsTrigger value="conferencia">Conferência</TabsTrigger>
