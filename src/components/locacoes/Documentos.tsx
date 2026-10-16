@@ -192,8 +192,10 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       await enviar(caminho!, file);
       qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
       toast({ title: "Documento anexado" });
+      return true;
     } catch (e) {
       toast({ title: "Não foi possível anexar", description: (e as Error).message, variant: "destructive" });
+      return false;
     }
   };
 
@@ -234,10 +236,20 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
         <input ref={refZip} type="file" accept=".zip,.pdf,.docx" multiple className="hidden" onChange={(e) => { importar([...(e.target.files ?? [])]); e.target.value = ""; }} />
       </div>
       {progresso && <div className="mt-3 h-1.5 w-full rounded bg-muted"><div className="h-1.5 rounded bg-gold transition-all" style={{ width: `${progresso.total ? (progresso.feitos / progresso.total) * 100 : 0}%` }} /></div>}
-      {resumo && <p className="mt-3 text-xs text-muted-foreground">
-        Enviados: {resumo.enviados} · Já existiam: {resumo.existentes} · Sem cadastro: {resumo.semCadastro.length}
-        {resumo.semCadastro.length > 0 && <span className="block mt-1">{resumo.semCadastro.join(" · ")}</span>}
-      </p>}
+      {resumo && <div className="mt-3 text-xs text-muted-foreground">
+        <p>Enviados: {resumo.enviados} · Já existiam: {resumo.existentes} · Sem cadastro: {resumo.semCadastro.length}</p>
+        {resumo.semCadastro.map((s, idx) => <div key={idx + s.nome} className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="break-all">{s.nome}</span>
+          <select name="vincular-doc" autoComplete="off" defaultValue="" onChange={(e) => e.target.value && vincular(idx, e.target.value)}
+            className="rounded border border-input bg-card px-2 py-1 text-xs text-foreground">
+            <option value="">Vincular a…</option>
+            {(itens ?? []).filter((i) => situacaoDe(i) !== "Anexado").map((i) => {
+              const c = info.get(i.contrato_id ?? "");
+              return <option key={i.id} value={i.id}>{c?.unidades ?? "Garagens e Estacionamento"} · {i.descricao} · {i.data_ref ? dt(i.data_ref) : "—"}</option>;
+            })}
+          </select>
+        </div>)}
+      </div>}
     </Bloco>}
 
     <Bloco titulo="Documentos por Unidade" acao={admin ? <label className="flex items-center gap-2 text-xs text-muted-foreground"><Switch checked={soPendentes} onCheckedChange={setSoPendentes} />Só Pendentes</label> : undefined}>
