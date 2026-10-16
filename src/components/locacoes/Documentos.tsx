@@ -272,7 +272,12 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
             <td className={cn(tableClasses.td, "font-medium")}>{a.exibido}</td>
-            <td className={tableClasses.td}><div className="flex gap-3">{/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}<button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button></div></td>
+            <td className={tableClasses.td}><div className="flex gap-3">
+              {/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}
+              <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button>
+              {admin && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setMovendo(a)}>Mover</button>}
+              {admin && <button className="text-xs font-medium text-destructive underline-offset-2 hover:underline" onClick={() => setApagando(a)}>Apagar</button>}
+            </div></td>
           </tr>)}
         </Fragment>)}
       </tbody></table></div>}
