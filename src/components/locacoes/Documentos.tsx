@@ -164,7 +164,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const ESTADO: Record<Fila["estado"], string> = { aguardando: "", enviando: "Enviando…", enviado: "Enviado", existia: "Já existia", erro: "Erro" };
 
   return <div className="space-y-4">
-    {admin && <Bloco titulo="Anexar Arquivos">
+    {admin && <Bloco titulo="Anexar Arquivos" className="overflow-visible">
       <div role="button" tabIndex={0}
         onClick={() => refInput.current?.click()} onKeyDown={(e) => e.key === "Enter" && refInput.current?.click()}
         onDragOver={(e) => e.preventDefault()}
