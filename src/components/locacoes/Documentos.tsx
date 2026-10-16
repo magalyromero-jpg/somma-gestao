@@ -150,12 +150,50 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
   };
 
+  const imoveis = useMemo(() => {
+    const arr = (data.contratosInfo ?? []).map((c: any) => ({ k: c.id as string, rotulo: `${c.unidades ?? "—"} · ${c.locatario ?? "—"}` }));
+    arr.sort((a: any, b: any) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true }));
+    return [...arr, { k: "_sem", rotulo: "Garagens e Estacionamento" }] as { k: string; rotulo: string }[];
+  }, [data.contratosInfo]);
+
+  const tirarDaLista = (idx: number) =>
+    setResumo((r) => r ? { ...r, enviados: r.enviados + 1, semCadastro: r.semCadastro.filter((_, j) => j !== idx) } : r);
+
   const vincular = async (idx: number, itemId: string) => {
     const s = resumo?.semCadastro[idx];
     const item = (itens ?? []).find((i) => i.id === itemId);
     if (!s || !item) return;
     const ok = await anexarNaLinha(item, new File([s.blob], s.nome));
-    if (ok) setResumo((r) => r ? { ...r, enviados: r.enviados + 1, semCadastro: r.semCadastro.filter((_, j) => j !== idx) } : r);
+    if (ok) tirarDaLista(idx);
+  };
+
+  const vincularNovo = async (idx: number, contratoKey: string, grupo: string, descricao: string, dataRef: string | null) => {
+    const s = resumo?.semCadastro[idx];
+    if (!s) return;
+    try {
+      const contratoId = contratoKey === "_sem" ? null : contratoKey;
+      const ext = s.nome.split(".").pop();
+      const prefixo = dataRef ? dataRef.replace(/-/g, ".") : "sem-data";
+      const caminho = `${edificioId}/${contratoId ?? "_sem_contrato"}/${prefixo}_-_${slugArquivo(descricao)}.${ext}`;
+      const r = await enviar(caminho, new File([s.blob], s.nome));
+      if (r === "existente") { toast({ title: "Arquivo já existia", description: nomeArquivo(caminho) }); return; }
+      const { data: novo, error } = await db.from("loc_documentos").insert({
+        edificio_id: edificioId, contrato_id: contratoId, tipo: TIPO_DOC[grupo] ?? "outro",
+        titulo: descricao, storage_path: caminho, revisado: true,
+        visivel_cliente: !(grupo === "encerramento" || grupo === "outro"),
+      }).select("id").single();
+      if (error) throw error;
+      const { error: e2 } = await db.from("loc_documentos_esperados").insert({
+        edificio_id: edificioId, contrato_id: contratoId, grupo, descricao, data_ref: dataRef,
+        situacao: "necessario", documento_id: novo.id,
+      });
+      if (e2) throw e2;
+      qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+      toast({ title: "Documento anexado" });
+      tirarDaLista(idx);
+    } catch (e) {
+      toast({ title: "Não foi possível anexar", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
   const anexarNaLinha = async (item: ItemComFlag, file: File): Promise<boolean> => {
@@ -167,7 +205,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       } else {
         const ext = file.name.split(".").pop();
         const dataRef = item.data_ref ?? new Date().toISOString().slice(0, 10);
-        caminho = `${edificioId}/${item.contrato_id}/${dataRef.replace(/-/g, ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
+        caminho = `${edificioId}/${item.contrato_id ?? "_sem_contrato"}/${dataRef.replace(/-/g, ".")}_-_${slugArquivo(item.descricao)}.${ext}`;
         const { data: novo, error } = await db.from("loc_documentos").insert({
           edificio_id: edificioId, contrato_id: item.contrato_id, tipo: TIPO_DOC[item.grupo] ?? "outro",
           titulo: item.descricao, storage_path: caminho, revisado: true,
@@ -238,17 +276,8 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       {progresso && <div className="mt-3 h-1.5 w-full rounded bg-muted"><div className="h-1.5 rounded bg-gold transition-all" style={{ width: `${progresso.total ? (progresso.feitos / progresso.total) * 100 : 0}%` }} /></div>}
       {resumo && <div className="mt-3 text-xs text-muted-foreground">
         <p>Enviados: {resumo.enviados} · Já existiam: {resumo.existentes} · Sem cadastro: {resumo.semCadastro.length}</p>
-        {resumo.semCadastro.map((s, idx) => <div key={idx + s.nome} className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="break-all">{s.nome}</span>
-          <select name="vincular-doc" autoComplete="off" defaultValue="" onChange={(e) => e.target.value && vincular(idx, e.target.value)}
-            className="rounded border border-input bg-card px-2 py-1 text-xs text-foreground">
-            <option value="">Vincular a…</option>
-            {(itens ?? []).filter((i) => situacaoDe(i) !== "Anexado").map((i) => {
-              const c = info.get(i.contrato_id ?? "");
-              return <option key={i.id} value={i.id}>{c?.unidades ?? "Garagens e Estacionamento"} · {i.descricao} · {i.data_ref ? dt(i.data_ref) : "—"}</option>;
-            })}
-          </select>
-        </div>)}
+        {resumo.semCadastro.map((s, idx) => <Vincular key={idx + s.nome} nome={s.nome} imoveis={imoveis} itens={itens ?? []}
+          onPendente={(itemId) => vincular(idx, itemId)} onNovo={(c, t, d, dr) => vincularNovo(idx, c, t, d, dr)} />)}
       </div>}
     </Bloco>}
 
@@ -290,4 +319,57 @@ function FragmentGroup({ g, admin, abrir, naoExiste, pedirArquivo }: {
       </tr>;
     })}
   </>;
+}
+
+const TIPOS_NOVO = [
+  { v: "contrato", l: "Contrato" }, { v: "aditivo", l: "Aditivo" }, { v: "encerramento", l: "Distrato" },
+  { v: "encerramento_termo", l: "Termo de Encerramento" }, { v: "outro", l: "Outro" },
+];
+const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.\s]/g, "");
+
+function Vincular({ nome, imoveis, itens, onPendente, onNovo }: {
+  nome: string; imoveis: { k: string; rotulo: string }[]; itens: ItemComFlag[];
+  onPendente: (itemId: string) => void; onNovo: (contrato: string, grupo: string, descricao: string, dataRef: string | null) => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const [imovel, setImovel] = useState("");
+  const [doc, setDoc] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [desc, setDesc] = useState(() => nome.replace(/\.[^.]+$/, "").replace(/^\d{4}[.\-_ ]\d{2}[.\-_ ]\d{2}\s*[·\-_ ]*\s*/, "").trim());
+  const [dataTxt, setDataTxt] = useState("");
+  const filtrados = imoveis.filter((i) => !busca || normBusca(i.rotulo).includes(normBusca(busca)));
+  const pendentes = itens.filter((i) => (i.contrato_id ?? "_sem") === imovel && situacaoDe(i) !== "Anexado")
+    .sort((a, b) => (a.data_ref ?? "9999").localeCompare(b.data_ref ?? "9999"));
+  const m = dataTxt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const dataOk = !dataTxt || !!m;
+  const cls = "rounded border border-input bg-card px-2 py-1 text-xs text-foreground";
+  const confirmar = () => {
+    if (!tipo || !desc.trim() || !dataOk) return;
+    onNovo(imovel, tipo === "encerramento_termo" ? "encerramento" : tipo, desc.trim(), m ? `${m[3]}-${m[2]}-${m[1]}` : null);
+  };
+  return <div className="mt-2 flex flex-wrap items-center gap-2">
+    <span className="break-all">{nome}</span>
+    <input name="vincular-busca" autoComplete="off" placeholder="Vincular a… (buscar imóvel)" value={busca}
+      onChange={(e) => setBusca(e.target.value)} className={cls} />
+    <select name="vincular-imovel" autoComplete="off" value={imovel} onChange={(e) => { setImovel(e.target.value); setDoc(""); }} className={cls}>
+      <option value="">Imóvel…</option>
+      {filtrados.map((i) => <option key={i.k} value={i.k}>{i.rotulo}</option>)}
+    </select>
+    {imovel && <select name="vincular-doc" autoComplete="off" value={doc}
+      onChange={(e) => { const v = e.target.value; setDoc(v); if (v && v !== "_novo") onPendente(v); }} className={cls}>
+      <option value="">Documento…</option>
+      {pendentes.map((i) => <option key={i.id} value={i.id}>{i.descricao} · {i.data_ref ? dt(i.data_ref) : "—"} · {situacaoDe(i)}</option>)}
+      <option value="_novo">Outro documento deste imóvel…</option>
+    </select>}
+    {doc === "_novo" && <>
+      <select name="vincular-tipo" autoComplete="off" value={tipo} onChange={(e) => setTipo(e.target.value)} className={cls}>
+        <option value="">Tipo…</option>
+        {TIPOS_NOVO.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+      </select>
+      <input name="vincular-descricao" autoComplete="off" placeholder="Descrição" value={desc} onChange={(e) => setDesc(e.target.value)} className={cn(cls, "min-w-[200px]")} />
+      <input name="vincular-data" autoComplete="off" placeholder="dd/mm/aaaa" value={dataTxt} onChange={(e) => setDataTxt(e.target.value)} className={cn(cls, "w-[100px]", !dataOk && "border-destructive")} />
+      <button className="font-medium text-foreground underline-offset-2 hover:underline disabled:opacity-50"
+        disabled={!tipo || !desc.trim() || !dataOk} onClick={confirmar}>Confirmar</button>
+    </>}
+  </div>;
 }
