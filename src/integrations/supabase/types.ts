@@ -1854,6 +1854,116 @@ export type Database = {
           },
         ]
       }
+      loc_documentos_esperados: {
+        Row: {
+          contrato_id: string | null
+          created_at: string
+          data_ref: string | null
+          descricao: string
+          detalhe: string | null
+          documento_id: string | null
+          edificio_id: string
+          grupo: string
+          id: string
+          situacao: string
+        }
+        Insert: {
+          contrato_id?: string | null
+          created_at?: string
+          data_ref?: string | null
+          descricao: string
+          detalhe?: string | null
+          documento_id?: string | null
+          edificio_id: string
+          grupo?: string
+          id?: string
+          situacao?: string
+        }
+        Update: {
+          contrato_id?: string | null
+          created_at?: string
+          data_ref?: string | null
+          descricao?: string
+          detalhe?: string | null
+          documento_id?: string | null
+          edificio_id?: string
+          grupo?: string
+          id?: string
+          situacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_evolucao"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_metragem"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_mudancas_ano"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "loc_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_documentos_esperados_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loc_edificios: {
         Row: {
           ativo_id: string | null
