@@ -16,6 +16,7 @@ import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
 import { MESES, MESES_LONGOS, addMes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
+import { reajusteRealizado } from "@/lib/leituraDocumento";
 
 const db = supabase as any;
 
@@ -79,7 +80,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const hoje = hojeRef;
   const limite = addMes(hoje.slice(0, 7), 4) + "-31";
   const vigMap = new Map<string, any>(vig.map((v: any) => [v.contrato_id, v]));
-  const proximos = alertas.filter((a: any) => a.aniversario >= hoje && a.aniversario <= limite);
+  const proximos = alertas.filter((a: any) => a.aniversario >= hoje && a.aniversario <= limite && !reajusteRealizado(auditoria, a.contrato_id, a.aniversario));
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
@@ -245,7 +246,8 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
   const vigToContrato = new Map<string, string>(data.vigencias.map((v: any) => [v.id, v.contrato_id]));
   const proximos: { unidade: string; regra: string; boleto: string; valor: number; key: string }[] = [];
   for (const g of data.degraus) {
-    const cid = vigToContrato.get(g.vigencia_id)!;
+    const cid = vigToContrato.get(g.vigencia_id);
+    if (!cid || reajusteRealizado(data.auditoria, cid, g.a_partir)) continue;
     const l = d.porContrato.get(cid);
     const k = g.a_partir.slice(0, 7);
     if (!l || vigAtual.get(cid)?.id !== g.vigencia_id || k <= hojeKey || k > limiteKey) continue;
@@ -253,6 +255,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
   }
   for (const a of data.reajustesCalc) {
     const l = d.porContrato.get(a.contrato_id);
+    if (reajusteRealizado(data.auditoria, a.contrato_id, a.aniversario)) continue;
     if (!l || !a.calc || a.calc.estimado || a.calc.valor_calculado == null) continue;
     const k = (a.calc.vigencia_a_partir ?? a.aniversario).slice(0, 7);
     if (proximos.some((p) => p.key === a.contrato_id + k)) continue;
@@ -305,12 +308,13 @@ function Reajustes({ data, d }: { data: DadosZen; d: any }) {
   const resultado = (a: any) => {
     const p = String(a.parecer ?? "").toLowerCase();
     if (p === "pendente") return { label: "Pendente", cls: "op-tag-amber" };
+    if (p === "divergente") return { label: "Divergente", cls: "op-tag-amber" };
     return { label: "Atualizado", cls: "op-tag-green" };
   };
   const linhas = [...data.auditoria].sort((a: any, b: any) => (b.aniversario ?? "").localeCompare(a.aniversario ?? ""));
   const fonte = (i: string) => data.indices.find((x: any) => x.indice === i);
   return <Bloco titulo="Conferência de Reajustes">
-    <p className="mb-4 text-[13px] text-muted-foreground">Reajuste do aniversário do contrato: atualizado ou pendente.</p>
+    <p className="mb-4 text-[13px] text-muted-foreground">Reajuste do aniversário do contrato: atualizado, divergente ou pendente.</p>
     {linhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste a verificar.</p> :
       <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Unidade", "Índice", "Referência", "Base", "Pelo Índice", "Aplicado", "Situação"].map((h, i) => <th key={h} className={cn(tableClasses.th, i >= 3 && i <= 5 && "text-right")}>{h}</th>)}
