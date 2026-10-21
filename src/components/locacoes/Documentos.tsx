@@ -10,6 +10,10 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { VisorPdf } from "@/components/locacoes/VisorPdf";
+import { Button } from "@/components/ui/button";
+import { PropostaDocumento } from "@/components/locacoes/PropostaDocumento";
+import { Leitura, lerAutomaticamente } from "@/lib/leituraDocumento";
+import { dt } from "@/lib/locacoes";
 
 const db = supabase as any;
 const BUCKET = "loc-docs";
@@ -39,12 +43,12 @@ const ordemImovel = (a: Imovel, b: Imovel) =>
   grupo(a) - grupo(b) || primeiroNum(a.cabecalho) - primeiroNum(b.cabecalho) || a.cabecalho.localeCompare(b.cabecalho, "pt-BR", { numeric: true });
 
 
-type Arquivo = { caminho: string; pasta: string; nome: string; data: string; exibido: string; salvarComo: string };
+type Arquivo = { documentoId?: string; caminho: string; pasta: string; nome: string; data: string; exibido: string; salvarComo: string };
 type Imovel = { k: string; cabecalho: string; rotulo: string };
 type Fila = { id: number; nome: string; blob: Blob; imovel: string; estado: "aguardando" | "enviando" | "enviado" | "existia" | "erro"; erro?: string };
 
 async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]> {
-  const { data: regs } = await db.from("loc_documentos").select("storage_path,titulo").eq("edificio_id", edificioId);
+  const { data: regs } = await db.from("loc_documentos").select("id,storage_path,titulo").eq("edificio_id", edificioId);
   const porCaminho = new Map<string, any>((regs ?? []).map((r: any) => [r.storage_path, r]));
   const out: Arquivo[] = [];
   await Promise.all(pastas.map(async (p) => {
@@ -55,7 +59,7 @@ async function carregar(edificioId: string, pastas: string[]): Promise<Arquivo[]
       const r = porCaminho.get(caminho);
       const d = dataDoNome(a.name);
       const base = r?.titulo ? String(r.titulo) : nomeLegivel(a.name);
-      out.push({ caminho, pasta: p, nome: a.name, data: d?.iso ?? "", exibido: d ? `${d.br} · ${base}` : base,
+      out.push({ documentoId: r?.id, caminho, pasta: p, nome: a.name, data: d?.iso ?? "", exibido: d ? `${d.br} · ${base}` : base,
         salvarComo: r?.titulo && /\.[a-z0-9]+$/i.test(String(r.titulo)) ? String(r.titulo) : a.name });
     }
   }));
@@ -73,6 +77,52 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const [movendo, setMovendo] = useState<Arquivo | null>(null);
   const [apagando, setApagando] = useState<Arquivo | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [revisando, setRevisando] = useState<{ leitura: Leitura; arquivo: Arquivo } | null>(null);
+  const [iniciando, setIniciando] = useState<Set<string>>(new Set());
+  const { data: leituras = [] } = useQuery<Leitura[]>({
+    queryKey: ["loc-leituras", edificioId], enabled: admin,
+    queryFn: async () => {
+      const r = await db.from("loc_leituras_documento").select("*").eq("edificio_id", edificioId).order("criado_em", { ascending: false });
+      if (r.error) throw r.error;
+      return r.data ?? [];
+    },
+    refetchInterval: q => (q.state.data?.some(l => l.status === "lendo") || iniciando.size > 0) ? 3000 : false,
+  });
+  const ultimaLeitura = new Map<string, Leitura>();
+  for (const l of leituras) if (!ultimaLeitura.has(l.documento_id)) ultimaLeitura.set(l.documento_id, l);
+  const ler = async (documentoId: string) => {
+    if (iniciando.has(documentoId)) return;
+    setIniciando(s => new Set(s).add(documentoId));
+    try {
+      const { data: resposta, error } = await supabase.functions.invoke("ler-documento-locacao", { body: { documento_id: documentoId } });
+      if (error) {
+        const context = (error as unknown as { context?: Response }).context;
+        const details = context ? await context.json().catch(() => null) : null;
+        throw new Error(details?.erro ?? error.message);
+      }
+      if (!(resposta instanceof ReadableStream)) throw new Error(resposta?.erro ?? "A leitura não retornou resposta");
+      const reader = resposta.getReader(), decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let i: number;
+        while ((i = buffer.indexOf("\n\n")) >= 0) {
+          const part = buffer.slice(0, i); buffer = buffer.slice(i + 2);
+          const line = part.split("\n").find(l => l.startsWith("data: "));
+          if (!line) continue;
+          const event = JSON.parse(line.slice(6));
+          if (part.startsWith("event: error")) throw new Error(event.erro);
+          if (part.startsWith("event: started") || part.startsWith("event: complete")) qc.invalidateQueries({ queryKey: ["loc-leituras", edificioId] });
+        }
+      }
+    } catch (e) {
+      toast({ title: "Não foi possível ler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setIniciando(s => { const next = new Set(s); next.delete(documentoId); return next; });
+      qc.invalidateQueries({ queryKey: ["loc-leituras", edificioId] });
+    }
+  };
 
   const imoveis: Imovel[] = useMemo(() => {
     const arr = (data.contratosInfo ?? []).map((c: any) => {
@@ -121,13 +171,14 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
         if (/already exists|Duplicate/i.test(error.message)) return atualizar(item.id, { estado: "existia" });
         throw error;
       }
-      const { error: e2 } = await db.from("loc_documentos").insert({
+      const { data: criado, error: e2 } = await db.from("loc_documentos").insert({
         edificio_id: edificioId, contrato_id: imovel === SEM ? null : imovel, tipo: "outro",
         titulo: item.nome, storage_path: caminho, revisado: true, visivel_cliente: true,
-      });
+      }).select("id").single();
       if (e2) throw e2;
       atualizar(item.id, { estado: "enviado" });
       qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
+      if (admin && criado?.id && lerAutomaticamente(item.nome, imovel === SEM ? null : imovel)) void ler(criado.id);
     } catch (e) {
       atualizar(item.id, { estado: "erro", erro: (e as Error).message });
     }
@@ -272,17 +323,27 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
           </td></tr>
           {b.lista.map((a) => <tr key={a.caminho}>
             <td className={cn(tableClasses.td, "font-medium")}>{a.exibido}</td>
-            <td className={tableClasses.td}><div className="flex gap-3">
+            <td className={tableClasses.td}><div className="flex flex-wrap items-center gap-3">
               {/\.pdf$/i.test(a.nome) && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => ver(a)}>Ver</button>}
               <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button>
               {admin && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setMovendo(a)}>Mover</button>}
               {admin && <button className="text-xs font-medium text-destructive underline-offset-2 hover:underline" onClick={() => setApagando(a)}>Apagar</button>}
+              {admin && a.pasta !== SEM && (a.documentoId ? (() => {
+                const l = ultimaLeitura.get(a.documentoId);
+                if (!/\.pdf$/i.test(a.nome)) return <span className="text-xs text-muted-foreground">Leitura automática disponível somente para PDF</span>;
+                if (iniciando.has(a.documentoId) || l?.status === "lendo") return <span className="text-xs text-muted-foreground">Lendo…</span>;
+                if (l?.status === "pendente") return <Button size="sm" onClick={() => setRevisando({ leitura: l, arquivo: a })}>Revisar Proposta</Button>;
+                if (l?.status === "aplicada") return <span className="text-xs text-success">Aplicado em {dt(l.aplicado_em)}</span>;
+                return <>{l?.status === "erro" && <span className="text-xs text-destructive">Não foi possível ler: {l.erro}</span>}<Button variant="outline" size="sm" onClick={() => a.documentoId && ler(a.documentoId)}>{l?.status === "erro" ? "Tentar de Novo" : "Ler"}</Button></>;
+              })() : <span className="text-xs text-muted-foreground">Documento sem registro vinculado</span>)}
             </div></td>
           </tr>)}
         </Fragment>)}
       </tbody></table></div>}
     </Bloco>
     <VisorPdf titulo={visor?.titulo ?? ""} blob={visor?.blob ?? null} onFechar={() => setVisor(null)} />
+    {admin && revisando && <PropostaDocumento key={revisando.leitura.id} leitura={revisando.leitura} nome={revisando.arquivo.nome}
+      imovel={imoveis.find(i => i.k === revisando.arquivo.pasta)?.cabecalho ?? "—"} data={data} onFechar={() => setRevisando(null)} />}
 
     {movendo && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setMovendo(null)}>
       <div className="w-full max-w-md rounded-lg border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>

@@ -1420,6 +1420,7 @@ export type Database = {
           no_orcamento: boolean
           periodicidade_meses: number
           piso_zero: boolean
+          retencao_orcada_pct: number | null
           retencao_pct: number
           status: Database["public"]["Enums"]["loc_status"]
           tipo: Database["public"]["Enums"]["loc_tipo_contrato"]
@@ -1451,6 +1452,7 @@ export type Database = {
           no_orcamento?: boolean
           periodicidade_meses?: number
           piso_zero?: boolean
+          retencao_orcada_pct?: number | null
           retencao_pct?: number
           status?: Database["public"]["Enums"]["loc_status"]
           tipo?: Database["public"]["Enums"]["loc_tipo_contrato"]
@@ -1482,6 +1484,7 @@ export type Database = {
           no_orcamento?: boolean
           periodicidade_meses?: number
           piso_zero?: boolean
+          retencao_orcada_pct?: number | null
           retencao_pct?: number
           status?: Database["public"]["Enums"]["loc_status"]
           tipo?: Database["public"]["Enums"]["loc_tipo_contrato"]
@@ -2052,6 +2055,119 @@ export type Database = {
           variacao_mensal?: number | null
         }
         Relationships: []
+      }
+      loc_leituras_documento: {
+        Row: {
+          aplicado_em: string | null
+          aplicado_por: string | null
+          contrato_id: string | null
+          criado_em: string
+          dados: Json | null
+          documento_id: string
+          edificio_id: string
+          erro: string | null
+          id: string
+          modelo: string | null
+          status: string
+        }
+        Insert: {
+          aplicado_em?: string | null
+          aplicado_por?: string | null
+          contrato_id?: string | null
+          criado_em?: string
+          dados?: Json | null
+          documento_id: string
+          edificio_id: string
+          erro?: string | null
+          id?: string
+          modelo?: string | null
+          status?: string
+        }
+        Update: {
+          aplicado_em?: string | null
+          aplicado_por?: string | null
+          contrato_id?: string | null
+          criado_em?: string
+          dados?: Json | null
+          documento_id?: string
+          edificio_id?: string
+          erro?: string | null
+          id?: string
+          modelo?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_evolucao"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_metragem"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_mudancas_ano"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "loc_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_leituras_documento_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loc_locatarios: {
         Row: {
@@ -3608,6 +3724,10 @@ export type Database = {
           papel: string
         }[]
       }
+      loc_aplicar_leitura: {
+        Args: { p_dados: Json; p_leitura: string }
+        Returns: Json
+      }
       loc_caixa_mensal: {
         Args: { p_ano: number; p_edificio: string }
         Returns: {
@@ -3656,6 +3776,10 @@ export type Database = {
           situacao: string
           unidades: string
         }[]
+      }
+      loc_conferir_leitura: {
+        Args: { p_dados?: Json; p_leitura: string }
+        Returns: Json
       }
       loc_definir_acesso: {
         Args: { p_edificio: string; p_papel: string; p_user: string }
@@ -3738,6 +3862,10 @@ export type Database = {
         }[]
       }
       loc_pode_ver: { Args: { p_edificio: string }; Returns: boolean }
+      loc_previsao_leitura: {
+        Args: { p_contrato: string; p_data: string }
+        Returns: Json
+      }
       loc_previsto_caixa: {
         Args: { p_ano: number; p_edificio: string }
         Returns: {
