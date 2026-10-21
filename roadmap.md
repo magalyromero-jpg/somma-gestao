@@ -1,4 +1,7 @@
 # Visual do portal
+- [ ] Implementar leitura PDF restrita a Admin/Gestor e proposta revisável.
+- [ ] Aplicar com proteção do Orçado e conferência baseada nos valores do portal.
+- [ ] Testar leitura, revisão, descarte e aplicação com validação das permissões.
 - [x] Ajustar Reforecast aos 12 meses contratuais, diferenças e motivos; 18 testes e tela conferidos, preservando os valores retornados pelo banco.
 - [x] Aplicar tokens e tipografia do modelo em todo o sistema.
 - [x] Ajustar menu, blocos, indicadores e disposição do Zen Tower.
