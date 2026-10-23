@@ -1,3 +1,8 @@
+# Proteção Bitrix
+- [ ] Guardar webhook em secret e remover acesso ao valor nas três funções e na tela.
+- [ ] Remover registro legado e restringir configurações sensíveis.
+- [ ] Verificar status, teste real de conexão e permissões.
+
 # Visual do portal
 - [x] Implementar leitura PDF restrita a Admin/Gestor e proposta revisável.
 - [x] Implementar aplicação protegida e conferência com valores da base; Orçado conferido em R$ 6.855.976,20.
