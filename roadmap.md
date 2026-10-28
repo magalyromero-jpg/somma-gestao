@@ -1,7 +1,7 @@
 # Natureza dos boletos
-- [ ] Adicionar classificação por boleto e conferência com tolerância de R$ 2,00.
-- [ ] Separar Não É Aluguel no planejamento e Realizado, preservando detalhe e reimportação.
-- [ ] Conferir classificação de Compra de cadeiras e valores de julho e novembro nas telas.
+- [x] Adicionar classificação por boleto e conferência com tolerância de R$ 2,00.
+- [x] Separar Não É Aluguel no planejamento e Realizado, preservando detalhe e reimportação.
+- [x] Conferir Compra de cadeiras pela tela: restam NAC e DHL; julho R$ 674.179,93, detalhe R$ 2.844,19 e novembro preservado; 16 testes passaram.
 
 # Multa e Juros no Realizado
 - [x] Criar view de encargos sem duplicar pagamentos importados.
