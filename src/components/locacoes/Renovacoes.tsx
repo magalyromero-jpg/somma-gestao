@@ -115,7 +115,7 @@ export function Renovacoes({ linhas }: { linhas: any[] }) {
   const [filtro, setFiltro] = useState<CicloRenovacao | "todos">("todos");
   const lista = filtro === "todos" ? base.lista : base.lista.filter((c) => c.ciclo === filtro);
   const top10Pct = base.total ? (base.top10Valor / base.total) * 100 : 0;
-  const curva = base.top10.map((c) => ({ ...c, rotulo: `${c.unidades} · ${c.locatario}` }));
+  const curva = base.top10.map((c) => ({ ...c, rotulo: `${c.unidades} · ${c.locatario}`, ponta: `${brl(c.valor)} · ${pct1(c.pctAcum)} acumulado` }));
 
   return <div className="space-y-4">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -140,7 +140,7 @@ export function Renovacoes({ linhas }: { linhas: any[] }) {
             />
             <Bar dataKey="valor" radius={[0, 2, 2, 0]}>
               {curva.map((c) => <Cell key={c.contrato_id} fill={CICLO_COR[c.ciclo]} />)}
-              <LabelList dataKey="valor" position="right" formatter={(_v: number, item: any) => `${brl(item?.valor ?? _v)} · ${pct1(item?.pctAcum ?? 0)} acumulado`} style={{ fontSize: 10, fill: CORES.texto }} />
+              <LabelList dataKey="ponta" position="right" style={{ fontSize: 10, fill: CORES.texto }} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
