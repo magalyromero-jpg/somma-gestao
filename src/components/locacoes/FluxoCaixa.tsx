@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { RealizadoEmAberto } from "@/components/locacoes/RealizadoEmAberto";
+import { EncargosAtraso } from "@/components/locacoes/EncargosAtraso";
 import { MESES, addMes, brl, dt, m2, mil, num2, pct, projetarContrato } from "@/lib/locacoes";
 import { compararReforecast, motivoReforecast, previstoPorMes } from "@/lib/reforecast";
 const inteiro = (n: number) => Math.round(n).toLocaleString("pt-BR");
@@ -98,6 +99,7 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
     <DetalheUnidade data={data} linhas={linhas} ultimoMes={ultimoMes} />
     <MudancasAno edificioId={data.edificio.id} ano={ano} />
     <RealizadoEmAberto ano={data.ano} edificioId={data.edificio.id} admin={!!data.admin} ultimaData={data.pags.reduce((m: string, p: any) => (p.data_pagamento > m ? p.data_pagamento : m), "")} />
+    <EncargosAtraso data={data} />
     <Projecao data={data} linhas={linhas} />
   </>;
 }

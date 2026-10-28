@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { PrazoRecebimento } from "@/components/locacoes/PrazoRecebimento";
 import { Documentos } from "@/components/locacoes/Documentos";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
+import { PlanejamentoCaixa } from "@/components/locacoes/PlanejamentoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
 import { MESES, MESES_LONGOS, addMes, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
@@ -140,6 +141,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <div className="overflow-x-auto"><TabsList>
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="planejamento">Planejamento do Caixa</TabsTrigger>
           <TabsTrigger value="prazo">Prazo de Recebimento</TabsTrigger>
 <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="renovacoes">Renovações</TabsTrigger>
@@ -153,6 +155,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
 
         <TabsContent value="caixa" className="space-y-4"><FluxoCaixa data={data} linhas={d.linhas} meses={d.meses} ultimoMes={d.ultimoMes} /></TabsContent>
+
+        <TabsContent value="planejamento" className="space-y-4"><PlanejamentoCaixa data={data} admin={admin} /></TabsContent>
 
         <TabsContent value="prazo" className="space-y-4"><PrazoRecebimento data={data} /></TabsContent>
 

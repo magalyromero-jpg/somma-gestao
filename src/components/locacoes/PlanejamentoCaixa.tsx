@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as pdfjsLib from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -79,7 +79,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
         <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
           {["Mês", "Previsto", "Já Emitido", "% Emitido", "Fora do Boleto", "Sem Boleto", "Em Aberto"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
         </tr></thead><tbody>
-          {linhas.map((l) => <>
+          {linhas.map((l) => <Fragment key={l.k}>
             <tr key={l.k} className="cursor-pointer hover:bg-muted/40" onClick={() => setAberto(aberto === l.k ? null : l.k)}>
               <td className={cn(tableClasses.td, "font-medium")}>{aberto === l.k ? "▾" : "▸"} {nomeMes(l.k)}</td>
               <td className={tableClasses.num}>{brl(l.previsto)}</td><td className={tableClasses.num}>{brl(l.emitido)}</td>
@@ -99,7 +99,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
                   <td className={tableClasses.num}>{brl(r.sem_boleto)}</td><td className={tableClasses.num}>{brl(r.em_aberto)}</td>
                 </tr>)}</tbody></table>
             </td></tr>}
-          </>)}
+          </Fragment>)}
           <tr className="font-semibold"><td className={tableClasses.td}>Total</td>
             <td className={tableClasses.num}>{brl(tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.emitido)}</td>
             <td className={tableClasses.num}>{pctTxt(tot.emitido, tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.fora)}</td>
