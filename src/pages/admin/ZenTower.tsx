@@ -16,7 +16,7 @@ import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { PlanejamentoCaixa } from "@/components/locacoes/PlanejamentoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
-import { MESES, MESES_LONGOS, addMes, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
+import { MESES, MESES_LONGOS, addMes, baseRealizado, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
 import { BlocoCicloVencimento, BlocoIndiceReajuste, Renovacoes } from "@/components/locacoes/Renovacoes";
 import { reajusteRealizado } from "@/lib/leituraDocumento";
 
@@ -60,9 +60,10 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_indices").select("indice,mes,fonte").order("mes", { ascending: false }).limit(60),
     db.from("loc_projecao_indices").select("*"),
     db.from("loc_projecao_regras").select("*").eq("edificio_id", id),
+    db.from("loc_v_encargos_realizados").select("competencia,multa,juros,ja_no_realizado").eq("edificio_id", id).gte("competencia", `${ano}-01-01`).lt("competencia", `${ano + 1}-01-01`).limit(10000),
   ]);
   for (const r of rs) if (r.error) throw r.error;
-  const [vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras] = rs.map((r) => r.data ?? []);
+  const [vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, alertas, auditoria, evolucao, indices, focus, regras, encargos] = rs.map((r) => r.data ?? []);
   // unidades e locatários de todos os contratos (orçado fixo × reforecast)
   const [cuAll, lcAll, prevR] = await Promise.all([
     db.from("loc_contrato_unidades").select("contrato_id,loc_unidades(nome,tipo)").eq("edificio_id", id),
@@ -86,7 +87,8 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
   const calc = await Promise.all(proximos.map((a: any) =>
     db.rpc("loc_calcular_reajuste", { p_contrato: a.contrato_id, p_aniversario: a.aniversario, p_valor_anterior: vigMap.get(a.contrato_id)?.valor_vigente ?? 0 })
       .then((r: any) => ({ ...a, calc: r.data?.[0] ?? null }))));
-  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin, contratosInfo, previsto, hoje: hojeRef };
+  const realizado = baseRealizado(pags, encargos, ano);
+  return { edificio: ed, ano, vig, contratos, locs, encerrados, ciclo, ocup, pags, orcado, metragem, vigencias, auditoria, evolucao, indices, focus, regras, degraus: deg.data ?? [], reajustesCalc: calc, admin, contratosInfo, previsto, realizado, hoje: hojeRef };
 }
 
 export type DadosZen = NonNullable<Awaited<ReturnType<typeof carregar>>>;
@@ -117,7 +119,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
     const meses = MESES.map((m, i) => {
       const key = `${anoStr}-${String(i + 1).padStart(2, "0")}`;
       const orcado = data.orcado.filter((o: any) => o.mes.startsWith(key)).reduce((s: number, o: any) => s + Number(o.valor ?? 0), 0);
-      const realizado = data.pags.filter((p: any) => p.data_pagamento.startsWith(key)).reduce((s: number, p: any) => s + Number(p.valor_liquido ?? 0), 0);
+      const realizado = data.realizado.meses[i].total;
       return { mes: m, key, i, orcado, realizado, fechado: key <= ultimoMes };
     });
     return { linhas, porContrato, meses, ultimaData, ultimoMes };
@@ -233,9 +235,7 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
   const acumR = fechados.reduce((s: number, m: any) => s + m.realizado, 0);
   const saldo = useSaldoEmAberto(data.edificio.id, data.ano, d.ultimaData, !!data.admin);
   const recebidoPor = (pred: (k: string) => boolean) => {
-    let c = 0, a = 0;
-    for (const p of data.pags) { const k = p.data_pagamento.slice(0, 7); if (!pred(k)) continue; const v = Number(p.valor_liquido ?? 0); if (p.contrato_id) c += v; else a += v; }
-    return { c, a };
+    return data.realizado.meses.filter((m) => pred(m.key)).reduce((s, m) => ({ c: s.c + m.contratos, a: s.a + m.avulsas, e: s.e + m.multa + m.juros }), { c: 0, a: 0, e: 0 });
   };
   const reforecastPor = (pred: (k: string) => boolean) => (data.previsto ?? []).filter((x: any) => pred(String(x.mes).slice(0, 7))).reduce((s: number, x: any) => s + Number(x.valor ?? 0), 0);
   const noMes = (k: string) => !!ultimo && k === ultimo.key;
@@ -286,10 +286,10 @@ const vencem = d.linhas.filter((l: any) => ["a_vencer_12m", "a_vencer_120d"].inc
       </Card>
       <Card label="Valor Médio do m² — Salas"><Valor>{brl(m2Medio("Sala"))}</Valor></Card>
       <Card label="Valor Médio do m² — Lojas"><Valor>{brl(m2Medio("Loja"))}</Valor></Card>
-      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i].charAt(0).toUpperCase() + MESES_LONGOS[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recMes.c)} · Receitas Avulsas ${brl(recMes.a)} · Reforecast do mês ${brl(refMes)}`}>
+      <Card label={`Recebido em ${ultimo ? MESES_LONGOS[ultimo.i].charAt(0).toUpperCase() + MESES_LONGOS[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recMes.c)} · Receitas Avulsas ${brl(recMes.a)} · Multa e Juros ${brl(recMes.e)} · Reforecast do mês ${brl(refMes)}`}>
         <Valor>{brl(ultimo?.realizado ?? 0)}</Valor>
       </Card>
-      <Card label={`Acumulado Jan–${ultimo ? MESES[ultimo.i].charAt(0).toUpperCase() + MESES[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recAcum.c)} · Receitas Avulsas ${brl(recAcum.a)} · Reforecast do período ${brl(refAcum)}`}>
+      <Card label={`Acumulado Jan–${ultimo ? MESES[ultimo.i].charAt(0).toUpperCase() + MESES[ultimo.i].slice(1) : "—"}`} dica={`Contratos ${brl(recAcum.c)} · Receitas Avulsas ${brl(recAcum.a)} · Multa e Juros ${brl(recAcum.e)} · Reforecast do período ${brl(refAcum)}`}>
         <Valor>{brl(acumR)}</Valor>
       </Card>
       <Card label={data.admin ? "Total em Aberto" : "Em Aberto"} dica={data.admin ? `Ativos ${brl(saldo.ativos)} · Não Ativos ${brl(saldo.naoAtivos)}\nDiferença: ajustes de meses anteriores ${brl(difAjustes)}` : undefined}>

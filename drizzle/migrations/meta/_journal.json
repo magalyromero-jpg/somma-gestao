@@ -218,6 +218,13 @@
       "when": 1793198756047,
       "tag": "0030_boletos_outras_receitas",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793210974470,
+      "tag": "0031_encargos_realizados_sem_duplicacao",
+      "breakpoints": true
     }
   ]
 }

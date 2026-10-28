@@ -3891,6 +3891,124 @@ export type Database = {
           },
         ]
       }
+      loc_v_encargos_realizados: {
+        Row: {
+          acrescimo: number | null
+          competencia: string | null
+          contrato_id: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          dias_atraso: number | null
+          edificio_id: string | null
+          id: string | null
+          ja_no_realizado: boolean | null
+          juros: number | null
+          multa: number | null
+          nosso_numero: string | null
+          pagador: string | null
+          valor_pago: number | null
+          valor_titulo: number | null
+        }
+        Insert: {
+          acrescimo?: never
+          competencia?: never
+          contrato_id?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          dias_atraso?: never
+          edificio_id?: string | null
+          id?: string | null
+          ja_no_realizado?: never
+          juros?: never
+          multa?: never
+          nosso_numero?: string | null
+          pagador?: string | null
+          valor_pago?: number | null
+          valor_titulo?: number | null
+        }
+        Update: {
+          acrescimo?: never
+          competencia?: never
+          contrato_id?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          dias_atraso?: never
+          edificio_id?: string | null
+          id?: string | null
+          ja_no_realizado?: never
+          juros?: never
+          multa?: never
+          nosso_numero?: string | null
+          pagador?: string | null
+          valor_pago?: number | null
+          valor_titulo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_evolucao"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_metragem"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_mudancas_ano"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_boletos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loc_v_encerrados: {
         Row: {
           alugueis_em_aberto: number | null
