@@ -6,6 +6,7 @@ import { CORES, chartTooltipStyle } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
 import { MESES, brl, dt } from "@/lib/locacoes";
+import { Button } from "@/components/ui/button";
 
 const db = supabase as any;
 const DICA = "O banco informa apenas o total pago a mais. Juros estimados em 1% ao mês, proporcional aos dias de atraso; multa é o restante.";
@@ -19,7 +20,11 @@ export function EncargosAtraso({ data }: { data: any }) {
     queryFn: async () => {
       const r = await db.from("loc_v_boleto_encargos").select("*").eq("edificio_id", data.edificio.id)
         .gte("competencia", `${ano}-01-01`).lte("competencia", `${ano}-12-01`).order("data_pagamento", { ascending: false });
-      if (r.error) throw r.error; return r.data ?? [];
+      if (r.error) throw r.error;
+      const b = await db.from("loc_boletos").select("id,natureza,descricao").eq("edificio_id", data.edificio.id).limit(10000);
+      if (b.error) throw b.error;
+      const meta = new Map<string, any>((b.data ?? []).map((item: any) => [item.id, item]));
+      return (r.data ?? []).map((item: any) => ({ ...item, natureza: meta.get(item.id)?.natureza, descricao: meta.get(item.id)?.descricao }));
     },
   });
   const un = new Map<string, string>((data.contratosInfo ?? []).map((c: any) => [c.id, c.unidades]));
@@ -33,10 +38,10 @@ export function EncargosAtraso({ data }: { data: any }) {
   });
 
   return <div className="rounded-md border bg-card">
-    <button className="flex w-full items-center justify-between p-4 text-left" onClick={() => setAberto((v) => !v)}>
+    <Button variant="ghost" aria-expanded={aberto} className="flex h-auto w-full items-center justify-between p-4 text-left" onClick={() => setAberto((v) => !v)}>
       <span className="text-sm font-semibold">{aberto ? "▾" : "▸"} Encargos de Atraso</span>
       <span className="text-sm tabular-nums">{brl(s("acrescimo"))}</span>
-    </button>
+    </Button>
     {aberto && <div className="space-y-4 border-t p-4">
       <div className="h-64"><ResponsiveContainer><ComposedChart data={graf}>
         <CartesianGrid vertical={false} stroke={CORES.borda} />
@@ -56,7 +61,7 @@ export function EncargosAtraso({ data }: { data: any }) {
           <th key={h} title={i === 7 || i === 8 ? DICA : undefined} className={cn(tableClasses.th, i >= 4 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
         {rows.map((r: any) => <tr key={r.id}>
-          <td className={tableClasses.td}>{r.pagador}</td><td className={tableClasses.td}>{un.get(r.contrato_id) ?? r.outra_receita ?? "—"}</td>
+          <td className={tableClasses.td}>{r.pagador} {r.natureza === "outros" && <span className="op-tag op-tag-gray ml-1" title={r.descricao ?? undefined}>Não Aluguel</span>}</td><td className={tableClasses.td}>{un.get(r.contrato_id) ?? r.outra_receita ?? "—"}</td>
           <td className={cn(tableClasses.td, "tabular-nums")}>{dt(r.data_vencimento)}</td><td className={cn(tableClasses.td, "tabular-nums")}>{dt(r.data_pagamento)}</td>
           <td className={tableClasses.num}>{r.dias_atraso}</td><td className={tableClasses.num}>{brl(r.valor_titulo)}</td><td className={tableClasses.num}>{brl(r.valor_pago)}</td>
           <td className={tableClasses.num} title={DICA}>{brl(r.multa)}</td><td className={tableClasses.num} title={DICA}>{brl(r.juros)}</td><td className={tableClasses.num}>{brl(r.acrescimo)}</td>

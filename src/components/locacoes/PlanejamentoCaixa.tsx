@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MESES_LONGOS, brl, dt } from "@/lib/locacoes";
 import { agruparLinhas, lerBoletos, mesesPlanejamento, pareceBoleto } from "@/lib/boletos";
+import { BoletosConferir } from "./BoletosConferir";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const db = supabase as any;
@@ -24,16 +25,18 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
   const atual = hoje.slice(0, 7);
   const meses = mesesPlanejamento(hoje);
   const [aberto, setAberto] = useState<string | null>(null);
-  const { data: q } = useQuery({
+  const { data: q, error: erroConsulta } = useQuery({
     queryKey: ["loc-planejamento", edificio, ano],
     queryFn: async () => {
-      const [p, b, o] = await Promise.all([
+      const [p, b, o, conferir] = await Promise.all([
         db.rpc("loc_planejamento_caixa", { p_edificio: edificio, p_ano: ano }),
-        db.from("loc_boletos").select("id,nosso_numero,pagador,documento,contrato_id,outra_receita,data_vencimento,valor_titulo,status,atualizado_em").eq("edificio_id", edificio).limit(10000),
+        db.from("loc_boletos").select("id,nosso_numero,pagador,documento,contrato_id,outra_receita,natureza,descricao,data_vencimento,valor_titulo,status,atualizado_em").eq("edificio_id", edificio).limit(10000),
         db.rpc("loc_planejamento_outras", { p_edificio: edificio, p_ano: ano }),
+        db.from("loc_v_boletos_a_conferir").select("*").eq("edificio_id", edificio).order("data_vencimento"),
       ]);
       if (p.error) throw p.error; if (b.error) throw b.error; if (o.error) throw o.error;
-      return { plan: p.data ?? [], boletos: b.data ?? [], outras: o.data ?? [] };
+      if (conferir.error) throw conferir.error;
+      return { plan: p.data ?? [], boletos: b.data ?? [], outras: o.data ?? [], conferir: conferir.data ?? [] };
     },
   });
   const info = useMemo(() => new Map<string, any>((data.contratosInfo ?? []).map((c: any) => [c.id, c])), [data.contratosInfo]);
@@ -63,6 +66,9 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
   const vencidos = (q?.boletos ?? []).filter((b: any) => b.status === "vencida" && String(b.data_vencimento).startsWith(String(ano)));
   const emAberto = vencidos.reduce((t: number, b: any) => t + Number(b.valor_titulo), 0);
   const atualizado = (q?.boletos ?? []).reduce((m: string, b: any) => (b.atualizado_em > m ? b.atualizado_em : m), "");
+  const dicaOutra = (nome: string, mes?: string) => (q?.boletos ?? [])
+    .filter((b: any) => (b.outra_receita ?? (b.natureza === "outros" ? "Outros Boletos" : null)) === nome && (!mes || String(b.data_vencimento).startsWith(mes)) && b.descricao)
+    .map((b: any) => `${b.nosso_numero}: ${b.descricao}`).join(" · ");
   const traco = (l: any, v: number) => l.corrente ? <span title={DICA_ATUAL}>—</span> : brl(v);
 
   const cards = [
@@ -70,12 +76,14 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
     { l: "Já Emitido", v: tot.emitido, d: `Somente boletos com status A Vencer · ${pctTxt(emitFut, tot.previsto)} do Previsto dos meses seguintes.` },
     { l: "Sem Boleto", v: tot.sem, d: "Previsto menos tudo que já tem boleto não cancelado no mês." },
     { l: "Fora do Boleto", v: tot.fora, d: "Contratos que não pagam por boleto (Município de Itajaí e Bradesco)." },
-    { l: "Outras Receitas", v: tot.outras, d: porOutra.size ? [...porOutra].map(([n, v]) => `${n}: ${brl(v)}`).join(" · ") : "Nenhum boleto A Vencer de Outras Receitas." },
+    { l: "Outras Receitas", v: tot.outras, d: porOutra.size ? [...porOutra].map(([n, v]) => `${n}: ${brl(v)}${dicaOutra(n) ? ` · ${dicaOutra(n)}` : ""}`).join(" · ") : "Nenhum boleto A Vencer de Outras Receitas." },
     { l: "Em Aberto", v: emAberto, d: "Posição do arquivo importado." },
   ];
 
   return <div className="space-y-4">
     {admin && <Importacao edificio={edificio} contratos={data.contratosInfo ?? []} outras={nomesOutras} boletos={q?.boletos ?? []} />}
+    {erroConsulta && <p role="alert" className="text-sm text-destructive">Não foi possível consultar os boletos: {erroConsulta.message}</p>}
+    <BoletosConferir edificio={edificio} itens={q?.conferir ?? []} info={info} admin={admin} />
     {atualizado && <p className="text-xs text-muted-foreground">Atualizado em <span className="tabular-nums">{dt(atualizado.slice(0, 10))}</span></p>}
     <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((c) => <div key={c.l} title={c.d} className="rounded-md border bg-card p-5">
@@ -122,7 +130,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
             {l.os.length > 0 && <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
               <th className={tableClasses.th}>Outras Receitas</th><th className={cn(tableClasses.th, "text-right")}>Emitido</th>
             </tr></thead><tbody>{l.os.map((r: any) => <tr key={r.outra_receita}>
-              <td className={tableClasses.td}>{r.outra_receita}</td><td className={tableClasses.num}>{brl(r.emitido)}</td>
+              <td className={tableClasses.td} title={dicaOutra(r.outra_receita, l.k)}>{r.outra_receita}</td><td className={tableClasses.num}>{brl(r.emitido)}</td>
             </tr>)}</tbody></table>}
           </td></tr>}
         </Fragment>)}
@@ -137,7 +145,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
       <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Pagador", "Unidade", "Vencimento", "Valor (R$)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 3 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{vencidos.sort((a: any, b: any) => a.data_vencimento.localeCompare(b.data_vencimento)).map((b: any) => <tr key={b.id}>
-        <td className={tableClasses.td}>{b.pagador}</td><td className={tableClasses.td}>{info.get(b.contrato_id)?.unidades ?? b.outra_receita ?? "—"}</td>
+        <td className={tableClasses.td}>{b.pagador}</td><td className={tableClasses.td} title={b.descricao ?? undefined}>{b.natureza === "outros" ? b.outra_receita ?? "Outros Boletos" : info.get(b.contrato_id)?.unidades ?? b.outra_receita ?? "—"}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(b.data_vencimento)}</td><td className={tableClasses.num}>{brl(b.valor_titulo)}</td>
       </tr>)}</tbody></table>
     </Bloco>}
@@ -152,7 +160,7 @@ function Importacao({ edificio, contratos, outras, boletos }: { edificio: string
   const [escolha, setEscolha] = useState<Record<string, string>>({});
   const semVinculo = useMemo(() => {
     const m = new Map<string, { pagador: string; documento: string; n: number }>();
-    for (const b of boletos) if (!b.contrato_id && !b.outra_receita && b.documento) {
+    for (const b of boletos) if (b.natureza !== "outros" && !b.contrato_id && !b.outra_receita && b.documento) {
       const x = m.get(b.documento) ?? { pagador: b.pagador, documento: b.documento, n: 0 }; x.n++; m.set(b.documento, x);
     }
     return [...m.values()];
