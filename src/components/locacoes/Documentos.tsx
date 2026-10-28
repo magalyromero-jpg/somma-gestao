@@ -13,7 +13,7 @@ import { VisorPdf } from "@/components/locacoes/VisorPdf";
 import { Button } from "@/components/ui/button";
 import { PropostaDocumento } from "@/components/locacoes/PropostaDocumento";
 import { Leitura, lerAutomaticamente } from "@/lib/leituraDocumento";
-import { dt } from "@/lib/locacoes";
+import { dt, LEITURA_DOCUMENTOS_ATIVA } from "@/lib/locacoes";
 
 const db = supabase as any;
 const BUCKET = "loc-docs";
@@ -80,7 +80,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
   const [revisando, setRevisando] = useState<{ leitura: Leitura; arquivo: Arquivo } | null>(null);
   const [iniciando, setIniciando] = useState<Set<string>>(new Set());
   const { data: leituras = [] } = useQuery<Leitura[]>({
-    queryKey: ["loc-leituras", edificioId], enabled: admin,
+    queryKey: ["loc-leituras", edificioId], enabled: admin && LEITURA_DOCUMENTOS_ATIVA,
     queryFn: async () => {
       const r = await db.from("loc_leituras_documento").select("*").eq("edificio_id", edificioId).order("criado_em", { ascending: false });
       if (r.error) throw r.error;
@@ -181,7 +181,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       if (e2) throw e2;
       atualizar(item.id, { estado: "enviado" });
       qc.invalidateQueries({ queryKey: ["loc-documentos", edificioId] });
-      if (admin && criado?.id && lerAutomaticamente(item.nome, imovel === SEM ? null : imovel)) void ler(criado.id);
+      if (LEITURA_DOCUMENTOS_ATIVA && admin && criado?.id && lerAutomaticamente(item.nome, imovel === SEM ? null : imovel)) void ler(criado.id);
     } catch (e) {
       atualizar(item.id, { estado: "erro", erro: (e as Error).message });
     }
@@ -331,7 +331,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
               <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => baixar(a)}>Baixar</button>
               {admin && <button className="text-xs font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setMovendo(a)}>Mover</button>}
               {admin && <button className="text-xs font-medium text-destructive underline-offset-2 hover:underline" onClick={() => setApagando(a)}>Apagar</button>}
-              {admin && a.pasta !== SEM && (a.documentoId ? (() => {
+              {LEITURA_DOCUMENTOS_ATIVA && admin && a.pasta !== SEM && (a.documentoId ? (() => {
                 const l = ultimaLeitura.get(a.documentoId);
                 if (!/\.pdf$/i.test(a.nome)) return <span className="text-xs text-muted-foreground">Leitura automática disponível somente para PDF</span>;
                 if (iniciando.has(a.documentoId) || l?.status === "lendo") return <span className="text-xs text-muted-foreground">Lendo…</span>;
@@ -345,7 +345,7 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
       </tbody></table></div>}
     </Bloco>
     <VisorPdf titulo={visor?.titulo ?? ""} blob={visor?.blob ?? null} onFechar={() => setVisor(null)} />
-    {admin && revisando && <PropostaDocumento key={revisando.leitura.id} leitura={revisando.leitura} nome={revisando.arquivo.nome}
+    {LEITURA_DOCUMENTOS_ATIVA && admin && revisando && <PropostaDocumento key={revisando.leitura.id} leitura={revisando.leitura} nome={revisando.arquivo.nome}
       imovel={imoveis.find(i => i.k === revisando.arquivo.pasta)?.cabecalho ?? "—"} data={data} onFechar={() => setRevisando(null)} />}
 
     {movendo && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => !ocupado && setMovendo(null)}>
