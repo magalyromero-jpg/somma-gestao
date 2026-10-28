@@ -14,6 +14,91 @@ export const pct = (n: number | null | undefined) => (n == null || !isFinite(n) 
 export const indiceLabel = (i: string | null | undefined) =>
   i === "MEDIA" ? "Média IPCA/IGP-M" : i === "IGPM" ? "IGP-M" : i === "FIXO" ? "Fixo" : i === "NENHUM" ? "Nenhum" : i ?? "—";
 
+export const pct1 = (n: number | null | undefined) =>
+  n == null || !isFinite(n) ? "—" : `${Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+
+/** Tooltip padrão do Valor Mensal Vigente (bruto, antes da retenção do Município) */
+export const DICA_VALOR_VIGENTE =
+  "Valor contratual vigente, antes da retenção de 4,8% do Município de Itajaí. O Fluxo de Caixa mostra o valor líquido.";
+
+export type CicloRenovacao = "a_vencer_120d" | "a_vencer_12m" | "vigente" | "sem_data";
+export const CICLOS_RENOVACAO: { chave: CicloRenovacao; label: string }[] = [
+  { chave: "a_vencer_120d", label: "Até 120 Dias" },
+  { chave: "a_vencer_12m", label: "De 121 Dias a 12 Meses" },
+  { chave: "vigente", label: "Acima de 12 Meses" },
+  { chave: "sem_data", label: "Vencido ou Sem Data" },
+];
+
+export type ContratoRenovacao = {
+  contrato_id: string;
+  unidades: string;
+  locatario: string;
+  valor: number;
+  indice: string;
+  ciclo: CicloRenovacao;
+  fim: string | null;
+  dias: number | null;
+  pct: number;
+  pctAcum: number;
+  classe: "A" | "B" | "C";
+};
+
+/**
+ * Base única de renovações (Visão Geral e aba Renovações): contratos de d.linhas,
+ * Valor Mensal Vigente bruto, ciclo da loc_v_ciclo e índice (sem índice = Fixo).
+ * Ordenada por valor; % e % acumulado sempre sobre o total da lista completa.
+ */
+export function baseRenovacoes(linhas: any[]) {
+  const lista: ContratoRenovacao[] = linhas
+    .map((l: any) => {
+      const bruto = l.ciclo?.ciclo;
+      const ciclo: CicloRenovacao = bruto === "a_vencer_120d" || bruto === "a_vencer_12m" || bruto === "vigente" ? bruto : "sem_data";
+      const ind = l.indice;
+      return {
+        contrato_id: l.contrato_id,
+        unidades: l.unidades ?? "—",
+        locatario: l.locatario ?? "—",
+        valor: Number(l.valor_vigente ?? 0),
+        indice: !ind || ind === "NENHUM" ? "FIXO" : String(ind),
+        ciclo,
+        fim: l.ciclo?.fim_contrato ?? l.fim ?? null,
+        dias: l.ciclo?.dias_para_o_fim ?? null,
+        pct: 0, pctAcum: 0, classe: "C" as const,
+      };
+    })
+    .sort((a, b) => b.valor - a.valor || a.unidades.localeCompare(b.unidades, "pt-BR", { numeric: true }));
+  const total = lista.reduce((s, c) => s + c.valor, 0);
+  let acum = 0;
+  for (const c of lista) {
+    c.pct = total ? (c.valor / total) * 100 : 0;
+    c.classe = acum < 80 ? "A" : acum < 95 ? "B" : "C";
+    acum += c.pct;
+    c.pctAcum = acum;
+  }
+  const porCiclo = CICLOS_RENOVACAO.map((c) => {
+    const itens = lista.filter((x) => x.ciclo === c.chave);
+    const valor = itens.reduce((s, x) => s + x.valor, 0);
+    return { ...c, n: itens.length, valor, pct: total ? (valor / total) * 100 : 0 };
+  }).filter((c) => c.chave !== "sem_data" || c.n > 0);
+  const porIndiceMap = new Map<string, { n: number; valor: number }>();
+  for (const c of lista) {
+    const g = porIndiceMap.get(c.indice) ?? { n: 0, valor: 0 };
+    g.n += 1; g.valor += c.valor;
+    porIndiceMap.set(c.indice, g);
+  }
+  const porIndice = [...porIndiceMap.entries()]
+    .map(([indice, g]) => ({ indice, label: indiceLabel(indice), ...g, pct: total ? (g.valor / total) * 100 : 0 }))
+    .sort((a, b) => b.valor - a.valor);
+  const top10 = lista.slice(0, 10);
+  return {
+    lista, total, porCiclo, porIndice, top10,
+    nContratos: lista.length,
+    vencem120: porCiclo.find((c) => c.chave === "a_vencer_120d") ?? { n: 0, valor: 0 },
+    vencem12m: porCiclo.find((c) => c.chave === "a_vencer_12m") ?? { n: 0, valor: 0 },
+    top10Valor: top10.reduce((s, c) => s + c.valor, 0),
+  };
+}
+
 /** "YYYY-MM" somado de n meses */
 export function addMes(key: string, n: number) {
   const [y, m] = key.split("-").map(Number);
