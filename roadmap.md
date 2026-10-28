@@ -1,3 +1,7 @@
+# Multa e Juros no Realizado
+- [ ] Criar view de encargos sem duplicar pagamentos importados.
+- [ ] Compartilhar totais entre Fluxo de Caixa e Visão Geral e conferir julho/2026.
+
 # Proteção Bitrix
 - [ ] Guardar webhook em secret e remover acesso ao valor nas três funções e na tela.
 - [ ] Remover registro legado e restringir configurações sensíveis.
