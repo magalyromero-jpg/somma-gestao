@@ -9,7 +9,7 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MESES_LONGOS, brl, dt } from "@/lib/locacoes";
-import { agruparLinhas, lerBoletos, mesesPlanejamento } from "@/lib/boletos";
+import { agruparLinhas, lerBoletos, mesesPlanejamento, pareceBoleto } from "@/lib/boletos";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const db = supabase as any;
@@ -141,14 +141,20 @@ function Importacao({ edificio, contratos, boletos }: { edificio: string; contra
       const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
       const linhas: string[] = [];
       for (let p = 1; p <= pdf.numPages; p++) {
-        const tc = await (await pdf.getPage(p)).getTextContent();
-        linhas.push(...agruparLinhas((tc.items as any[]).map((i) => ({ str: i.str, x: i.transform[4], y: i.transform[5] }))));
+        const page = await pdf.getPage(p);
+        const vp = page.getViewport({ scale: 1 });
+        const tc = await page.getTextContent();
+        linhas.push(...agruparLinhas((tc.items as any[]).filter((i) => typeof i.str === "string").map((i) => {
+          const t = pdfjsLib.Util.transform(vp.transform, i.transform);
+          return { str: i.str, x: t[4], y: t[5] };
+        })));
       }
       const lidos = lerBoletos(linhas);
-      if (!lidos.length) { setMsg("Nenhum boleto encontrado no arquivo."); return; }
+      if (!lidos.length) { setMsg("Não reconheci o formato deste PDF. Envie a exportação de movimentações de cobrança do banco."); return; }
+      const naoLidas = linhas.filter(pareceBoleto).length - lidos.length;
       const { data, error } = await db.rpc("loc_importar_boletos", { p_edificio: edificio, p_boletos: lidos, p_arquivo: f.name });
       if (error) throw error;
-      setMsg(`${lidos.length} Boletos Lidos · ${data.novos} Novos · ${data.atualizados} Atualizados · ${data.sem_vinculo} Sem Vínculo`);
+      setMsg(`${lidos.length} Boletos Lidos · ${data.novos} Novos · ${data.atualizados} Atualizados · ${data.sem_vinculo} Sem Vínculo${naoLidas > 0 ? ` · ${naoLidas} linhas não foram lidas` : ""}`);
       recarregar();
     } catch (e: any) { setMsg(`Não foi possível importar: ${e.message ?? e}`); }
     finally { setOcupado(false); if (input.current) input.current.value = ""; }
