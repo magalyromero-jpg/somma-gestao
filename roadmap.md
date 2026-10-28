@@ -1,6 +1,6 @@
 # Multa e Juros no Realizado
-- [ ] Criar view de encargos sem duplicar pagamentos importados.
-- [ ] Compartilhar totais entre Fluxo de Caixa e Visão Geral e conferir julho/2026.
+- [x] Criar view de encargos sem duplicar pagamentos importados.
+- [x] Compartilhar totais entre Fluxo de Caixa e Visão Geral e conferir julho/2026: Multa 132,75, Juros 82,02; acumulado 5.427.073,10 em ambas as telas, inclusive visualização Cliente; outubro aguarda importação.
 
 # Proteção Bitrix
 - [ ] Guardar webhook em secret e remover acesso ao valor nas três funções e na tela.
