@@ -15,7 +15,8 @@ import { Documentos } from "@/components/locacoes/Documentos";
 import { FluxoCaixa } from "@/components/locacoes/FluxoCaixa";
 import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
-import { MESES, MESES_LONGOS, addMes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
+import { MESES, MESES_LONGOS, addMes, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
+import { BlocoCicloVencimento, BlocoIndiceReajuste, Renovacoes } from "@/components/locacoes/Renovacoes";
 import { reajusteRealizado } from "@/lib/leituraDocumento";
 
 const db = supabase as any;
@@ -46,7 +47,7 @@ async function carregar(edificioId: string | undefined, admin: boolean) {
     db.from("loc_contratos").select("id,locatario_id,status,tipo,dia_vencimento,retencao_pct,data_inicio,no_orcamento").eq("edificio_id", id),
     db.from("loc_locatarios").select("id,nome"),
     db.from("loc_v_encerrados").select("*").eq("edificio_id", id),
-    db.from("loc_v_ciclo").select("contrato_id,ciclo,dias_para_o_fim").eq("edificio_id", id),
+    db.from("loc_v_ciclo").select("contrato_id,ciclo,dias_para_o_fim,fim_contrato").eq("edificio_id", id),
     db.from("loc_v_ocupacao").select("unidade_id,nome,tipo,situacao").eq("edificio_id", id),
     db.from("loc_pagamentos").select("id,codigo,imovel_nome,data_vencimento,data_pagamento,valor_liquido,contrato_id,dias_atraso").eq("edificio_id", id).order("data_pagamento", { ascending: false }).limit(5000),
     db.rpc("loc_orcado_caixa", { p_edificio: id, p_ano: ano }),
@@ -140,7 +141,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="prazo">Prazo de Recebimento</TabsTrigger>
-          <TabsTrigger value="contratos">Contratos</TabsTrigger>
+<TabsTrigger value="contratos">Contratos</TabsTrigger>
+          <TabsTrigger value="renovacoes">Renovações</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
@@ -178,6 +180,8 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           </Bloco>
           {admin && <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>}
         </TabsContent>
+
+<TabsContent value="renovacoes" className="space-y-4"><Renovacoes linhas={d.linhas} /></TabsContent>
 
         <TabsContent value="documentos" className="space-y-4"><Documentos data={data} admin={admin} /></TabsContent>
 
@@ -238,7 +242,8 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
   const hojeKey = String(data.hoje ?? new Date().toISOString()).slice(0, 7);
   const limiteKey = addMes(hojeKey, 4);
   const [la, lm] = limiteKey.split("-").map(Number);
-  const vencem = d.linhas.filter((l: any) => ["a_vencer_12m", "a_vencer_120d"].includes(l.ciclo?.ciclo)).length;
+const vencem = d.linhas.filter((l: any) => ["a_vencer_12m", "a_vencer_120d"].includes(l.ciclo?.ciclo)).length;
+  const renov = useMemo(() => baseRenovacoes(d.linhas), [d.linhas]);
 
   // próximos reajustes (somente valor certo)
   const vigAtual = new Map<string, any>();
@@ -288,8 +293,10 @@ function VisaoGeral({ data, d }: { data: DadosZen; d: any }) {
       </Card>
       {data.admin && saldo.condominio > 0.004 && <Card label="Condomínio em Aberto"><Valor>{brl(saldo.condominio)}</Valor></Card>}
       <Card label={`Reajustes até ${MESES[lm - 1]}/${la}`} dica={`${nReaj} contratos`}><Valor>{nReaj}</Valor></Card>
-      <Card label="Vencimentos em 12 Meses"><Valor>{vencem}</Valor></Card>
+<Card label="Vencimentos em 12 Meses" dica={`Até 120 Dias: ${renov.vencem120.n} · De 121 Dias a 12 Meses: ${renov.vencem12m.n}`}><Valor>{vencem}</Valor></Card>
     </div>
+    <BlocoCicloVencimento base={renov} />
+    <BlocoIndiceReajuste base={renov} />
     <Bloco titulo="Próximos Reajustes">
       {proximos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum reajuste com valor definido nos próximos meses.</p> :
         <div className={tableClasses.wrap}><table className={tableClasses.table}><thead><tr className={tableClasses.head}>
