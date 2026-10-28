@@ -4,6 +4,42 @@ export const LEITURA_DOCUMENTOS_ATIVA = false;
 export const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 export const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
+export const DICA_ENCARGOS_REALIZADOS = "O banco informa só o total pago a mais. Juros estimados em 1% ao mês, proporcional aos dias de atraso; multa é o restante.";
+
+type PagamentoRealizado = { contrato_id: string | null; data_pagamento: string; valor_liquido: number | string | null; imovel_nome?: string | null };
+type EncargoRealizado = { competencia: string | null; multa: number | string | null; juros: number | string | null; ja_no_realizado: boolean | null };
+
+/** Base única do Realizado: janela importada do Lidderar e encargos já deduplicados pela view. */
+export function baseRealizado(pagamentos: PagamentoRealizado[], encargos: EncargoRealizado[], ano: number) {
+  const prefixo = String(ano);
+  const ultimoMes = pagamentos.reduce((max, p) => p.data_pagamento.startsWith(prefixo) && p.data_pagamento.slice(0, 7) > max ? p.data_pagamento.slice(0, 7) : max, `${prefixo}-00`);
+  const meses = MESES.map((_, i) => {
+    const key = `${prefixo}-${String(i + 1).padStart(2, "0")}`;
+    const fechado = key <= ultimoMes;
+    let contratos = 0, avulsas = 0, multa = 0, juros = 0;
+    if (fechado) {
+      for (const p of pagamentos) if (p.data_pagamento.startsWith(key)) {
+        if (p.contrato_id) contratos += Number(p.valor_liquido ?? 0);
+        else avulsas += Number(p.valor_liquido ?? 0);
+      }
+      for (const e of encargos) if (e.ja_no_realizado === false && e.competencia?.startsWith(key)) {
+        multa += Number(e.multa ?? 0); juros += Number(e.juros ?? 0);
+      }
+    }
+    return { key, fechado, contratos, avulsas, multa, juros, total: contratos + avulsas + multa + juros };
+  });
+  const nomes = [...new Set(pagamentos.filter((p) => !p.contrato_id).map((p) => String(p.imovel_nome ?? "Outros").replace(/^Zen Tower - /, "")))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const outras = nomes.map((un) => ({
+    un, loc: "Receita avulsa", dica: undefined as string | undefined,
+    real: meses.map((m) => m.fechado ? pagamentos.filter((p) => !p.contrato_id && String(p.imovel_nome ?? "Outros").replace(/^Zen Tower - /, "") === un && p.data_pagamento.startsWith(m.key)).reduce((s, p) => s + Number(p.valor_liquido ?? 0), 0) : null),
+  }));
+  for (const campo of ["multa", "juros"] as const) outras.push({
+    un: campo === "multa" ? "Multa" : "Juros", loc: "Receita de atraso", dica: DICA_ENCARGOS_REALIZADOS,
+    real: meses.map((m) => m.fechado ? m[campo] : null),
+  });
+  return { meses, outras, ultimoMes };
+}
+
 export const formatoPagamentoPermitido = (nome: string) => /\.(xlsx|xls|csv)$/i.test(nome);
 
 export const brl = (n: number | null | undefined) =>

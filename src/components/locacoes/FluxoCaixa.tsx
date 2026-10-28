@@ -154,14 +154,9 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const totaisRef = Array.from({ length: 12 }, (_, i) => unidades.reduce((s, x) => s + x.ref[i], 0));
   const totaisOrc = Array.from({ length: 12 }, (_, i) => unidades.reduce((s, x) => s + x.orc[i], 0));
   const totalRef = totaisRef.reduce((s, n) => s + n, 0), totalOrc = totaisOrc.reduce((s, n) => s + n, 0);
-  const fmt = (v: number | null) => (v == null || Math.round(v) === 0 ? "—" : inteiro(v));
-  // Outras Receitas: pagamentos sem contrato, agrupados por imovel_nome
-  const porOutra = new Map<string, any[]>();
-  for (const p of data.pags ?? []) if (p.contrato_id == null) { const k = String(p.imovel_nome ?? "Outros").replace(/^Zen Tower - /, ""); porOutra.set(k, [...(porOutra.get(k) ?? []), p]); }
-  const outras = [...porOutra.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR")).map(([un, ps]) => ({
-    un, real: Array.from({ length: 12 }, (_, i) => (i + 1 <= u ? ps.filter((p) => String(p.data_pagamento).startsWith(mk(i + 1))).reduce((s, p) => s + Number(p.valor_liquido ?? 0), 0) : null)),
-  }));
-  const linhaUn = (un: string, loc: string, v: (number | null)[]) => <tr key={un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{un}</td><td className={cn(tableClasses.td, "zen-txt")}>{loc}</td>{v.map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(v.reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>;
+  const fmt = (v: number | null) => (v == null || Math.abs(v) < 0.005 ? "—" : visao === "real" ? num2(v) : inteiro(v));
+  const outras = data.realizado.outras as { un: string; loc: string; dica?: string; real: (number | null)[] }[];
+  const linhaUn = (un: string, loc: string, v: (number | null)[], dica?: string) => <tr key={un}><td title={dica} className={cn(tableClasses.td, "font-medium zen-un")}>{un}</td><td className={cn(tableClasses.td, "zen-txt")}>{loc}</td>{v.map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(v.reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>;
   const linhaTot = (rot: string, cols: (number | null)[][]) => <tr className="font-bold"><td className={tableClasses.td}>{rot}</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => { const col = cols.map((v) => v[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(cols.reduce((s, v) => s + v.reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>;
   const mensal = (lista: typeof unidades, get: (x: typeof unidades[number]) => (number | null)[], loc: (x: typeof unidades[number]) => string, comOutras = false) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
       <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
@@ -169,14 +164,14 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
       {lista.map((x) => linhaUn(x.un, loc(x), get(x)))}
       {comOutras && outras.length > 0 && <>
         <tr className="bg-muted"><td className={cn(tableClasses.td, "font-bold")} colSpan={15}>Outras Receitas</td></tr>
-        {outras.map((o) => linhaUn(o.un, "Receita avulsa", o.real))}
+        {outras.map((o) => linhaUn(o.un, o.loc, o.real, o.dica))}
         {linhaTot("Subtotal Outras Receitas", outras.map((o) => o.real))}
       </>}
       {linhaTot("Total", [...lista.map(get), ...(comOutras ? outras.map((o) => o.real) : [])])}
     </tbody></table></div>;
   const comOrc = unidades.filter((x) => x.temOrc);
   const ox = unidades.map((x) => ({ x, o: [...ms].reduce((s, m) => s + x.orc[m - 1], 0), r: [...ms].reduce((s, m) => s + (x.real[m - 1] ?? 0), 0), f: [...ms].reduce((s, m) => s + (x.ref[m - 1] ?? 0), 0) })).filter(({ o, r, f }) => o || r || f);
-  const ox2 = outras.map((o) => ({ un: o.un, r: [...ms].reduce((s, m) => s + (o.real[m - 1] ?? 0), 0) }));
+  const ox2 = outras.map((o) => ({ un: o.un, loc: o.loc, dica: o.dica, r: [...ms].reduce((s, m) => s + (o.real[m - 1] ?? 0), 0) }));
   const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0) + ox2.reduce((s, y) => s + y.r, 0);
   return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
     {visao === "or" && janelaTxt && <span className="text-xs text-muted-foreground">{janelaTxt}</span>}
@@ -200,7 +195,7 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
         <td className={cn(tableClasses.num, r - f < -0.004 ? "text-destructive" : "text-success")}>{f ? pct((r - f) / f * 100) : ""}</td>
       </tr>)}
       {ox2.length > 0 && <tr className="bg-muted"><td className={cn(tableClasses.td, "font-bold")} colSpan={7}>Outras Receitas</td></tr>}
-      {ox2.map((o) => <tr key={o.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{o.un}</td><td className={cn(tableClasses.td, "zen-txt")}>Receita avulsa</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>{o.r ? brl(o.r) : "—"}</td><td className={tableClasses.num}></td><td className={tableClasses.num}></td></tr>)}
+      {ox2.map((o) => <tr key={o.un}><td title={o.dica} className={cn(tableClasses.td, "font-medium zen-un")}>{o.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{o.loc}</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>—</td><td className={tableClasses.num}>{o.r ? brl(o.r) : "—"}</td><td className={tableClasses.num}></td><td className={tableClasses.num}></td></tr>)}
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td}></td><td className={tableClasses.num}>{brl(tO)}</td><td className={tableClasses.num}>{brl(tF)}</td><td className={tableClasses.num}>{brl(tR)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{brl(tR - tF)}</td><td className={cn(tableClasses.num, tR - tF < -0.004 ? "text-destructive" : "text-success")}>{tF ? pct((tR - tF) / tF * 100) : ""}</td></tr>
     </tbody></table></div>}
   </Bloco>;
