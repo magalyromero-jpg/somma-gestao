@@ -94,14 +94,17 @@ export function Documentos({ data, admin }: { data: any; admin: boolean }) {
     if (iniciando.has(documentoId)) return;
     setIniciando(s => new Set(s).add(documentoId));
     try {
-      const { data: resposta, error } = await supabase.functions.invoke("ler-documento-locacao", { body: { documento_id: documentoId } });
-      if (error) {
-        const context = (error as unknown as { context?: Response }).context;
-        const details = context ? await context.json().catch(() => null) : null;
-        throw new Error(details?.erro ?? error.message);
+      const { data: sess } = await supabase.auth.getSession();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ler-documento-locacao`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token ?? ""}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ documento_id: documentoId }),
+      });
+      if (!resp.ok || !resp.body) {
+        const details = await resp.json().catch(() => null);
+        throw new Error(details?.erro ?? `A leitura falhou (HTTP ${resp.status})`);
       }
-      if (!(resposta instanceof ReadableStream)) throw new Error(resposta?.erro ?? "A leitura não retornou resposta");
-      const reader = resposta.getReader(), decoder = new TextDecoder();
+      const reader = resp.body.getReader(), decoder = new TextDecoder();
       let buffer = "";
       while (true) {
         const { done, value } = await reader.read(); if (done) break;
