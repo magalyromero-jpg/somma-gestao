@@ -1,3 +1,6 @@
+/** Liga/desliga a leitura automática de documentos na tela (banco e funções ficam intactos). */
+export const LEITURA_DOCUMENTOS_ATIVA = false;
+
 export const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 export const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
