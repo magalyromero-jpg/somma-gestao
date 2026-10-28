@@ -20,7 +20,7 @@ describe("leitura de boletos", () => {
   it("agrupa itens pela mesma altura, da esquerda para a direita", () => {
     expect(agruparLinhas([{ str: "C", x: 10, y: 120 }, { str: "B", x: 50, y: 100 }, { str: "A", x: 10, y: 100.4 }, { str: " ", x: 5, y: 100 }])).toEqual(["A B", "C"]);
   });
-  it("planejamento vai do mês seguinte até dezembro", () => {
-    expect(mesesPlanejamento("2026-10-28")).toEqual(["2026-11", "2026-12"]);
+  it("planejamento vai do mês atual até dezembro", () => {
+    expect(mesesPlanejamento("2026-10-28")).toEqual(["2026-10", "2026-11", "2026-12"]);
   });
 });

@@ -158,7 +158,7 @@ function Importacao({ edificio, contratos, outras, boletos }: { edificio: string
     return [...m.values()];
   }, [boletos]);
   const opcoes = [...contratos].sort((a, b) => a.unidades.localeCompare(b.unidades, "pt-BR", { numeric: true }));
-  const recarregar = () => qc.invalidateQueries({ queryKey: ["loc-planejamento"] });
+  const recarregar = () => { qc.invalidateQueries({ queryKey: ["loc-planejamento"] }); qc.invalidateQueries({ queryKey: ["loc-encargos"] }); };
 
   async function importar(f: File) {
     if (!f.name.toLowerCase().endsWith(".pdf")) { setMsg("Envie somente arquivo .pdf."); return; }
@@ -187,10 +187,10 @@ function Importacao({ edificio, contratos, outras, boletos }: { edificio: string
   }
 
   async function vincular(documento: string) {
-    const contrato = escolha[documento]; if (!contrato) return;
+    const v = escolha[documento]; if (!v) return;
     setOcupado(true);
-    const a = await db.from("loc_pagador_vinculo").upsert({ edificio_id: edificio, documento, contrato_id: contrato });
-    const b = a.error ? a : await db.from("loc_boletos").update({ contrato_id: contrato }).eq("edificio_id", edificio).eq("documento", documento);
+    const ehOutra = v.startsWith("o:");
+    const b = await db.rpc("loc_vincular_pagador", { p_edificio: edificio, p_documento: documento, p_contrato: ehOutra ? null : v.slice(2), p_outra: ehOutra ? v.slice(2) : null });
     setOcupado(false);
     if (b.error) setMsg(`Não foi possível vincular: ${b.error.message}`); else recarregar();
   }
@@ -208,8 +208,9 @@ function Importacao({ edificio, contratos, outras, boletos }: { edificio: string
       {semVinculo.map((p) => <div key={p.documento} className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium">{p.pagador}</span><span className="text-muted-foreground tabular-nums">{p.documento} · {p.n} boletos</span>
         <select className="h-8 rounded-md border bg-background px-2 text-sm" value={escolha[p.documento] ?? ""} onChange={(e) => setEscolha({ ...escolha, [p.documento]: e.target.value })}>
-          <option value="">Contrato…</option>
-          {opcoes.map((c) => <option key={c.id} value={c.id}>{c.unidades} · {c.locatario}</option>)}
+          <option value="">Contrato ou Outra Receita…</option>
+          <optgroup label="Contratos">{opcoes.map((c) => <option key={c.id} value={"c:" + c.id}>{c.unidades} · {c.locatario}</option>)}</optgroup>
+          {outras.length > 0 && <optgroup label="Outras Receitas">{outras.map((o) => <option key={o} value={"o:" + o}>{o}</option>)}</optgroup>}
         </select>
         <Button size="sm" variant="outline" disabled={!escolha[p.documento] || ocupado} onClick={() => vincular(p.documento)}>Vincular</Button>
       </div>)}
