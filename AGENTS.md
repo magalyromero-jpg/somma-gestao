@@ -5,3 +5,4 @@
 - Freeze budget retention separately from contractual retention and preserve all budget vigências/degraus on document application so forecast changes cannot change the budget.
 - Read bank boleto PDF exports in the browser with a fixed-rule parser (src/lib/boletos.ts), never AI; boleto principal never changes Orçado, Reforecast or Realizado.
 - Aggregate realized receipts in src/lib/locacoes.ts for both overview and cash flow; only nonduplicated paid late fees from the security-invoker view enter imported-month Realizado, never budget or forecast.
+- Store boleto nature per boleto and classify through an authorized RPC; imports must preserve that classification so subsequent bank exports cannot reintroduce non-rent charges into realized rent.

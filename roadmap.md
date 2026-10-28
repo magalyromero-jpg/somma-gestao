@@ -1,3 +1,8 @@
+# Natureza dos boletos
+- [x] Adicionar classificação por boleto e conferência com tolerância de R$ 2,00.
+- [x] Separar Não É Aluguel no planejamento e Realizado, preservando detalhe e reimportação.
+- [x] Conferir Compra de cadeiras pela tela: restam NAC e DHL; julho R$ 674.179,93, detalhe R$ 2.844,19 e novembro preservado; 16 testes passaram.
+
 # Multa e Juros no Realizado
 - [x] Criar view de encargos sem duplicar pagamentos importados.
 - [x] Compartilhar totais entre Fluxo de Caixa e Visão Geral e conferir julho/2026: Multa 132,75, Juros 82,02; acumulado 5.427.073,10 em ambas as telas, inclusive visualização Cliente; outubro aguarda importação.
