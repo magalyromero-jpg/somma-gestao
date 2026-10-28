@@ -3769,30 +3769,6 @@ export type Database = {
           valor_pago: number | null
           valor_titulo: number | null
         }
-        Insert: {
-          contrato_id?: string | null
-          data_vencimento?: string | null
-          edificio_id?: string | null
-          id?: string | null
-          nosso_numero?: string | null
-          pagador?: string | null
-          previsto_mes?: never
-          status?: string | null
-          valor_pago?: number | null
-          valor_titulo?: number | null
-        }
-        Update: {
-          contrato_id?: string | null
-          data_vencimento?: string | null
-          edificio_id?: string | null
-          id?: string | null
-          nosso_numero?: string | null
-          pagador?: string | null
-          previsto_mes?: never
-          status?: string | null
-          valor_pago?: number | null
-          valor_titulo?: number | null
-        }
         Relationships: [
           {
             foreignKeyName: "loc_boletos_contrato_id_fkey"

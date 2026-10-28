@@ -232,6 +232,13 @@
       "when": 1793216013332,
       "tag": "0032_natureza_boletos",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793216230396,
+      "tag": "0033_otimizar_conferencia_boletos",
+      "breakpoints": true
     }
   ]
 }
