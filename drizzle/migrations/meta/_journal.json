@@ -204,6 +204,13 @@
       "when": 1792606266901,
       "tag": "0028_leitura_documentos_propostas_protegidas",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793197725991,
+      "tag": "0029_boletos_planejamento_encargos",
+      "breakpoints": true
     }
   ]
 }
