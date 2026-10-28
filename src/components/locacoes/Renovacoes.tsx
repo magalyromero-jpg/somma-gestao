@@ -134,7 +134,7 @@ export function Renovacoes({ linhas }: { linhas: any[] }) {
             <Tooltip
               contentStyle={chartTooltipStyle}
               formatter={(v: number, _n, item: any) => {
-                const c = item.payload as ContratoRenovacao;
+                const c = item.payload as ContratoRenovacao & { rotulo: string };
                 return [`${brl(v)} · ${pct1(c.pct)} da receita · ${pct1(c.pctAcum)} acumulado · Classe ${c.classe} · Vencimento ${dt(c.fim)}`, c.rotulo];
               }}
             />
