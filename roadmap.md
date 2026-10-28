@@ -1,3 +1,8 @@
+# Natureza dos boletos
+- [ ] Adicionar classificação por boleto e conferência com tolerância de R$ 2,00.
+- [ ] Separar Não É Aluguel no planejamento e Realizado, preservando detalhe e reimportação.
+- [ ] Conferir classificação de Compra de cadeiras e valores de julho e novembro nas telas.
+
 # Multa e Juros no Realizado
 - [x] Criar view de encargos sem duplicar pagamentos importados.
 - [x] Compartilhar totais entre Fluxo de Caixa e Visão Geral e conferir julho/2026: Multa 132,75, Juros 82,02; acumulado 5.427.073,10 em ambas as telas, inclusive visualização Cliente; outubro aguarda importação.
