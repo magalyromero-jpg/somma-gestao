@@ -14,111 +14,137 @@ import { agruparLinhas, lerBoletos, mesesPlanejamento, pareceBoleto } from "@/li
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const db = supabase as any;
 const pctTxt = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : "—");
+const DICA_ATUAL = "Mês em andamento: o que já foi pago está no Realizado.";
 const nomeMes = (k: string) => `${MESES_LONGOS[Number(k.slice(5, 7)) - 1]}/${k.slice(0, 4)}`;
 
 export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }) {
   const edificio = data.edificio.id as string;
   const hoje = new Date().toISOString().slice(0, 10);
   const ano = Number(hoje.slice(0, 4));
+  const atual = hoje.slice(0, 7);
   const meses = mesesPlanejamento(hoje);
   const [aberto, setAberto] = useState<string | null>(null);
   const { data: q } = useQuery({
     queryKey: ["loc-planejamento", edificio, ano],
     queryFn: async () => {
-      const [p, b] = await Promise.all([
+      const [p, b, o] = await Promise.all([
         db.rpc("loc_planejamento_caixa", { p_edificio: edificio, p_ano: ano }),
-        db.from("loc_boletos").select("id,nosso_numero,pagador,documento,contrato_id,data_vencimento,valor_titulo,status,atualizado_em").eq("edificio_id", edificio).limit(10000),
+        db.from("loc_boletos").select("id,nosso_numero,pagador,documento,contrato_id,outra_receita,data_vencimento,valor_titulo,status,atualizado_em").eq("edificio_id", edificio).limit(10000),
+        db.rpc("loc_planejamento_outras", { p_edificio: edificio, p_ano: ano }),
       ]);
-      if (p.error) throw p.error; if (b.error) throw b.error;
-      return { plan: p.data ?? [], boletos: b.data ?? [] };
+      if (p.error) throw p.error; if (b.error) throw b.error; if (o.error) throw o.error;
+      return { plan: p.data ?? [], boletos: b.data ?? [], outras: o.data ?? [] };
     },
   });
   const info = useMemo(() => new Map<string, any>((data.contratosInfo ?? []).map((c: any) => [c.id, c])), [data.contratosInfo]);
+  const nomesOutras = useMemo(() => [...new Set<string>((data.pags ?? []).filter((p: any) => !p.contrato_id && p.imovel_nome)
+    .map((p: any) => String(p.imovel_nome).replace(/^Zen Tower\s*-\s*/i, "").trim()))].sort((a, b) => a.localeCompare(b, "pt-BR")), [data.pags]);
   const plan = q?.plan ?? [];
+  const outras = q?.outras ?? [];
   const linhas = meses.map((k) => {
+    const corrente = k === atual;
     const rs = plan.filter((r: any) => String(r.mes).startsWith(k));
+    const os = outras.filter((r: any) => String(r.mes).startsWith(k) && Number(r.emitido) > 0);
     const s = (f: (r: any) => number) => rs.reduce((t: number, r: any) => t + f(r), 0);
-    const fora = s((r) => (r.fora_boleto ? Number(r.previsto) : 0));
-    return { k, rs, previsto: s((r) => Number(r.previsto)), emitido: s((r) => Number(r.emitido)), fora, sem: s((r) => Number(r.sem_boleto)), aberto: s((r) => Number(r.em_aberto)) };
+    const outrasV = os.reduce((t: number, r: any) => t + Number(r.emitido), 0);
+    const previsto = corrente ? 0 : s((r) => Number(r.previsto));
+    const emitido = s((r) => Number(r.emitido));
+    return { k, corrente, rs, os, previsto, emitido, fora: corrente ? 0 : s((r) => (r.fora_boleto ? Number(r.previsto) : 0)),
+      sem: corrente ? 0 : s((r) => Number(r.sem_boleto)), outras: outrasV,
+      aberto: s((r) => Number(r.em_aberto)) + outras.filter((r: any) => String(r.mes).startsWith(k)).reduce((t: number, r: any) => t + Number(r.em_aberto), 0),
+      caixa: (corrente ? emitido : previsto) + outrasV };
   });
-  const tot = linhas.reduce((t, l) => ({ previsto: t.previsto + l.previsto, emitido: t.emitido + l.emitido, fora: t.fora + l.fora, sem: t.sem + l.sem }), { previsto: 0, emitido: 0, fora: 0, sem: 0 });
+  const soma = (f: (l: any) => number) => linhas.reduce((t, l) => t + f(l), 0);
+  const tot = { previsto: soma((l) => l.previsto), emitido: soma((l) => l.emitido), fora: soma((l) => l.fora), sem: soma((l) => l.sem), outras: soma((l) => l.outras), caixa: soma((l) => l.caixa), aberto: soma((l) => l.aberto) };
+  const futuros = linhas.filter((l) => !l.corrente);
+  const emitFut = futuros.reduce((t, l) => t + l.emitido, 0);
+  const porOutra = new Map<string, number>();
+  for (const l of linhas) for (const r of l.os) porOutra.set(r.outra_receita, (porOutra.get(r.outra_receita) ?? 0) + Number(r.emitido));
   const vencidos = (q?.boletos ?? []).filter((b: any) => b.status === "vencida" && String(b.data_vencimento).startsWith(String(ano)));
   const emAberto = vencidos.reduce((t: number, b: any) => t + Number(b.valor_titulo), 0);
   const atualizado = (q?.boletos ?? []).reduce((m: string, b: any) => (b.atualizado_em > m ? b.atualizado_em : m), "");
+  const traco = (l: any, v: number) => l.corrente ? <span title={DICA_ATUAL}>—</span> : brl(v);
 
   const cards = [
-    { l: "Previsto", v: tot.previsto, d: "Previsto contratual dos meses exibidos." },
-    { l: "Já Emitido", v: tot.emitido, d: `Somente boletos com status A Vencer · ${pctTxt(tot.emitido, tot.previsto)} do Previsto.` },
+    { l: "Previsto", v: tot.previsto, d: "Previsto contratual dos meses seguintes." },
+    { l: "Já Emitido", v: tot.emitido, d: `Somente boletos com status A Vencer · ${pctTxt(emitFut, tot.previsto)} do Previsto dos meses seguintes.` },
     { l: "Sem Boleto", v: tot.sem, d: "Previsto menos tudo que já tem boleto não cancelado no mês." },
     { l: "Fora do Boleto", v: tot.fora, d: "Contratos que não pagam por boleto (Município de Itajaí e Bradesco)." },
+    { l: "Outras Receitas", v: tot.outras, d: porOutra.size ? [...porOutra].map(([n, v]) => `${n}: ${brl(v)}`).join(" · ") : "Nenhum boleto A Vencer de Outras Receitas." },
     { l: "Em Aberto", v: emAberto, d: "Posição do arquivo importado." },
   ];
 
   return <div className="space-y-4">
-    {admin && <Importacao edificio={edificio} contratos={data.contratosInfo ?? []} boletos={q?.boletos ?? []} />}
+    {admin && <Importacao edificio={edificio} contratos={data.contratosInfo ?? []} outras={nomesOutras} boletos={q?.boletos ?? []} />}
     {atualizado && <p className="text-xs text-muted-foreground">Atualizado em <span className="tabular-nums">{dt(atualizado.slice(0, 10))}</span></p>}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((c) => <div key={c.l} title={c.d} className="rounded-md border bg-card p-5">
         <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-secondary">{c.l}</div>
-        <div className="mt-3 text-[26px] font-extralight leading-none tabular-nums">{brl(c.v)}</div>
+        <div className="mt-3 text-[24px] font-extralight leading-none tabular-nums">{brl(c.v)}</div>
       </div>)}
     </div>
-    {!meses.length ? <p className="text-sm text-muted-foreground">Não há meses restantes no ano.</p> : <>
-      <Bloco titulo="Planejamento por Mês">
-        <div className="h-72"><ResponsiveContainer><BarChart data={linhas.map((l) => ({ mes: nomeMes(l.k), ...l }))}>
-          <CartesianGrid vertical={false} stroke={CORES.borda} />
-          <XAxis dataKey="mes" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)} mil`} />
-          <Tooltip contentStyle={chartTooltipStyle} formatter={(v: any, n: any) => [brl(Number(v)), n]}
-            labelFormatter={(lab: any, p: any) => `${lab} · ${pctTxt(p?.[0]?.payload?.emitido ?? 0, p?.[0]?.payload?.previsto ?? 0)} emitido`} />
-          <Bar dataKey="emitido" name="Já Emitido" stackId="a" fill={CORES.marca} />
-          <Bar dataKey="fora" name="Fora do Boleto" stackId="a" fill={CORES.ouro} />
-          <Bar dataKey="sem" name="Sem Boleto" stackId="a" fill={CORES.cinza} />
-        </BarChart></ResponsiveContainer></div>
-      </Bloco>
-      <Bloco titulo="Detalhe por Mês">
-        <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-          {["Mês", "Previsto", "Já Emitido", "% Emitido", "Fora do Boleto", "Sem Boleto", "Em Aberto"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
-        </tr></thead><tbody>
-          {linhas.map((l) => <Fragment key={l.k}>
-            <tr key={l.k} className="cursor-pointer hover:bg-muted/40" onClick={() => setAberto(aberto === l.k ? null : l.k)}>
-              <td className={cn(tableClasses.td, "font-medium")}>{aberto === l.k ? "▾" : "▸"} {nomeMes(l.k)}</td>
-              <td className={tableClasses.num}>{brl(l.previsto)}</td><td className={tableClasses.num}>{brl(l.emitido)}</td>
-              <td className={tableClasses.num}>{pctTxt(l.emitido, l.previsto)}</td><td className={tableClasses.num}>{brl(l.fora)}</td>
-              <td className={tableClasses.num}>{brl(l.sem)}</td><td className={tableClasses.num}>{brl(l.aberto)}</td>
-            </tr>
-            {aberto === l.k && <tr key={l.k + "d"}><td colSpan={7} className="bg-muted/20 p-3">
-              <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
-                {["Unidade", "Locatário", "Previsto", "Emitido", "Sem Boleto", "Em Aberto"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 1 && "text-right")}>{h}</th>)}
-              </tr></thead><tbody>{l.rs.filter((r: any) => Number(r.previsto) || Number(r.emitido) || Number(r.em_aberto))
-                .map((r: any) => ({ ...r, c: info.get(r.contrato_id) }))
-                .sort((a: any, b: any) => (a.c?.unidades ?? "").localeCompare(b.c?.unidades ?? "", "pt-BR", { numeric: true }))
-                .map((r: any) => <tr key={r.contrato_id}>
-                  <td className={tableClasses.td}>{r.c?.unidades ?? "—"}</td>
-                  <td className={tableClasses.td}>{r.c?.locatario ?? "—"} {r.fora_boleto && <span className="op-tag op-tag-gray ml-1">Fora do Boleto</span>}</td>
-                  <td className={tableClasses.num}>{brl(r.previsto)}</td><td className={tableClasses.num}>{brl(r.emitido)}</td>
-                  <td className={tableClasses.num}>{brl(r.sem_boleto)}</td><td className={tableClasses.num}>{brl(r.em_aberto)}</td>
-                </tr>)}</tbody></table>
-            </td></tr>}
-          </Fragment>)}
-          <tr className="font-semibold"><td className={tableClasses.td}>Total</td>
-            <td className={tableClasses.num}>{brl(tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.emitido)}</td>
-            <td className={tableClasses.num}>{pctTxt(tot.emitido, tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.fora)}</td>
-            <td className={tableClasses.num}>{brl(tot.sem)}</td><td className={tableClasses.num}>{brl(linhas.reduce((t, l) => t + l.aberto, 0))}</td></tr>
-        </tbody></table>
-      </Bloco>
-    </>}
+    <Bloco titulo="Planejamento por Mês">
+      <div className="h-72"><ResponsiveContainer><BarChart data={linhas.map((l) => ({ mes: nomeMes(l.k), ...l }))}>
+        <CartesianGrid vertical={false} stroke={CORES.borda} />
+        <XAxis dataKey="mes" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)} mil`} />
+        <Tooltip contentStyle={chartTooltipStyle} formatter={(v: any, n: any) => [brl(Number(v)), n]}
+          labelFormatter={(lab: any, p: any) => { const x = p?.[0]?.payload; return x?.corrente ? `${lab} · mês em andamento` : `${lab} · ${pctTxt(x?.emitido ?? 0, x?.previsto ?? 0)} emitido`; }} />
+        <Bar dataKey="emitido" name="Já Emitido" stackId="a" fill={CORES.marca} />
+        <Bar dataKey="fora" name="Fora do Boleto" stackId="a" fill={CORES.ouro} />
+        <Bar dataKey="sem" name="Sem Boleto" stackId="a" fill={CORES.cinza} />
+        <Bar dataKey="outras" name="Outras Receitas" stackId="a" fill={CORES.verde} />
+      </BarChart></ResponsiveContainer></div>
+    </Bloco>
+    <Bloco titulo="Detalhe por Mês">
+      <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+        {["Mês", "Previsto", "Já Emitido", "% Emitido", "Fora do Boleto", "Sem Boleto", "Outras Receitas", "Caixa Planejado", "Em Aberto"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 0 && "text-right")}>{h}</th>)}
+      </tr></thead><tbody>
+        {linhas.map((l) => <Fragment key={l.k}>
+          <tr className="cursor-pointer hover:bg-muted/40" onClick={() => setAberto(aberto === l.k ? null : l.k)}>
+            <td className={cn(tableClasses.td, "font-medium")}>{aberto === l.k ? "▾" : "▸"} {nomeMes(l.k)}</td>
+            <td className={tableClasses.num}>{traco(l, l.previsto)}</td><td className={tableClasses.num}>{brl(l.emitido)}</td>
+            <td className={tableClasses.num}>{l.corrente ? <span title={DICA_ATUAL}>—</span> : pctTxt(l.emitido, l.previsto)}</td><td className={tableClasses.num}>{traco(l, l.fora)}</td>
+            <td className={tableClasses.num}>{traco(l, l.sem)}</td><td className={tableClasses.num}>{brl(l.outras)}</td>
+            <td className={tableClasses.num}>{brl(l.caixa)}</td><td className={tableClasses.num}>{brl(l.aberto)}</td>
+          </tr>
+          {aberto === l.k && <tr><td colSpan={9} className="bg-muted/20 p-3 space-y-3">
+            <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+              {["Unidade", "Locatário", "Previsto", "Emitido", "Sem Boleto", "Em Aberto"].map((h, i) => <th key={h} className={cn(tableClasses.th, i > 1 && "text-right")}>{h}</th>)}
+            </tr></thead><tbody>{l.rs.filter((r: any) => (!l.corrente && Number(r.previsto)) || Number(r.emitido) || Number(r.em_aberto))
+              .map((r: any) => ({ ...r, c: info.get(r.contrato_id) }))
+              .sort((a: any, b: any) => (a.c?.unidades ?? "").localeCompare(b.c?.unidades ?? "", "pt-BR", { numeric: true }))
+              .map((r: any) => <tr key={r.contrato_id}>
+                <td className={tableClasses.td}>{r.c?.unidades ?? "—"}</td>
+                <td className={tableClasses.td}>{r.c?.locatario ?? "—"} {r.fora_boleto && <span className="op-tag op-tag-gray ml-1">Fora do Boleto</span>}</td>
+                <td className={tableClasses.num}>{traco(l, r.previsto)}</td><td className={tableClasses.num}>{brl(r.emitido)}</td>
+                <td className={tableClasses.num}>{traco(l, r.sem_boleto)}</td><td className={tableClasses.num}>{brl(r.em_aberto)}</td>
+              </tr>)}</tbody></table>
+            {l.os.length > 0 && <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
+              <th className={tableClasses.th}>Outras Receitas</th><th className={cn(tableClasses.th, "text-right")}>Emitido</th>
+            </tr></thead><tbody>{l.os.map((r: any) => <tr key={r.outra_receita}>
+              <td className={tableClasses.td}>{r.outra_receita}</td><td className={tableClasses.num}>{brl(r.emitido)}</td>
+            </tr>)}</tbody></table>}
+          </td></tr>}
+        </Fragment>)}
+        <tr className="font-semibold"><td className={tableClasses.td}>Total</td>
+          <td className={tableClasses.num}>{brl(tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.emitido)}</td>
+          <td className={tableClasses.num}>{pctTxt(emitFut, tot.previsto)}</td><td className={tableClasses.num}>{brl(tot.fora)}</td>
+          <td className={tableClasses.num}>{brl(tot.sem)}</td><td className={tableClasses.num}>{brl(tot.outras)}</td>
+          <td className={tableClasses.num}>{brl(tot.caixa)}</td><td className={tableClasses.num}>{brl(tot.aberto)}</td></tr>
+      </tbody></table>
+    </Bloco>
     {vencidos.length > 0 && <Bloco titulo="Em Aberto" acao={<span title="Posição do arquivo importado." className="text-xs text-muted-foreground">{brl(emAberto)}</span>}>
       <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Pagador", "Unidade", "Vencimento", "Valor (R$)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 3 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>{vencidos.sort((a: any, b: any) => a.data_vencimento.localeCompare(b.data_vencimento)).map((b: any) => <tr key={b.id}>
-        <td className={tableClasses.td}>{b.pagador}</td><td className={tableClasses.td}>{info.get(b.contrato_id)?.unidades ?? "—"}</td>
+        <td className={tableClasses.td}>{b.pagador}</td><td className={tableClasses.td}>{info.get(b.contrato_id)?.unidades ?? b.outra_receita ?? "—"}</td>
         <td className={cn(tableClasses.td, "tabular-nums")}>{dt(b.data_vencimento)}</td><td className={tableClasses.num}>{brl(b.valor_titulo)}</td>
       </tr>)}</tbody></table>
     </Bloco>}
   </div>;
 }
 
-function Importacao({ edificio, contratos, boletos }: { edificio: string; contratos: any[]; boletos: any[] }) {
+function Importacao({ edificio, contratos, outras, boletos }: { edificio: string; contratos: any[]; outras: string[]; boletos: any[] }) {
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -126,7 +152,7 @@ function Importacao({ edificio, contratos, boletos }: { edificio: string; contra
   const [escolha, setEscolha] = useState<Record<string, string>>({});
   const semVinculo = useMemo(() => {
     const m = new Map<string, { pagador: string; documento: string; n: number }>();
-    for (const b of boletos) if (!b.contrato_id && b.documento) {
+    for (const b of boletos) if (!b.contrato_id && !b.outra_receita && b.documento) {
       const x = m.get(b.documento) ?? { pagador: b.pagador, documento: b.documento, n: 0 }; x.n++; m.set(b.documento, x);
     }
     return [...m.values()];
