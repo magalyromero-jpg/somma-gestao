@@ -18,7 +18,7 @@ describe("leitura de boletos", () => {
     expect(lerLinhaBoleto("AVIAÇÃO LTDA")).toBeNull();
   });
   it("agrupa itens pela mesma altura, da esquerda para a direita", () => {
-    expect(agruparLinhas([{ str: "B", x: 50, y: 700 }, { str: "A", x: 10, y: 700.4 }, { str: "C", x: 10, y: 680 }])).toEqual(["A B", "C"]);
+    expect(agruparLinhas([{ str: "C", x: 10, y: 120 }, { str: "B", x: 50, y: 100 }, { str: "A", x: 10, y: 100.4 }, { str: " ", x: 5, y: 100 }])).toEqual(["A B", "C"]);
   });
   it("planejamento vai do mês seguinte até dezembro", () => {
     expect(mesesPlanejamento("2026-10-28")).toEqual(["2026-11", "2026-12"]);

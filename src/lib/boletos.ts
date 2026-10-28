@@ -29,18 +29,21 @@ export function lerLinhaBoleto(linha: string): BoletoLido | null {
   };
 }
 
-/** Agrupa itens de texto por linha (mesma coordenada vertical), da esquerda para a direita. */
+/** Agrupa itens (coordenadas já no espaço da página girada, Y para baixo) pela linha round(Y/3), da esquerda para a direita. */
 export function agruparLinhas(itens: { str: string; x: number; y: number }[]): string[] {
-  const porY = new Map<number, { str: string; x: number }[]>();
+  const linhas = new Map<number, { x: number; s: string }[]>();
   for (const it of itens) {
     if (!it.str.trim()) continue;
-    const y = Math.round(it.y);
-    const k = [...porY.keys()].find((v) => Math.abs(v - y) <= 1) ?? y;
-    porY.set(k, [...(porY.get(k) ?? []), it]);
+    const k = Math.round(it.y / 3);
+    if (!linhas.has(k)) linhas.set(k, []);
+    linhas.get(k)!.push({ x: it.x, s: it.str.trim() });
   }
-  return [...porY.entries()].sort((a, b) => b[0] - a[0])
-    .map(([, l]) => l.sort((a, b) => a.x - b.x).map((i) => i.str.trim()).join(" "));
+  return [...linhas.entries()].sort((a, b) => a[0] - b[0])
+    .map(([, v]) => v.sort((a, b) => a.x - b.x).map((i) => i.s).join(" ").replace(/\s+/g, " "));
 }
+
+/** Linhas que parecem boleto (carteira + BOLETO) mas não foram lidas. */
+export const pareceBoleto = (l: string) => /^\d{3}\s.*\sBOLETO\s/.test(l);
 
 export function lerBoletos(linhas: string[]): BoletoLido[] {
   return linhas.map(lerLinhaBoleto).filter((b): b is BoletoLido => !!b);
