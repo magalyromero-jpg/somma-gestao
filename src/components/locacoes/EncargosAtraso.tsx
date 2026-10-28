@@ -56,7 +56,7 @@ export function EncargosAtraso({ data }: { data: any }) {
           <th key={h} title={i === 7 || i === 8 ? DICA : undefined} className={cn(tableClasses.th, i >= 4 && "text-right")}>{h}</th>)}
       </tr></thead><tbody>
         {rows.map((r: any) => <tr key={r.id}>
-          <td className={tableClasses.td}>{r.pagador}</td><td className={tableClasses.td}>{un.get(r.contrato_id) ?? "—"}</td>
+          <td className={tableClasses.td}>{r.pagador}</td><td className={tableClasses.td}>{un.get(r.contrato_id) ?? r.outra_receita ?? "—"}</td>
           <td className={cn(tableClasses.td, "tabular-nums")}>{dt(r.data_vencimento)}</td><td className={cn(tableClasses.td, "tabular-nums")}>{dt(r.data_pagamento)}</td>
           <td className={tableClasses.num}>{r.dias_atraso}</td><td className={tableClasses.num}>{brl(r.valor_titulo)}</td><td className={tableClasses.num}>{brl(r.valor_pago)}</td>
           <td className={tableClasses.num} title={DICA}>{brl(r.multa)}</td><td className={tableClasses.num} title={DICA}>{brl(r.juros)}</td><td className={tableClasses.num}>{brl(r.acrescimo)}</td>

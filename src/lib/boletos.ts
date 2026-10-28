@@ -49,10 +49,10 @@ export function lerBoletos(linhas: string[]): BoletoLido[] {
   return linhas.map(lerLinhaBoleto).filter((b): b is BoletoLido => !!b);
 }
 
-/** Meses do planejamento: do mês seguinte ao atual até dezembro do mesmo ano (aaaa-mm). */
+/** Meses do planejamento: do mês atual até dezembro do mesmo ano (aaaa-mm). */
 export function mesesPlanejamento(hoje: string): string[] {
   const ano = hoje.slice(0, 4); const m = Number(hoje.slice(5, 7));
   const r: string[] = [];
-  for (let i = m + 1; i <= 12; i++) r.push(`${ano}-${String(i).padStart(2, "0")}`);
+  for (let i = m; i <= 12; i++) r.push(`${ano}-${String(i).padStart(2, "0")}`);
   return r;
 }
