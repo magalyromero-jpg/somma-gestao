@@ -1140,6 +1140,7 @@ export type Database = {
           edificio_id: string
           id: string
           nosso_numero: string
+          outra_receita: string | null
           pagador: string
           status: string
           valor_pago: number
@@ -1157,6 +1158,7 @@ export type Database = {
           edificio_id: string
           id?: string
           nosso_numero: string
+          outra_receita?: string | null
           pagador: string
           status: string
           valor_pago?: number
@@ -1174,6 +1176,7 @@ export type Database = {
           edificio_id?: string
           id?: string
           nosso_numero?: string
+          outra_receita?: string | null
           pagador?: string
           status?: string
           valor_pago?: number
@@ -2377,19 +2380,22 @@ export type Database = {
       }
       loc_pagador_vinculo: {
         Row: {
-          contrato_id: string
+          contrato_id: string | null
           documento: string
           edificio_id: string
+          outra_receita: string | null
         }
         Insert: {
-          contrato_id: string
+          contrato_id?: string | null
           documento: string
           edificio_id: string
+          outra_receita?: string | null
         }
         Update: {
-          contrato_id?: string
+          contrato_id?: string | null
           documento?: string
           edificio_id?: string
+          outra_receita?: string | null
         }
         Relationships: [
           {
@@ -3636,6 +3642,7 @@ export type Database = {
           juros: number | null
           multa: number | null
           nosso_numero: string | null
+          outra_receita: string | null
           pagador: string | null
           valor_pago: number | null
           valor_titulo: number | null
@@ -3652,6 +3659,7 @@ export type Database = {
           juros?: never
           multa?: never
           nosso_numero?: string | null
+          outra_receita?: string | null
           pagador?: string | null
           valor_pago?: number | null
           valor_titulo?: number | null
@@ -3668,6 +3676,7 @@ export type Database = {
           juros?: never
           multa?: never
           nosso_numero?: string | null
+          outra_receita?: string | null
           pagador?: string | null
           valor_pago?: number | null
           valor_titulo?: number | null
@@ -4196,6 +4205,16 @@ export type Database = {
           sem_boleto: number
         }[]
       }
+      loc_planejamento_outras: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          em_aberto: number
+          emitido: number
+          mes: string
+          outra_receita: string
+          pago: number
+        }[]
+      }
       loc_pode_ver: { Args: { p_edificio: string }; Returns: boolean }
       loc_previsao_leitura: {
         Args: { p_contrato: string; p_data: string }
@@ -4232,6 +4251,15 @@ export type Database = {
       }
       loc_valor_orcado_em: {
         Args: { p_contrato: string; p_ref: string }
+        Returns: number
+      }
+      loc_vincular_pagador: {
+        Args: {
+          p_contrato: string
+          p_documento: string
+          p_edificio: string
+          p_outra: string
+        }
         Returns: number
       }
       registrar_snapshot_operacional: {

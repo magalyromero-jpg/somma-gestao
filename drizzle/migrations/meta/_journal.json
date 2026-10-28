@@ -211,6 +211,13 @@
       "when": 1793197725991,
       "tag": "0029_boletos_planejamento_encargos",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793198756047,
+      "tag": "0030_boletos_outras_receitas",
+      "breakpoints": true
     }
   ]
 }
