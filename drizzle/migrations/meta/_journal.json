@@ -239,6 +239,13 @@
       "when": 1793216230396,
       "tag": "0033_otimizar_conferencia_boletos",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793295174326,
+      "tag": "0034_iptu_acompanhamento",
+      "breakpoints": true
     }
   ]
 }
