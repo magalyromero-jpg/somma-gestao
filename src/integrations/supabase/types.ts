@@ -2189,6 +2189,82 @@ export type Database = {
         }
         Relationships: []
       }
+      loc_iptu: {
+        Row: {
+          ano: number
+          edificio_id: string
+          forma: string
+          locatario: string | null
+          observacao: string | null
+          pago_em: string | null
+          unidade: string
+          valor_garagem: number | null
+          valor_sala: number | null
+        }
+        Insert: {
+          ano: number
+          edificio_id: string
+          forma: string
+          locatario?: string | null
+          observacao?: string | null
+          pago_em?: string | null
+          unidade: string
+          valor_garagem?: number | null
+          valor_sala?: number | null
+        }
+        Update: {
+          ano?: number
+          edificio_id?: string
+          forma?: string
+          locatario?: string | null
+          observacao?: string | null
+          pago_em?: string | null
+          unidade?: string
+          valor_garagem?: number | null
+          valor_sala?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_iptu_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_iptu_parcelas: {
+        Row: {
+          ano: number
+          edificio_id: string
+          pago_em: string | null
+          parcela: number
+          unidade: string
+        }
+        Insert: {
+          ano: number
+          edificio_id: string
+          pago_em?: string | null
+          parcela: number
+          unidade: string
+        }
+        Update: {
+          ano?: number
+          edificio_id?: string
+          pago_em?: string | null
+          parcela?: number
+          unidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_iptu_parcelas_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loc_leituras_documento: {
         Row: {
           aplicado_em: string | null
@@ -4355,6 +4431,16 @@ export type Database = {
           p_mes: string
         }
         Returns: number
+      }
+      loc_iptu_marcar_parcela: {
+        Args: {
+          p_ano: number
+          p_edificio: string
+          p_pago_em: string
+          p_parcela: number
+          p_unidade: string
+        }
+        Returns: undefined
       }
       loc_listar_acessos: {
         Args: { p_edificio: string }

@@ -6,3 +6,4 @@
 - Read bank boleto PDF exports in the browser with a fixed-rule parser (src/lib/boletos.ts), never AI; boleto principal never changes Orçado, Reforecast or Realizado.
 - Aggregate realized receipts in src/lib/locacoes.ts for both overview and cash flow; only nonduplicated paid late fees from the security-invoker view enter imported-month Realizado, never budget or forecast.
 - Store boleto nature per boleto and classify through an authorized RPC; imports must preserve that classification so subsequent bank exports cannot reintroduce non-rent charges into realized rent.
+- IPTU repassado aos locatários é só acompanhamento (loc_iptu/loc_iptu_parcelas): nunca soma em Orçado, Reforecast, Realizado, Planejamento ou Fluxo de Caixa; só o administrador marca parcelas, via RPC autorizada.

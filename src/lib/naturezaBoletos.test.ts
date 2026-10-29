@@ -22,10 +22,16 @@ describe.skipIf(!session)("natureza de boletos — dados reais, sem alteração"
     const e = await client().from("loc_v_encargos_realizados").select("id").eq("edificio_id", edificio).eq("nosso_numero", "13670");
     expect(e.error).toBeNull(); expect(e.data).toHaveLength(0);
   });
-  it("a conferência mantém NAC e DHL com os valores informados", async () => {
-    const r = await client().from("loc_v_boletos_a_conferir").select("nosso_numero,valor_titulo,previsto_mes").eq("edificio_id", edificio).order("data_vencimento");
+  it("NAC e DHL foram classificados como aluguel e a conferência ficou vazia", async () => {
+    const b = await client().from("loc_boletos").select("nosso_numero,natureza,classificado,valor_titulo").eq("edificio_id", edificio).in("nosso_numero", ["15337", "13852"]).order("nosso_numero", { ascending: false });
+    expect(b.error).toBeNull();
+    expect(b.data).toEqual([
+      { nosso_numero: "15337", natureza: "aluguel", classificado: true, valor_titulo: 16516.13 },
+      { nosso_numero: "13852", natureza: "aluguel", classificado: true, valor_titulo: 5500 },
+    ]);
+    const r = await client().from("loc_v_boletos_a_conferir").select("nosso_numero").eq("edificio_id", edificio);
     expect(r.error).toBeNull();
-    expect(r.data).toEqual([{ nosso_numero: "15337", valor_titulo: 16516.13, previsto_mes: 25600 }, { nosso_numero: "13852", valor_titulo: 5500, previsto_mes: 3117 }]);
+    expect(r.data).toEqual([]);
   });
   it("novembro preserva Previsto, Já Emitido e Sem Boleto", async () => {
     const r = await client().rpc("loc_planejamento_caixa", { p_edificio: edificio, p_ano: 2026 });

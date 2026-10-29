@@ -18,6 +18,7 @@ import { ImportarPagamentos } from "@/components/locacoes/ImportarDocs";
 import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } from "@/components/locacoes/GestaoContratos";
 import { MESES, MESES_LONGOS, addMes, baseRealizado, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
 import { BlocoCicloVencimento, BlocoIndiceReajuste, Renovacoes } from "@/components/locacoes/Renovacoes";
+import { Iptu } from "@/components/locacoes/Iptu";
 import { reajusteRealizado } from "@/lib/leituraDocumento";
 
 const db = supabase as any;
@@ -149,6 +150,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           <TabsTrigger value="renovacoes">Renovações</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
+          <TabsTrigger value="iptu">IPTU</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
           <TabsTrigger value="conferencia">Conferência</TabsTrigger>
           {admin && <TabsTrigger value="importar">Importar Pagamentos</TabsTrigger>}
@@ -192,6 +194,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         <TabsContent value="documentos" className="space-y-4"><Documentos data={data} admin={admin} /></TabsContent>
 
         <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
+        <TabsContent value="iptu" className="space-y-4"><Iptu data={data} admin={admin} /></TabsContent>
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
 
