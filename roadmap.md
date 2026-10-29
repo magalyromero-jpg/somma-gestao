@@ -1,3 +1,7 @@
+# IPTU (acompanhamento)
+- [x] Criar tabelas, permissões e marcação de parcelas só para administrador; dados de 2026 carregados.
+- [x] Nova aba IPTU após Reajustes: quadros, tabela de 46 unidades e marcadores; conferido R$ 102.718,15 à vista, 82/88 parcelas, 6 pendentes, 6 sem registro; marcar/desmarcar testado; 68 testes passaram.
+
 # Natureza dos boletos
 - [x] Adicionar classificação por boleto e conferência com tolerância de R$ 2,00.
 - [x] Separar Não É Aluguel no planejamento e Realizado, preservando detalhe e reimportação.
