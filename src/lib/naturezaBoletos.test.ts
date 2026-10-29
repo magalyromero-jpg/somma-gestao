@@ -23,7 +23,7 @@ describe.skipIf(!session)("natureza de boletos — dados reais, sem alteração"
     expect(e.error).toBeNull(); expect(e.data).toHaveLength(0);
   });
   it("NAC e DHL foram classificados como aluguel e a conferência ficou vazia", async () => {
-    const b = await client().from("loc_boletos").select("nosso_numero,natureza,classificado,valor_titulo").eq("edificio_id", edificio).in("nosso_numero", ["15337", "13852"]);
+    const b = await client().from("loc_boletos").select("nosso_numero,natureza,classificado,valor_titulo").eq("edificio_id", edificio).in("nosso_numero", ["15337", "13852"]).order("nosso_numero", { ascending: false });
     expect(b.error).toBeNull();
     expect(b.data).toEqual([
       { nosso_numero: "15337", natureza: "aluguel", classificado: true, valor_titulo: 16516.13 },
