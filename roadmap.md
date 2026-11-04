@@ -1,5 +1,5 @@
 # Filtro mensal do Detalhe por Unidade
-- [ ] Disponibilizar filtro compartilhado nos quatro modos, ajustar colunas e totais e conferir com dados reais.
+- [x] Filtro compartilhado nos quatro modos; colunas e totais filtrados, 21 testes passando e conferência autenticada de julho/novembro e tela pequena, sem alterar banco.
 
 # IPTU (acompanhamento)
 - [x] Criar tabelas, permissões e marcação de parcelas só para administrador; dados de 2026 carregados.
