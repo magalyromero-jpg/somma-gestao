@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { RealizadoEmAberto } from "@/components/locacoes/RealizadoEmAberto";
 import { EncargosAtraso } from "@/components/locacoes/EncargosAtraso";
 import { MESES, addMes, brl, dt, m2, mil, num2, pct, projetarContrato } from "@/lib/locacoes";
+import { PERIODOS_CAIXA, mesesPeriodoCaixa, valoresPeriodoCaixa } from "@/lib/periodosCaixa";
 import { compararReforecast, motivoReforecast, previstoPorMes } from "@/lib/reforecast";
 const inteiro = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
@@ -106,22 +107,15 @@ export function FluxoCaixa({ data, linhas, meses, ultimoMes }: { data: any; linh
 
 export const VISOES_DETALHE = [["orc", "Orçado"], ["ref", "Reforecast"], ["real", "Realizado"], ["or", "Orçado × Realizado"]] as const;
 
-const PERIODOS: { v: string; label: string; meses: (u: number) => number[] }[] = [
-  { v: "ytd", label: "Year to Date", meses: (u) => Array.from({ length: Math.max(u, 0) }, (_, i) => i + 1) },
-  ...MESES.map((m, i) => ({ v: `m${i + 1}`, label: m.charAt(0).toUpperCase() + m.slice(1), meses: () => [i + 1] })),
-  ...[1, 2, 3, 4].map((q) => ({ v: `t${q}`, label: `${q}º trimestre`, meses: () => [1, 2, 3].map((x) => (q - 1) * 3 + x) })),
-  { v: "s1", label: "1º semestre", meses: () => [1, 2, 3, 4, 5, 6] },
-  { v: "s2", label: "2º semestre", meses: () => [7, 8, 9, 10, 11, 12] },
-  { v: "ano", label: "Ano", meses: () => Array.from({ length: 12 }, (_, i) => i + 1) },
-];
-
 function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoMes: string }) {
   const [visao, setVisao] = useState<"orc" | "real" | "or" | "ref">("orc");
-  const [periodo, setPeriodo] = useState("ytd");
+  const [periodo, setPeriodo] = useState("ano");
   const ano = String(data.ano);
   const u = ultimoMes.startsWith(ano) ? Number(ultimoMes.slice(5, 7)) || 0 : 0;
-  // janela comparada: meses do período que já têm pagamento importado
-  const ms = new Set((PERIODOS.find((p) => p.v === periodo) ?? PERIODOS[0]).meses(u).filter((m) => m <= u));
+  const mesesExibidos = mesesPeriodoCaixa(periodo, u);
+  const valoresExibidos = <T,>(valores: T[]) => valoresPeriodoCaixa(valores, mesesExibidos);
+  // Comparação continua limitada aos meses com pagamento importado.
+  const ms = new Set(mesesExibidos.filter((m) => m <= u));
   const msLista = [...ms].sort((a, b) => a - b);
   const janelaTxt = msLista.length === 0 ? "" : msLista.length === 1
     ? `Comparando ${MESES[msLista[0] - 1]}/${ano} (meses com pagamento importado)`
@@ -156,14 +150,14 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const totalRef = totaisRef.reduce((s, n) => s + n, 0), totalOrc = totaisOrc.reduce((s, n) => s + n, 0);
   const fmt = (v: number | null) => (v == null || Math.abs(v) < 0.005 ? "—" : visao === "real" ? num2(v) : inteiro(v));
   const outras = data.realizado.outras as { un: string; loc: string; dica?: string; real: (number | null)[] }[];
-  const linhaUn = (un: string, loc: string, v: (number | null)[], dica?: string) => <tr key={un}><td title={dica} className={cn(tableClasses.td, "font-medium zen-un")}>{un}</td><td className={cn(tableClasses.td, "zen-txt")}>{loc}</td>{v.map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(v.reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>;
-  const linhaTot = (rot: string, cols: (number | null)[][]) => <tr className="font-bold"><td className={tableClasses.td}>{rot}</td><td className={tableClasses.td}></td>{Array.from({ length: 12 }, (_, i) => { const col = cols.map((v) => v[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(cols.reduce((s, v) => s + v.reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>;
-  const mensal = (lista: typeof unidades, get: (x: typeof unidades[number]) => (number | null)[], loc: (x: typeof unidades[number]) => string, comOutras = false) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-      <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
+  const linhaUn = (un: string, loc: string, v: (number | null)[], dica?: string) => <tr key={un}><td title={dica} className={cn(tableClasses.td, "font-medium zen-un")}>{un}</td><td className={cn(tableClasses.td, "zen-txt")}>{loc}</td>{valoresExibidos(v).map((n, i) => <td key={i} className={tableClasses.num}>{fmt(n)}</td>)}<td className={cn(tableClasses.num, "font-bold")}>{fmt(valoresExibidos(v).reduce((s: number, n) => s + (n ?? 0), 0))}</td></tr>;
+  const linhaTot = (rot: string, cols: (number | null)[][]) => <tr className="font-bold"><td className={tableClasses.td}>{rot}</td><td className={tableClasses.td}></td>{mesesExibidos.map((m) => { const i = m - 1; const col = cols.map((v) => v[i]); return <td key={i} className={tableClasses.num}>{col.every((n) => n == null) ? "—" : fmt(col.reduce((s: number, n) => s + (n ?? 0), 0))}</td>; })}<td className={tableClasses.num}>{fmt(cols.reduce((s, v) => s + valoresExibidos(v).reduce((a: number, n) => a + (n ?? 0), 0), 0))}</td></tr>;
+  const mensal = (lista: typeof unidades, get: (x: typeof unidades[number]) => (number | null)[], loc: (x: typeof unidades[number]) => string, comOutras = false) => <div className={tableClasses.wrap}><table className={cn(tableClasses.table, mesesExibidos.length > 6 && "zen-wide")}><thead><tr className={tableClasses.head}>
+      <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{mesesExibidos.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{MESES[m - 1]}</th>)}<th className={cn(tableClasses.th, "text-right")}>Total</th>
     </tr></thead><tbody>
       {lista.map((x) => linhaUn(x.un, loc(x), get(x)))}
       {comOutras && outras.length > 0 && <>
-        <tr className="bg-muted"><td className={cn(tableClasses.td, "font-bold")} colSpan={15}>Outras Receitas</td></tr>
+        <tr className="bg-muted"><td className={cn(tableClasses.td, "font-bold")} colSpan={mesesExibidos.length + 3}>Outras Receitas</td></tr>
         {outras.map((o) => linhaUn(o.un, o.loc, o.real, o.dica))}
         {linhaTot("Subtotal Outras Receitas", outras.map((o) => o.real))}
       </>}
@@ -173,16 +167,16 @@ function DetalheUnidade({ data, ultimoMes }: { data: any; linhas: any[]; ultimoM
   const ox = unidades.map((x) => ({ x, o: [...ms].reduce((s, m) => s + x.orc[m - 1], 0), r: [...ms].reduce((s, m) => s + (x.real[m - 1] ?? 0), 0), f: [...ms].reduce((s, m) => s + (x.ref[m - 1] ?? 0), 0) })).filter(({ o, r, f }) => o || r || f);
   const ox2 = outras.map((o) => ({ un: o.un, loc: o.loc, dica: o.dica, r: [...ms].reduce((s, m) => s + (o.real[m - 1] ?? 0), 0) }));
   const tF = ox.reduce((s, y) => s + y.f, 0), tO = ox.reduce((s, y) => s + y.o, 0), tR = ox.reduce((s, y) => s + y.r, 0) + ox2.reduce((s, y) => s + y.r, 0);
-  return <Bloco titulo="Detalhe por Unidade" acao={<div className="flex flex-wrap items-center gap-2">
+  return <Bloco titulo="Detalhe por Unidade" className="[&>div:first-child]:flex-wrap [&>div:first-child>h2]:shrink-0" acao={<div className="flex min-w-0 flex-wrap items-center gap-2">
     {visao === "or" && janelaTxt && <span className="text-xs text-muted-foreground">{janelaTxt}</span>}
-    {visao === "or" && <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>}
+    <Select value={periodo} onValueChange={setPeriodo}><SelectTrigger className="h-8 w-40 text-xs" aria-label="Mês ou período"><SelectValue /></SelectTrigger><SelectContent>{PERIODOS_CAIXA.map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent></Select>
     {VISOES_DETALHE.map(([v, l]) =>
       <Button key={v} size="sm" variant={visao === v ? "default" : "outline"} aria-pressed={visao === v} onClick={() => setVisao(v)}>{l}</Button>)}
   </div>}>
-    {visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
+    {mesesExibidos.length === 0 ? <p className="text-sm text-muted-foreground">Sem pagamentos importados neste período</p> : visao === "orc" ? mensal(comOrc, (x) => x.orc, (x) => x.locOrc)
       : visao === "real" ? mensal(unidades, (x) => x.real, (x) => x.locRecente, true)
       : visao === "ref" ? <>
-        <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} />
+        <ReforecastTabela edificioId={data.edificio.id} ano={data.ano} mesesExibidos={mesesExibidos} />
       </>
       : ms.size === 0 ? <p className="text-sm text-muted-foreground">Sem pagamentos importados neste período</p>
       : <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
@@ -295,7 +289,7 @@ function MudancasAno({ edificioId, ano }: { edificioId: string; ano: number }) {
   </Bloco>;
 }
 
-function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number }) {
+function ReforecastTabela({ edificioId, ano, mesesExibidos }: { edificioId: string; ano: number; mesesExibidos: number[] }) {
   const q = useQuery({
     queryKey: ["loc-reforecast-vs-orcado", edificioId, ano],
     queryFn: async () => {
@@ -323,7 +317,7 @@ function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number
     grupos.set(un, g);
   }
   const linhas = [...grupos.values()].filter((g) => g.o.some(Boolean) || g.r.some(Boolean)).sort((a, b) => a.un.localeCompare(b.un, "pt-BR", { numeric: true }));
-  const soma = (v: number[]) => v.reduce((s, n) => s + n, 0);
+  const soma = (v: number[]) => valoresPeriodoCaixa(v, mesesExibidos).reduce((s, n) => s + n, 0);
   const cel = (orcado: number, ref: number, d: number, key?: number) => {
     const cls = d >= 1 ? "reforecast-acima" : d <= -1 ? "reforecast-abaixo" : "";
     return <td key={key} className={cn(tableClasses.num, cls)} title={cls ? `Orçado: ${brl(orcado)} · Reforecast: ${brl(ref)} · Diferença: ${brl(ref - orcado)}` : undefined}>{ref === 0 ? "—" : inteiro(ref)}</td>;
@@ -337,15 +331,15 @@ function ReforecastTabela({ edificioId, ano }: { edificioId: string; ano: number
   const tR = Array.from({ length: 12 }, (_, i) => linhas.reduce((s, g) => s + g.r[i], 0));
   return <>
     <p className="mb-3 text-xs text-muted-foreground">Verde: acima do orçado · Vermelho: abaixo do orçado</p>
-    <div className={tableClasses.wrap}><table className={cn(tableClasses.table, "zen-wide")}><thead><tr className={tableClasses.head}>
-      <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{MESES.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{m}</th>)}
+    <div className={tableClasses.wrap}><table className={cn(tableClasses.table, mesesExibidos.length > 6 && "zen-wide")}><thead><tr className={tableClasses.head}>
+      <th className={tableClasses.th}>Unidade</th><th className={tableClasses.th}>Locatário</th>{mesesExibidos.map((m) => <th key={m} className={cn(tableClasses.th, "text-right capitalize")}>{MESES[m - 1]}</th>)}
       <th className={cn(tableClasses.th, "text-right")}>Reforecast</th>
     </tr></thead><tbody>
       {linhas.map((g) => <tr key={g.un}><td className={cn(tableClasses.td, "font-medium zen-un")}>{g.un}</td><td className={cn(tableClasses.td, "zen-txt")}>{g.loc}</td>
-        {g.r.map((n, i) => cel(g.o[i], n, g.d[i], i))}
+        {mesesExibidos.map((m) => { const i = m - 1; return cel(g.o[i], g.r[i], g.d[i], i); })}
         <td className={cn(tableClasses.num, "font-bold")}>{num2(soma(g.r))}</td></tr>)}
       <tr className="font-bold"><td className={tableClasses.td}>Total</td><td className={tableClasses.td} />
-        {tR.map((n, i) => cel(tO[i], n, linhas.reduce((s, g) => s + g.d[i], 0), i))}
+        {mesesExibidos.map((m) => { const i = m - 1; return cel(tO[i], tR[i], linhas.reduce((s, g) => s + g.d[i], 0), i); })}
         <td className={tableClasses.num}>{num2(soma(tR))}</td></tr>
     </tbody></table></div>
   </>;
