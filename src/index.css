@@ -199,9 +199,9 @@
 /* Grade de cobrança mensal: compacta para caber na largura da tela sem rolagem própria. */
 .portal-shell table.cob-grid { table-layout: fixed; }
 .portal-shell table.cob-grid th, .portal-shell table.cob-grid td { padding: 4px 3px; font-size: 11px; overflow: hidden; }
-.portal-shell table.cob-grid th:first-child { width: 64px; }
-.portal-shell table.cob-grid th:nth-child(2) { width: 150px; }
-.portal-shell table.cob-grid th:last-child { width: 92px; }
+.portal-shell table.cob-grid th:first-child { width: 56px; }
+.portal-shell table.cob-grid th:nth-child(2) { width: 128px; }
+.portal-shell table.cob-grid th:last-child { width: 102px; }
 .portal-shell table.cob-grid td { height: 28px; }
 .portal-shell table.cob-grid .cob-locatario { text-overflow: ellipsis; white-space: nowrap; }
 .portal-shell table.cob-grid .cob-sit { padding: 0 3px; font-size: 10.5px; }
