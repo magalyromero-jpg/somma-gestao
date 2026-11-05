@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { MESES_LONGOS, brl, dt } from "@/lib/locacoes";
 import { agruparLinhas, lerBoletos, mesesPlanejamento, pareceBoleto } from "@/lib/boletos";
 import { BoletosConferir } from "./BoletosConferir";
-import { CobrancaMensal } from "./CobrancaMensal";
+import { ControleRecebimentos } from "./ControleRecebimentos";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const db = supabase as any;
@@ -82,6 +82,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
   ];
 
   return <div className="space-y-4">
+    <ControleRecebimentos data={data} ano={ano} outras={q?.outras ?? []} />
     {admin && <Importacao edificio={edificio} contratos={data.contratosInfo ?? []} outras={nomesOutras} boletos={q?.boletos ?? []} />}
     {erroConsulta && <p role="alert" className="text-sm text-destructive">Não foi possível consultar os boletos: {erroConsulta.message}</p>}
     <BoletosConferir edificio={edificio} itens={q?.conferir ?? []} info={info} admin={admin} />
@@ -142,7 +143,6 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
           <td className={tableClasses.num}>{brl(tot.caixa)}</td><td className={tableClasses.num}>{brl(tot.aberto)}</td></tr>
       </tbody></table>
     </Bloco>
-    <CobrancaMensal edificio={edificio} ano={ano} info={info} />
     {vencidos.length > 0 && <Bloco titulo="Em Aberto" acao={<span title="Posição do arquivo importado." className="text-xs text-muted-foreground">{brl(emAberto)}</span>}>
       <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Pagador", "Unidade", "Vencimento", "Valor (R$)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 3 && "text-right")}>{h}</th>)}
@@ -168,7 +168,7 @@ function Importacao({ edificio, contratos, outras, boletos }: { edificio: string
     return [...m.values()];
   }, [boletos]);
   const opcoes = [...contratos].sort((a, b) => a.unidades.localeCompare(b.unidades, "pt-BR", { numeric: true }));
-  const recarregar = () => { qc.invalidateQueries({ queryKey: ["loc-planejamento"] }); qc.invalidateQueries({ queryKey: ["loc-encargos"] }); };
+  const recarregar = () => { qc.invalidateQueries({ queryKey: ["loc-planejamento"] }); qc.invalidateQueries({ queryKey: ["loc-encargos"] }); qc.invalidateQueries({ queryKey: ["loc-controle-recebimentos"] }); };
 
   async function importar(f: File) {
     if (!f.name.toLowerCase().endsWith(".pdf")) { setMsg("Envie somente arquivo .pdf."); return; }

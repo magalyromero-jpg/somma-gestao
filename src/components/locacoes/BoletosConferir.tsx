@@ -23,7 +23,7 @@ export function BoletosConferir({ edificio, itens, info, admin }: { edificio: st
       });
       if (error) throw error;
       setEditando(null); setDescricao("");
-      await Promise.all(["loc-planejamento", "loc-encargos", "loc-edificio"].map((key) => qc.invalidateQueries({ queryKey: [key] })));
+      await Promise.all(["loc-planejamento", "loc-encargos", "loc-edificio", "loc-controle-recebimentos"].map((key) => qc.invalidateQueries({ queryKey: [key] })));
     } catch (e) { setErro(e instanceof Error ? e.message : (e as { message?: string })?.message ?? "Não foi possível classificar o boleto."); }
     finally { setOcupado(false); }
   }

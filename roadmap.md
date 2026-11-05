@@ -1,3 +1,9 @@
+# Controle de Recebimentos
+- [x] Aplicar esperado proporcional à saída e controle de recebimentos sem alterar Orçado/Reforecast/Fluxo.
+- [x] Substituir grade antiga, incluir composição, receitas avulsas e notas somente leitura.
+- [x] Conferir abril–junho ao centavo, NAC agosto 16.516,13 e zero após saída, Orçado 6.855.976,20, visualização Cliente e capturas; 15 testes passaram.
+- [ ] Comparar à planilha interna: arquivo não fornecido. Total da grade 7.560.630,20 inclui pendências históricas; diferença para Reforecast não é apenas saída (saídas 111.483,87).
+
 # Cobrança mensal por contrato
 - [x] Função loc_cobranca_mensal criada e conferida: novembro 25 emitidos R$ 477.267,86, 4 fora R$ 122.965,79, 2 sem boleto R$ 65.200,00; dezembro 23/4/4 conforme o desenho.
 - [x] Grade no Planejamento do Caixa com legenda, cores, destaque do mês, rodapé e 5 testes; conferida no navegador na largura da tela da usuária, sem rolagem.
