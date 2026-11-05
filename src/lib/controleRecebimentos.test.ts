@@ -18,4 +18,14 @@ describe("Controle de Recebimentos", () => {
     expect(o[0].meses[3].a_receber).toBe(0);
     expect(o[0].meses[10].a_receber).toBe(1548);
   });
+});import { previsaoCaixa, mesesPrevisao } from "./controleRecebimentos";
+describe("Previsão de Caixa a Partir de Hoje", () => {
+  const l = (contrato_id: string, mes: string, a_receber: number, situacao: RecebimentoMes["situacao"]): RecebimentoMes => ({ contrato_id, mes, recebido: 0, a_receber, situacao, valor_boleto: 0 });
+  it("colunas vão do mês atual aos 11 seguintes, atravessando o ano", () => { const m = mesesPrevisao("2026-11"); expect(m[0]).toBe("2026-11-01"); expect(m[11]).toBe("2027-10-01"); });
+  it("contrato que saiu antes do mês atual some; atraso só conta vencido", () => {
+    const p = previsaoCaixa([l("nac", "2026-11-01", 100, "sem_boleto"), l("t", "2026-09-01", 50, "vencido"), l("t", "2026-10-01", 70, "sem_registro"), l("t", "2026-11-01", 39600, "sem_boleto")], [{ id: "nac", data_saida: "2026-08-16" }, { id: "t" }], "2026-11");
+    expect(p.contratos.has("nac")).toBe(false);
+    expect(p.contratos.get("t")!.atraso).toBe(50);
+    expect(p.composicao.a_emitir).toBe(39600);
+  });
 });
