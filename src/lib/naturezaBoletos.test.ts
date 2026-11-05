@@ -33,11 +33,11 @@ describe.skipIf(!session)("natureza de boletos — dados reais, sem alteração"
     expect(r.error).toBeNull();
     expect(r.data).toEqual([]);
   });
-  it("novembro preserva Previsto, Já Emitido e Sem Boleto", async () => {
+  it("novembro retira NAC do previsto após saída e preserva boletos emitidos", async () => {
     const r = await client().rpc("loc_planejamento_caixa", { p_edificio: edificio, p_ano: 2026 });
     expect(r.error).toBeNull();
     const rows = (r.data ?? []).filter((x) => x.mes === "2026-11-01");
-    for (const [field, expected] of [["previsto", 665433.65], ["emitido", 484267.83], ["sem_boleto", 65201.48]] as const)
+    for (const [field, expected] of [["previsto", 639833.65], ["emitido", 484267.83], ["sem_boleto", 39601.48]] as const)
       expect(rows.reduce((s, x) => s + Number(x[field]), 0)).toBeCloseTo(expected, 2);
   });
   it("o detalhe mantém todos os encargos e o total de R$ 2.844,19", async () => {
