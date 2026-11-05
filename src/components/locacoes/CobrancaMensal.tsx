@@ -62,6 +62,9 @@ export function CobrancaMensal({ edificio, ano, info }: { edificio: string; ano:
       <p role="alert" className="text-sm text-destructive">Não foi possível consultar a cobrança mensal: {error.message}</p>
     </Bloco>;
   }
+  if (!linhas) {
+    return <Bloco titulo="Cobrança Mensal por Contrato"><p className="text-sm text-muted-foreground">Carregando…</p></Bloco>;
+  }
 
   return <Bloco titulo="Cobrança Mensal por Contrato">
     <div className="mb-3 flex flex-wrap gap-2">
