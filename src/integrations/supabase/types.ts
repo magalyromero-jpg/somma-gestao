@@ -4342,6 +4342,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      loc_cobranca_mensal: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          boleto_a_vencer: number
+          boleto_pago: number
+          boleto_vencido: number
+          contrato_id: string
+          esperado: number
+          mes: string
+          recebido: number
+          situacao: string
+        }[]
+      }
       loc_conceder_acesso: {
         Args: { p_edificio: string; p_email: string }
         Returns: string

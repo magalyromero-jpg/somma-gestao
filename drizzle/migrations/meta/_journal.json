@@ -246,6 +246,13 @@
       "when": 1793295174326,
       "tag": "0034_iptu_acompanhamento",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793890742977,
+      "tag": "0035_cobranca_mensal_contrato",
+      "breakpoints": true
     }
   ]
 }
