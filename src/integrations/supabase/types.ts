@@ -4378,6 +4378,17 @@ export type Database = {
         Args: { p_dados?: Json; p_leitura: string }
         Returns: Json
       }
+      loc_controle_recebimentos: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          a_receber: number
+          contrato_id: string
+          mes: string
+          recebido: number
+          situacao: string
+          valor_boleto: number
+        }[]
+      }
       loc_definir_acesso: {
         Args: { p_edificio: string; p_papel: string; p_user: string }
         Returns: undefined
@@ -4412,6 +4423,14 @@ export type Database = {
           locatario: string
           mes: string
           unidades: string
+        }[]
+      }
+      loc_esperado_caixa: {
+        Args: { p_ano: number; p_edificio: string }
+        Returns: {
+          contrato_id: string
+          mes: string
+          valor: number
         }[]
       }
       loc_fluxo: {
