@@ -1,3 +1,7 @@
+# Cobrança mensal por contrato
+- [x] Função loc_cobranca_mensal criada e conferida: novembro 25 emitidos R$ 477.267,86, 4 fora R$ 122.965,79, 2 sem boleto R$ 65.200,00; dezembro 23/4/4 conforme o desenho.
+- [ ] Grade no Planejamento do Caixa com legenda, cores, destaque do mês, rodapé e testes; conferir no navegador.
+
 # Filtro mensal do Detalhe por Unidade
 - [x] Filtro compartilhado nos quatro modos; colunas e totais filtrados, 21 testes passando e conferência autenticada de julho/novembro e tela pequena, sem alterar banco.
 
