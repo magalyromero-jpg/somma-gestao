@@ -196,6 +196,11 @@
 .cob-fora { background:hsl(var(--graybg)); color:hsl(var(--muted-foreground)); }
 .cob-atual { background:hsl(var(--goldbg)); }
 
+/* Grade de cobrança mensal: compacta para caber na largura da tela sem rolagem própria. */
+.portal-shell table.cob-grid th, .portal-shell table.cob-grid td { padding: 5px 6px; font-size: 12px; }
+.portal-shell table.cob-grid td { height: 30px; }
+.portal-shell table.cob-grid .cob-locatario { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Shared portal layout: light typography, quiet surfaces and dense data. */
 .portal-shell { font-size: 13px; }
 .portal-content { padding: 32px 40px; max-width: 1600px; margin: 0 auto; }

@@ -67,7 +67,7 @@ export function CobrancaMensal({ edificio, ano, info }: { edificio: string; ano:
     <div className="mb-3 flex flex-wrap gap-2">
       {LEGENDA.map((s) => <span key={s} className={cn("cob-sit", CLASSE_SITUACAO[s])}>{SITUACOES_COBRANCA[s]}</span>)}
     </div>
-    <table className={tableClasses.table}>
+    <table className={cn(tableClasses.table, "cob-grid")}>
       <thead><tr className={tableClasses.head}>
         <th className={tableClasses.th}>Unidade</th>
         <th className={tableClasses.th}>Locatário</th>
@@ -83,8 +83,8 @@ export function CobrancaMensal({ edificio, ano, info }: { edificio: string; ano:
           const c = info.get(id);
           const arr = grade.get(id)!;
           return <tr key={id}>
-            <td className={tableClasses.td}>{c?.unidades ?? "—"}</td>
-            <td className={tableClasses.td}>{c?.locatario ?? "—"}</td>
+            <td className={cn(tableClasses.td, "whitespace-nowrap")}>{c?.unidades ?? "—"}</td>
+            <td className={cn(tableClasses.td, "cob-locatario")} title={c?.locatario ?? undefined}>{c?.locatario ?? "—"}</td>
             {arr.map((l, i) => <td key={i} className={cn(tableClasses.num, i === mesDestaque && "cob-atual")}>
               {!l || l.situacao === "sem_cobranca"
                 ? <span className="text-muted-foreground">—</span>
