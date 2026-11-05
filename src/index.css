@@ -242,3 +242,24 @@
 .reforecast-acima { background: var(--reforecast-above-bg); color: var(--reforecast-above-text); }
 .reforecast-abaixo { background: var(--reforecast-below-bg); color: var(--reforecast-below-text); }
 .reforecast-novo { background: var(--reforecast-new-bg); color: var(--reforecast-new-text); }
+
+/* Continuous receipts sheet: page scroll only, stable numeric widths and pinned identifiers. */
+:root { --receb-paid-marker: 145 45% 57%; --receb-pending-text: 0 0% 10%; }
+.dark { --receb-paid-marker: 145 45% 68%; --receb-pending-text: 0 0% 94%; }
+.portal-shell table.receb-grid { width: max-content; min-width: 100%; table-layout: auto; background: hsl(var(--card)); }
+.portal-shell table.receb-grid th, .portal-shell table.receb-grid td { padding: 8px 10px; font-size: 12px; white-space: nowrap; min-width: 110px; }
+.portal-shell table.receb-grid th:first-child, .portal-shell table.receb-grid tbody td:first-child { position: sticky; left: 0; min-width: 96px; width: 96px; max-width: 96px; white-space: normal; background: hsl(var(--card)); z-index: 2; }
+.portal-shell table.receb-grid th:nth-child(2), .portal-shell table.receb-grid tbody td:nth-child(2):not([colspan]) { position: sticky; left: 96px; min-width: 200px; width: 200px; max-width: 200px; white-space: normal; background: hsl(var(--card)); z-index: 2; border-right: 1px solid hsl(var(--border)); }
+.portal-shell table.receb-grid tfoot td:first-child { position: sticky; left: 0; z-index: 3; background: hsl(var(--card)); }
+.portal-shell table.receb-grid .receb-nota { white-space: normal; min-width: 220px; max-width: 320px; }
+.receb-valor { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.receb-recebido { color: hsl(var(--green)); }
+.receb-pendente { color: hsl(var(--receb-pending-text)); font-style: italic; }
+.receb-marca { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.receb-boleto_emitido { background: hsl(var(--blue)); }
+.receb-vencido { background: hsl(var(--red)); }
+.receb-pago_no_boleto { background: hsl(var(--receb-paid-marker)); }
+.receb-sem_boleto, .receb-sem_registro { border: 1px solid hsl(var(--gray)); }
+.receb-fora_do_boleto { height: 1px; border-radius: 0; background: hsl(var(--gray)); }
+.portal-shell table.receb-grid td.receb-excecao { background: hsl(var(--amberbg)); }
+.portal-shell table.receb-grid .receb-grupo td { background: hsl(var(--muted)); font-weight: 500; }
