@@ -248,7 +248,8 @@
 .dark { --receb-paid-marker: 145 45% 68%; --receb-pending-text: 0 0% 94%; }
 .portal-shell table.receb-grid { width: max-content; min-width: 100%; table-layout: auto; background: hsl(var(--card)); }
 .portal-shell table.receb-grid th, .portal-shell table.receb-grid td { padding: 8px 10px; font-size: 12px; white-space: nowrap; min-width: 110px; }
-.portal-shell table.receb-grid th:first-child, .portal-shell table.receb-grid tbody td:first-child { position: sticky; left: 0; min-width: 96px; width: 96px; max-width: 96px; white-space: normal; background: hsl(var(--card)); z-index: 2; }
+.portal-shell table.receb-grid th:first-child, .portal-shell table.receb-grid tbody td:first-child:not([colspan]) { position: sticky; left: 0; min-width: 96px; width: 96px; max-width: 96px; white-space: normal; background: hsl(var(--card)); z-index: 2; }
+.portal-shell table.receb-grid tbody td:first-child[colspan="2"] { position: sticky; left: 0; min-width: 296px; white-space: normal; background: hsl(var(--card)); z-index: 3; }
 .portal-shell table.receb-grid th:nth-child(2), .portal-shell table.receb-grid tbody td:nth-child(2):not([colspan]) { position: sticky; left: 96px; min-width: 200px; width: 200px; max-width: 200px; white-space: normal; background: hsl(var(--card)); z-index: 2; border-right: 1px solid hsl(var(--border)); }
 .portal-shell table.receb-grid tfoot td:first-child { position: sticky; left: 0; z-index: 3; background: hsl(var(--card)); }
 .portal-shell table.receb-grid .receb-nota { white-space: normal; min-width: 220px; max-width: 320px; }
