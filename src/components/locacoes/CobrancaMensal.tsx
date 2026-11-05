@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Bloco } from "@/components/operacional/Shared";
 import { tableClasses } from "@/components/locacoes/tabela";
 import { cn } from "@/lib/utils";
-import { MESES, brl } from "@/lib/locacoes";
+import { MESES, brl, num2 } from "@/lib/locacoes";
 import {
   CLASSE_SITUACAO,
   SITUACOES_COBRANCA,
@@ -98,7 +98,7 @@ export function CobrancaMensal({ edificio, ano, info }: { edificio: string; ano:
         })}
         {RODAPE.map(([rotulo, valor, dica], ri) => <tr key={rotulo} className={ri === 0 ? "font-semibold" : undefined}>
           <td className={tableClasses.td} colSpan={2} title={dica}>{rotulo}</td>
-          {totMes.map((t, i) => <td key={i} className={cn(tableClasses.num, i === mesDestaque && "cob-atual")}>{brl(valor(t))}</td>)}
+          {totMes.map((t, i) => <td key={i} title={brl(valor(t))} className={cn(tableClasses.num, "cob-total-mes", i === mesDestaque && "cob-atual")}>{num2(valor(t))}</td>)}
           <td className={tableClasses.num}>{brl(valor(totAno))}</td>
         </tr>)}
       </tbody>
