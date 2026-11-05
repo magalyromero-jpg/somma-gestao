@@ -156,6 +156,7 @@
   --red: 3 71% 41%; --redbg: 6 67% 92%; --amber: 39 100% 27%; --amberbg: 43 83% 91%;
   --amber-bar: 38 67% 55%; --blue: 197 33% 37%; --bluebg: 195 29% 93%;
   --gray: 204 10% 58%; --graybg: 204 13% 94%; --green: 137 56% 27%; --greenbg: 133 33% 92%;
+  --orange: 22 88% 38%; --orangebg: 26 90% 92%; --teal: 181 55% 26%; --tealbg: 180 35% 91%;
   --flame: 18 77% 50%; --goldbg: 38 80% 93%;
   --card: 0 0% 100%; --border: var(--line); --foreground: var(--ink); --card-foreground: var(--ink);
   --muted: var(--surface2); --muted-foreground: 200 19% 37%;
@@ -167,6 +168,7 @@
   --red: 358 81% 70%; --redbg: 358 40% 18%; --amber: 36 83% 65%; --amberbg: 36 50% 16%;
   --blue: 197 35% 65%; --bluebg: 197 30% 17%; --gray: 204 10% 60%; --graybg: 204 12% 18%;
   --green: 154 40% 58%; --greenbg: 154 35% 15%; --goldbg: 38 50% 16%;
+  --orange: 24 85% 65%; --orangebg: 24 45% 16%; --teal: 180 40% 62%; --tealbg: 180 30% 16%;
   --card: 199 19% 12%; --muted-foreground: 199 12% 65%;
 }
 .op-theme h1, .op-theme h2 { color: hsl(var(--ink)); }
@@ -181,6 +183,29 @@
 .op-tag-blue { background:hsl(var(--bluebg)); color:hsl(var(--blue)); }
 .op-tag-gray { background:hsl(var(--graybg)); color:hsl(var(--muted-foreground)); }
 .op-tag-green { background:hsl(var(--greenbg)); color:hsl(var(--green)); }
+
+/* Cobrança mensal por contrato: marcador de situação da célula e destaque do mês corrente. */
+.cob-sit { display:inline-block; border-radius:4px; padding:0 5px; font-size:11px; line-height:18px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.cob-recebido { background:hsl(var(--greenbg)); color:hsl(var(--green)); }
+.cob-parcial { background:hsl(var(--orangebg)); color:hsl(var(--orange)); }
+.cob-pago-boleto { background:hsl(var(--tealbg)); color:hsl(var(--teal)); }
+.cob-emitido { background:hsl(var(--bluebg)); color:hsl(var(--blue)); }
+.cob-vencido { background:hsl(var(--redbg)); color:hsl(var(--red)); }
+.cob-sem-boleto { color:hsl(var(--amber)); box-shadow:inset 0 0 0 1px hsl(var(--amber)); }
+.cob-sem-registro { color:hsl(var(--red)); box-shadow:inset 0 0 0 1px hsl(var(--red)); }
+.cob-fora { background:hsl(var(--graybg)); color:hsl(var(--muted-foreground)); }
+.cob-atual { background:hsl(var(--goldbg)); }
+
+/* Grade de cobrança mensal: compacta para caber na largura da tela sem rolagem própria. */
+.portal-shell table.cob-grid { table-layout: fixed; }
+.portal-shell table.cob-grid th, .portal-shell table.cob-grid td { padding: 4px 3px; font-size: 11px; overflow: hidden; }
+.portal-shell table.cob-grid th:first-child { width: 56px; }
+.portal-shell table.cob-grid th:nth-child(2) { width: 128px; }
+.portal-shell table.cob-grid th:last-child { width: 102px; }
+.portal-shell table.cob-grid td { height: 28px; }
+.portal-shell table.cob-grid .cob-locatario { text-overflow: ellipsis; white-space: nowrap; }
+.portal-shell table.cob-grid .cob-sit { padding: 0 3px; font-size: 10.5px; }
+.portal-shell table.cob-grid td.cob-total-mes { font-size: 10px; }
 
 /* Shared portal layout: light typography, quiet surfaces and dense data. */
 .portal-shell { font-size: 13px; }

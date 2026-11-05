@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { MESES_LONGOS, brl, dt } from "@/lib/locacoes";
 import { agruparLinhas, lerBoletos, mesesPlanejamento, pareceBoleto } from "@/lib/boletos";
 import { BoletosConferir } from "./BoletosConferir";
+import { CobrancaMensal } from "./CobrancaMensal";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const db = supabase as any;
@@ -141,6 +142,7 @@ export function PlanejamentoCaixa({ data, admin }: { data: any; admin: boolean }
           <td className={tableClasses.num}>{brl(tot.caixa)}</td><td className={tableClasses.num}>{brl(tot.aberto)}</td></tr>
       </tbody></table>
     </Bloco>
+    <CobrancaMensal edificio={edificio} ano={ano} info={info} />
     {vencidos.length > 0 && <Bloco titulo="Em Aberto" acao={<span title="Posição do arquivo importado." className="text-xs text-muted-foreground">{brl(emAberto)}</span>}>
       <table className={tableClasses.table}><thead><tr className={tableClasses.head}>
         {["Pagador", "Unidade", "Vencimento", "Valor (R$)"].map((h, i) => <th key={h} className={cn(tableClasses.th, i === 3 && "text-right")}>{h}</th>)}
