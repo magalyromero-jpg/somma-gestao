@@ -90,5 +90,29 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
           <tr className="font-semibold"><td className="py-2">Total a Receber</td><td></td><td className="text-right tabular-nums">{num2(total)}</td><td></td></tr>
         </tfoot>
       </table>}
+    <div className="previsao-print hidden" aria-hidden="true">
+      <div className="pp-cabecalho">
+        <img src={sommaLogo} alt="Somma" />
+        <div className="pp-cab-dir">
+          <p>Zen Tower | Gestão de Locações</p>
+          <p>Emitido em {emitidoEm}</p>
+        </div>
+      </div>
+      <h1 className="pp-titulo">Valores a Receber de {titulo(ref.a, ref.m)}</h1>
+      <table className="pp-tabela">
+        <thead>
+          <tr className="pp-espaco"><td colSpan={4}></td></tr>
+          <tr><th>Unidade</th><th>Locatário</th><th>Valor a Receber</th><th>Boleto</th></tr>
+        </thead>
+        <tbody>{ids.map((id) => <tr key={id}>
+          <td>{info(id)?.unidades || "—"}</td><td>{info(id)?.locatario || "—"}</td>
+          <td>{num2(valores.get(id))}</td>
+          <td>{statusBoleto(linhas.find((l: any) => l.contrato_id === id))}</td>
+        </tr>)}</tbody>
+        <tfoot>
+          <tr className="pp-total"><td>Total a Receber</td><td></td><td>{num2(total)}</td><td></td></tr>
+        </tfoot>
+      </table>
+    </div>
   </section>;
 }
