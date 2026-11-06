@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MESES_LONGOS, num2 } from "@/lib/locacoes";
+import sommaLogo from "@/assets/somma-logo-dark.png";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
