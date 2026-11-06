@@ -76,6 +76,7 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
         <SelectContent>{opcoes.map((t) => <SelectItem key={t} value={String(t)}>{titulo(Math.floor(t / 12), t % 12)}</SelectItem>)}</SelectContent>
       </Select>
       <Button variant="ghost" size="icon" aria-label="Mês seguinte" disabled={tAtual >= maxT} onClick={() => mover(1)}><ChevronRight className="h-4 w-4" /></Button>
+      <Button variant="outline" size="sm" className="ml-auto" onClick={exportarPdf} disabled={isLoading || !!error}><Download className="h-4 w-4" />Exportar PDF</Button>
     </div>
     {error ? <p role="alert" className="text-destructive">Não foi possível consultar os valores: {error.message}</p> : isLoading ? <p>Carregando…</p> :
       <table className="w-full text-sm" aria-label="Valores a receber por contrato">
