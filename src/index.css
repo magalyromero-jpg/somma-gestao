@@ -159,7 +159,7 @@
     .previsao-print .pp-cabecalho img { height: 16mm; }
     .previsao-print .pp-cab-dir { text-align: right; font-size: 9pt; color: #4D6571; }
     .previsao-print .pp-cab-dir p { margin: 0; }
-    .previsao-print .pp-titulo { font-size: 15pt; font-weight: 700; color: #2E3E44; margin: 0 0 4mm; }
+    .previsao-print .pp-titulo { font-size: 15pt; font-weight: 700; color: #2E3E44; margin: 30mm 0 4mm; }
     .previsao-print .pp-tabela { width: 100%; border-collapse: collapse; font-size: 10pt; }
     .previsao-print .pp-tabela thead { display: table-header-group; }
     .previsao-print .pp-tabela tfoot { display: table-row-group; }
