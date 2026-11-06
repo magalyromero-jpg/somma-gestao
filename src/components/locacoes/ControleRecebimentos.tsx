@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MESES_LONGOS, num2 } from "@/lib/locacoes";
+import sommaLogo from "@/assets/somma-logo-dark.png";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -45,6 +46,27 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
   const ids = [...valores.keys()].filter((id) => valores.get(id)! > 0).sort((a, b) => String(info(a)?.unidades ?? "").localeCompare(String(info(b)?.unidades ?? ""), "pt-BR", { numeric: true }));
   const linhas = (q?.linhas ?? []).filter(doMes).map((l: any) => ({ ...l, recebido: Number(l.recebido) }));
   const total = ids.reduce((s, id) => s + c(valores.get(id)!), 0) / 100;
+  const mesNome = `${MESES_LONGOS[ref.m].charAt(0).toUpperCase()}${MESES_LONGOS[ref.m].slice(1)}`;
+  const emitidoEm = hoje.toLocaleDateString("pt-BR");
+  const exportarPdf = () => {
+    const tituloAnterior = document.title;
+    document.title = `Valores a Receber - Zen Tower - ${mesNome} ${ref.a}`;
+    document.body.classList.add("imprimindo-previsao");
+    const st = document.createElement("style");
+    st.id = "previsao-print-page";
+    st.textContent = `@page { size: A4 portrait; margin: 0 14mm 18mm;
+      @bottom-left { width: 90mm; content: "Somma MFO"; font: 8pt Inter, sans-serif; color: #4D6571; }
+      @bottom-right { width: 90mm; text-align: right; white-space: nowrap; content: "Página " counter(page) " de " counter(pages); font: 8pt Inter, sans-serif; color: #4D6571; } }`;
+    document.head.appendChild(st);
+    const limpar = () => {
+      document.body.classList.remove("imprimindo-previsao");
+      document.title = tituloAnterior;
+      st.remove();
+      window.removeEventListener("afterprint", limpar);
+    };
+    window.addEventListener("afterprint", limpar);
+    window.print();
+  };
   return <section className="space-y-4" aria-label="Valores a Receber">
     <div className="flex items-center gap-2">
       <Button variant="ghost" size="icon" aria-label="Mês anterior" disabled={tAtual <= minT} onClick={() => mover(-1)}><ChevronLeft className="h-4 w-4" /></Button>
@@ -54,6 +76,7 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
         <SelectContent>{opcoes.map((t) => <SelectItem key={t} value={String(t)}>{titulo(Math.floor(t / 12), t % 12)}</SelectItem>)}</SelectContent>
       </Select>
       <Button variant="ghost" size="icon" aria-label="Mês seguinte" disabled={tAtual >= maxT} onClick={() => mover(1)}><ChevronRight className="h-4 w-4" /></Button>
+      <Button variant="outline" size="sm" className="ml-auto" onClick={exportarPdf} disabled={isLoading || !!error}><Download className="h-4 w-4" />Exportar PDF</Button>
     </div>
     {error ? <p role="alert" className="text-destructive">Não foi possível consultar os valores: {error.message}</p> : isLoading ? <p>Carregando…</p> :
       <table className="w-full text-sm" aria-label="Valores a receber por contrato">
@@ -67,5 +90,29 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
           <tr className="font-semibold"><td className="py-2">Total a Receber</td><td></td><td className="text-right tabular-nums">{num2(total)}</td><td></td></tr>
         </tfoot>
       </table>}
+    <div className="previsao-print hidden" aria-hidden="true">
+      <div className="pp-cabecalho">
+        <img src={sommaLogo} alt="Somma" />
+        <div className="pp-cab-dir">
+          <p>Zen Tower | Gestão de Locações</p>
+          <p>Emitido em {emitidoEm}</p>
+        </div>
+      </div>
+      <h1 className="pp-titulo">Valores a Receber de {titulo(ref.a, ref.m)}</h1>
+      <table className="pp-tabela">
+        <thead>
+          <tr className="pp-espaco"><td colSpan={4}></td></tr>
+          <tr><th>Unidade</th><th>Locatário</th><th>Valor a Receber</th><th>Boleto</th></tr>
+        </thead>
+        <tbody>{ids.map((id) => <tr key={id}>
+          <td>{info(id)?.unidades || "—"}</td><td>{info(id)?.locatario || "—"}</td>
+          <td>{num2(valores.get(id))}</td>
+          <td>{statusBoleto(linhas.find((l: any) => l.contrato_id === id))}</td>
+        </tr>)}</tbody>
+        <tfoot>
+          <tr className="pp-total"><td>Total a Receber</td><td></td><td>{num2(total)}</td><td></td></tr>
+        </tfoot>
+      </table>
+    </div>
   </section>;
 }
