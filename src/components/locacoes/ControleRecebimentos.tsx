@@ -46,6 +46,27 @@ export function ControleRecebimentos({ data }: { data: any; ano?: number; outras
   const ids = [...valores.keys()].filter((id) => valores.get(id)! > 0).sort((a, b) => String(info(a)?.unidades ?? "").localeCompare(String(info(b)?.unidades ?? ""), "pt-BR", { numeric: true }));
   const linhas = (q?.linhas ?? []).filter(doMes).map((l: any) => ({ ...l, recebido: Number(l.recebido) }));
   const total = ids.reduce((s, id) => s + c(valores.get(id)!), 0) / 100;
+  const mesNome = `${MESES_LONGOS[ref.m].charAt(0).toUpperCase()}${MESES_LONGOS[ref.m].slice(1)}`;
+  const emitidoEm = hoje.toLocaleDateString("pt-BR");
+  const exportarPdf = () => {
+    const tituloAnterior = document.title;
+    document.title = `Valores a Receber - Zen Tower - ${mesNome} ${ref.a}`;
+    document.body.classList.add("imprimindo-previsao");
+    const st = document.createElement("style");
+    st.id = "previsao-print-page";
+    st.textContent = `@page { size: A4 portrait; margin: 0 14mm 18mm;
+      @bottom-left { width: 90mm; content: "Somma MFO"; font: 8pt Inter, sans-serif; color: #4D6571; }
+      @bottom-right { width: 90mm; text-align: right; white-space: nowrap; content: "Página " counter(page) " de " counter(pages); font: 8pt Inter, sans-serif; color: #4D6571; } }`;
+    document.head.appendChild(st);
+    const limpar = () => {
+      document.body.classList.remove("imprimindo-previsao");
+      document.title = tituloAnterior;
+      st.remove();
+      window.removeEventListener("afterprint", limpar);
+    };
+    window.addEventListener("afterprint", limpar);
+    window.print();
+  };
   return <section className="space-y-4" aria-label="Valores a Receber">
     <div className="flex items-center gap-2">
       <Button variant="ghost" size="icon" aria-label="Mês anterior" disabled={tAtual <= minT} onClick={() => mover(-1)}><ChevronLeft className="h-4 w-4" /></Button>
