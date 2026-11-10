@@ -2910,6 +2910,7 @@ export type Database = {
           no_orcamento: boolean
           origem: string
           valor_mensal: number
+          valor_real: number | null
           vigencia_id: string
         }
         Insert: {
@@ -2917,6 +2918,7 @@ export type Database = {
           no_orcamento?: boolean
           origem?: string
           valor_mensal: number
+          valor_real?: number | null
           vigencia_id: string
         }
         Update: {
@@ -2924,6 +2926,7 @@ export type Database = {
           no_orcamento?: boolean
           origem?: string
           valor_mensal?: number
+          valor_real?: number | null
           vigencia_id?: string
         }
         Relationships: [

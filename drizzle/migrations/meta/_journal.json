@@ -260,6 +260,13 @@
       "when": 1793903186485,
       "tag": "0036_controle_recebimentos_saida_proporcional",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794340428224,
+      "tag": "0037_valor_real_degraus_previsao",
+      "breakpoints": true
     }
   ]
 }
