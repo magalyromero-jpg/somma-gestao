@@ -4362,6 +4362,18 @@ export type Database = {
         Args: { p_codigo: string; p_edificio: string }
         Returns: string
       }
+      loc_composicao_aluguel: {
+        Args: { p_edificio: string }
+        Returns: {
+          categoria: string
+          contrato_id: string
+          data: string
+          grupo: string
+          locatario: string
+          unidades: string
+          valor: number
+        }[]
+      }
       loc_conceder_acesso: {
         Args: { p_edificio: string; p_email: string }
         Returns: string
@@ -4438,6 +4450,18 @@ export type Database = {
           contrato_id: string
           mes: string
           valor: number
+        }[]
+      }
+      loc_evolucao_rsm2: {
+        Args: { p_edificio: string; p_fim: string; p_inicio: string }
+        Returns: {
+          aluguel: number
+          area_m2: number
+          contratos: number
+          grupo: string
+          mes: string
+          projetado: boolean
+          rs_m2: number
         }[]
       }
       loc_fluxo: {
