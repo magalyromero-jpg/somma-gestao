@@ -28,7 +28,8 @@ function Zona({ titulo, detalhe, accept, onFiles, ocupado }: { titulo: string; d
   </div>;
 }
 
-const COLS = ["Código", "Imóvel", "Data de Vencimento", "Data de Pagamento", "Valor Bruto", "Valor Líquido"];
+const COLS = ["Código", "Imóvel", "Vencimento", "Pagamento", "Valor Bruto", "Valor Líquido"];
+const ALIASES: string[][] = [["Código"], ["Imóvel"], ["Vencimento", "Data de Vencimento"], ["Pagamento", "Data de Pagamento"], ["Valor Bruto"], ["Valor Líquido"]];
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const paraData = (v: any): string | null => {
   if (v == null || v === "") return null;
@@ -75,7 +76,7 @@ export function ImportarPagamentos({ data, porContrato }: { data: any; porContra
       const rows: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
       const hi = rows.findIndex((r) => r.some((c) => norm(String(c ?? "")) === "codigo"));
       if (hi < 0) throw new Error("Colunas não encontradas. Use o export \"Pagamentos Recebidos\".");
-      const idx = COLS.map((c) => rows[hi].findIndex((h) => norm(String(h ?? "")) === norm(c)));
+      const idx = ALIASES.map((nomes) => rows[hi].findIndex((h) => nomes.some((c) => norm(String(h ?? "")) === norm(c))));
       if (idx.some((i) => i < 0)) throw new Error(`Faltam colunas: ${COLS.filter((_, i) => idx[i] < 0).join(", ")}`);
       const linhas = rows.slice(hi + 1).filter((r) => r[idx[0]] != null && r[idx[3]]).map((r) => ({
         codigo: String(r[idx[0]]).trim(), imovel: r[idx[1]] ?? null, vencimento: paraData(r[idx[2]]), pagamento: paraData(r[idx[3]]), bruto: paraNum(r[idx[4]]), liquido: paraNum(r[idx[5]]),
