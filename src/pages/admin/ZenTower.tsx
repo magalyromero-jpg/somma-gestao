@@ -19,6 +19,7 @@ import { ContratosEncerrados, EditarContrato, EncerrarContrato, NovoContrato } f
 import { MESES, MESES_LONGOS, addMes, baseRealizado, baseRenovacoes, brl, dt, indiceLabel, m2, num2, pct } from "@/lib/locacoes";
 import { BlocoCicloVencimento, BlocoIndiceReajuste, Renovacoes } from "@/components/locacoes/Renovacoes";
 import { Iptu } from "@/components/locacoes/Iptu";
+import { EvolucaoComposicao } from "@/components/locacoes/EvolucaoComposicao";
 import { reajusteRealizado } from "@/lib/leituraDocumento";
 
 const db = supabase as any;
@@ -359,6 +360,7 @@ function Evolucao({ data, d }: { data: DadosZen; d: any }) {
   const STATUS: Record<string, string> = { vigente: "Vigente", vencido: "Vencido", encerrado: "Encerrado", "vence em até 180 dias": "Vence em até 180 dias" };
   const cab = ["Unidade", "Locatário", "Início do contrato inicial", "Início do aditivo", "Fim da vigência atual", "Aluguel inicial", "Aluguel atual", "Variação %", "Possui aditivo?", "Situação"];
   return <div className="space-y-4">
+    <EvolucaoComposicao edificioId={data.edificio.id} hoje={String(data.hoje)} />
     {grupos.map((g) => {
       const comArea = g.itens.filter((e: any) => Number(e.l.area_matricula_m2) > 0 && Number(e.aluguel_inicial) > 0 && Number(e.aluguel_atual) > 0);
       const area = comArea.reduce((s: number, e: any) => s + Number(e.l.area_matricula_m2), 0);

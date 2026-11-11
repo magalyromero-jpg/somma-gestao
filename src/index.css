@@ -64,6 +64,10 @@
     --reforecast-below-text: #B3261E;
     --reforecast-new-bg: #FBEFD3;
     --reforecast-new-text: #8A5A00;
+    --evolucao-salas: 197 19% 22%;
+    --evolucao-lojas: 38 80% 44%;
+    --evolucao-total: 200 19% 37%;
+    --evolucao-reducao: 8 58% 44%;
 
     --info: 197 33% 37%;                /* #185FA5 */
     --info-foreground: 0 0% 100%;
