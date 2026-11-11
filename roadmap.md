@@ -1,3 +1,8 @@
+# Evolução do Aluguel
+- [ ] Acrescentar funções de leitura e conferir valores e fechamento da composição.
+- [ ] Acrescentar os dois blocos com filtros e gráficos, preservando os cartões e tabelas atuais.
+- [ ] Testar cálculos e conferir a tela com dados reais, inclusive visualização e tela pequena.
+
 # Controle de Recebimentos
 - [x] Aplicar esperado proporcional à saída e controle de recebimentos sem alterar Orçado/Reforecast/Fluxo.
 - [x] Substituir grade antiga, incluir composição, receitas avulsas e notas somente leitura.
