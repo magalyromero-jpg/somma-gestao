@@ -4358,6 +4358,10 @@ export type Database = {
           situacao: string
         }[]
       }
+      loc_codigo_unico: {
+        Args: { p_codigo: string; p_edificio: string }
+        Returns: string
+      }
       loc_conceder_acesso: {
         Args: { p_edificio: string; p_email: string }
         Returns: string
