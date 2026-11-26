@@ -131,7 +131,7 @@ export function AgendaReajustes({ edificioId, admin, filtroInicial, onAbrir }: {
           <td className={tableClasses.td}>{TIPO_LABEL[e.tipo]}</td>
           <td className={tableClasses.td}>{e.indice ? indiceLabel(e.indice) : "—"}</td>
           <td className={tableClasses.num}>{brl(e.valor_atual)}</td>
-          <td className={tableClasses.num}>{e.valor_novo != null ? brl(e.valor_novo) : e.valor_sugerido != null ? <span className="text-muted-foreground" title="Sugerido pelo índice">{brl(e.valor_sugerido)}</span> : "—"}</td>
+          <td className={tableClasses.num}>{e.tipo === "renovacao" ? (e.status === "realizado" && e.valor_novo != null ? brl(e.valor_novo) : "—") : e.valor_novo != null ? brl(e.valor_novo) : e.valor_sugerido != null ? <span className="text-muted-foreground" title="Sugerido pelo índice">{brl(e.valor_sugerido)}</span> : "—"}</td>
           <td className={tableClasses.td}><SituacaoTag s={e.status} /></td>
           <td className={tableClasses.td}><Button size="sm" variant="outline" onClick={() => onAbrir(e)}>{admin ? "Registrar" : "Ver"}</Button></td>
         </tr>)}</tbody></table></div>}
@@ -159,7 +159,7 @@ export function PainelRegistrar({ evento, admin, linha, vigencias, edificioId, o
     setUltima(chave);
     setF({
       mes_ref: e.mes_referencia ?? "", pct: e.percentual_sugerido != null ? fmt(e.percentual_sugerido) : "",
-      valor: fmt(e.valor_novo ?? e.valor_sugerido ?? (e.tipo === "renovacao" ? e.valor_atual : null)),
+      valor: e.tipo === "renovacao" ? (e.status === "realizado" && e.valor_novo != null ? fmt(e.valor_novo) : "") : fmt(e.valor_novo ?? e.valor_sugerido),
       vig: e.vigencia_sugerida ?? "", fim: "", doc: e.documento_id ?? "", obs: e.observacao ?? "",
     });
     setAditivo(false);
@@ -172,7 +172,7 @@ export function PainelRegistrar({ evento, admin, linha, vigencias, edificioId, o
     setSalvando(true);
     const { error } = await db.rpc("loc_registrar_agenda", {
       p_contrato: e.contrato_id, p_tipo: e.tipo, p_data_evento: e.data_evento, p_status: status,
-      p_valor_novo: num(f.valor ?? ""), p_vigencia_a_partir: f.vig || null, p_nova_data_fim: f.fim || null,
+      p_valor_novo: e.tipo === "renovacao" && status !== "realizado" ? null : num(f.valor ?? ""), p_vigencia_a_partir: f.vig || null, p_nova_data_fim: f.fim || null,
       p_indice: e.indice, p_percentual: num(f.pct ?? ""), p_documento: f.doc || null, p_observacao: f.obs?.trim() || null,
     });
     setSalvando(false);
@@ -211,7 +211,7 @@ export function PainelRegistrar({ evento, admin, linha, vigencias, edificioId, o
           {e.tipo === "degrau" && <Campo l="Valor Confirmado (R$)"><Input inputMode="decimal" value={f.valor} onChange={set("valor")} readOnly={ro} /></Campo>}
           {e.tipo === "renovacao" && <>
             <Campo l="Nova Data Fim"><Input type="date" value={f.fim} onChange={set("fim")} readOnly={ro} /></Campo>
-            <Campo l="Novo Valor (R$)"><Input inputMode="decimal" value={f.valor} onChange={set("valor")} readOnly={ro} /></Campo>
+            <Campo l="Novo Valor (R$)"><Input inputMode="decimal" value={f.valor} onChange={set("valor")} readOnly={ro} placeholder="Informe após a assinatura do aditivo" /><p className="text-[11px] text-muted-foreground">Informe após a assinatura do aditivo.</p></Campo>
             <Campo l="Início do Novo Valor"><Input type="date" value={f.vig} onChange={set("vig")} readOnly={ro} /></Campo>
             {docSel}
           </>}

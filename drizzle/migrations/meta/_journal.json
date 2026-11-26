@@ -295,6 +295,13 @@
       "when": 1795726542136,
       "tag": "0041_agenda_valor_atual_mes_anterior",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795726909521,
+      "tag": "0042_agenda_renovacao_sem_novo_valor",
+      "breakpoints": true
     }
   ]
 }
