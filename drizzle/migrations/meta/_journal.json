@@ -288,6 +288,13 @@
       "when": 1795694973968,
       "tag": "0040_agenda_reajustes_renovacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795726542136,
+      "tag": "0041_agenda_valor_atual_mes_anterior",
+      "breakpoints": true
     }
   ]
 }
