@@ -1127,6 +1127,134 @@ export type Database = {
           },
         ]
       }
+      loc_agenda_contratos: {
+        Row: {
+          contrato_id: string
+          data_evento: string
+          documento_id: string | null
+          edificio_id: string
+          id: string
+          indice: string | null
+          nova_data_fim: string | null
+          observacao: string | null
+          percentual: number | null
+          registrado_em: string
+          registrado_por: string | null
+          status: string
+          tipo: string
+          valor_anterior: number | null
+          valor_novo: number | null
+          vigencia_a_partir: string | null
+        }
+        Insert: {
+          contrato_id: string
+          data_evento: string
+          documento_id?: string | null
+          edificio_id: string
+          id?: string
+          indice?: string | null
+          nova_data_fim?: string | null
+          observacao?: string | null
+          percentual?: number | null
+          registrado_em?: string
+          registrado_por?: string | null
+          status: string
+          tipo: string
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          vigencia_a_partir?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          data_evento?: string
+          documento_id?: string | null
+          edificio_id?: string
+          id?: string
+          indice?: string | null
+          nova_data_fim?: string | null
+          observacao?: string | null
+          percentual?: number | null
+          registrado_em?: string
+          registrado_por?: string | null
+          status?: string
+          tipo?: string
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          vigencia_a_partir?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_alerta_reajuste"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_ciclo"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_contrato_vigente"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_encerrados"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_evolucao"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_metragem"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "loc_v_mudancas_ano"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "loc_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loc_agenda_contratos_edificio_id_fkey"
+            columns: ["edificio_id"]
+            isOneToOne: false
+            referencedRelation: "loc_edificios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loc_boletos: {
         Row: {
           arquivo_origem: string | null
@@ -3587,6 +3715,51 @@ export type Database = {
       }
     }
     Views: {
+      loc_v_agenda_contratos: {
+        Row: {
+          contrato_id: string | null
+          data_evento: string | null
+          documento_id: string | null
+          edificio_id: string | null
+          indice: string | null
+          indice_estimado: boolean | null
+          locatario: string | null
+          mes_referencia: string | null
+          observacao: string | null
+          percentual_sugerido: number | null
+          registrado: boolean | null
+          registrado_em: string | null
+          status: string | null
+          tipo: string | null
+          unidades: string | null
+          valor_atual: number | null
+          valor_novo: number | null
+          valor_sugerido: number | null
+          vigencia_sugerida: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loc_agenda_contratos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "loc_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loc_v_agenda_notificacao: {
+        Row: {
+          edificio_id: string | null
+          em_andamento: number | null
+          pendentes: number | null
+          pendentes_reajustes: number | null
+          pendentes_renovacoes: number | null
+          reajustes_realizados_ano: number | null
+          renovacoes_realizadas_ano: number | null
+          vencem_60_dias: number | null
+        }
+        Relationships: []
+      }
       loc_v_alerta_reajuste: {
         Row: {
           aniversario: string | null
@@ -4306,6 +4479,15 @@ export type Database = {
         Args: { p_dados: Json; p_leitura: string }
         Returns: Json
       }
+      loc_aplicar_reajuste: {
+        Args: {
+          p_aniversario: string
+          p_contrato: string
+          p_observacao?: string
+          p_valor: number
+        }
+        Returns: undefined
+      }
       loc_caixa_mensal: {
         Args: { p_ano: number; p_edificio: string }
         Returns: {
@@ -4569,6 +4751,22 @@ export type Database = {
           reforecast: number
           unidades: string
         }[]
+      }
+      loc_registrar_agenda: {
+        Args: {
+          p_contrato: string
+          p_data_evento: string
+          p_documento?: string
+          p_indice?: string
+          p_nova_data_fim?: string
+          p_observacao?: string
+          p_percentual?: number
+          p_status: string
+          p_tipo: string
+          p_valor_novo?: number
+          p_vigencia_a_partir?: string
+        }
+        Returns: undefined
       }
       loc_remapear_pagamentos: { Args: { p_edificio: string }; Returns: number }
       loc_revogar_acesso: {

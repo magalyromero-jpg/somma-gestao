@@ -83,16 +83,17 @@ export function EncerrarContrato({ contratoId, edificioId, unidade }: { contrato
   </>;
 }
 
-export function EditarContrato({ linha, vigencias, edificioId }: { linha: any; vigencias: any[]; edificioId: string }) {
+export function EditarContrato({ linha, vigencias, edificioId, aditivo, onSalvo, onFechar }: { linha: any; vigencias: any[]; edificioId: string; aditivo?: { inicio: string; fim: string; valor: string }; onSalvo?: () => Promise<void> | void; onFechar?: () => void }) {
   const atual = [...vigencias].filter((v) => v.contrato_id === linha.contrato_id).sort((a, b) => b.seq - a.seq)[0];
-  const [open, setOpen] = useState<"" | "editar" | "aditivo">("");
+  const [open, setOpenRaw] = useState<"" | "editar" | "aditivo">(aditivo ? "aditivo" : "");
+  const setOpen = (v: "" | "editar" | "aditivo") => { setOpenRaw(v); if (!v) onFechar?.(); };
   const ini = () => ({
     dia: String(linha.contrato?.dia_vencimento ?? ""), ret: String(linha.contrato?.retencao_pct ?? 0),
     inicio: open === "aditivo" ? "" : atual?.inicio ?? "", fim: open === "aditivo" ? "" : atual?.fim ?? "",
     valor: open === "aditivo" ? "" : String(atual?.valor_mensal ?? ""), area: String(atual?.area_contrato_m2 ?? ""),
     indice: atual?.indice ?? linha.indice ?? "NENHUM", mes: String(atual?.mes_reajuste ?? ""),
   });
-  const [f, setF] = useState(ini());
+  const [f, setF] = useState(aditivo ? { ...ini(), ...aditivo } : ini());
   const [degraus, setDegraus] = useState<Degrau[]>([]);
   const [salvando, setSalvando] = useState(false);
   const { toast } = useToast(); const recarregar = useRecarregar();
@@ -114,13 +115,14 @@ export function EditarContrato({ linha, vigencias, edificioId }: { linha: any; v
       if (vigId) await gravarDegraus(vigId, degraus);
       const { error } = await db.from("loc_contratos").update({ dia_vencimento: n(f.dia), retencao_pct: n(f.ret) ?? 0, indice: f.indice, mes_reajuste: n(f.mes), data_fim: f.fim, ...(open === "aditivo" ? { data_inicio_vigente: f.inicio } : {}) }).eq("id", linha.contrato_id);
       if (error) throw error;
+      if (open === "aditivo" && onSalvo) await onSalvo();
       toast({ title: open === "aditivo" ? "Aditivo cadastrado" : "Contrato atualizado" }); setOpen(""); recarregar();
     } catch (e: any) { toast({ title: "Não foi possível salvar", description: e.message, variant: "destructive" }); }
     setSalvando(false);
   };
   return <>
-    <Button size="sm" variant="outline" onClick={() => abrir("editar")}>Editar</Button>
-    <Button size="sm" variant="outline" onClick={() => abrir("aditivo")}>Novo aditivo</Button>
+    {!aditivo && <><Button size="sm" variant="outline" onClick={() => abrir("editar")}>Editar</Button>
+    <Button size="sm" variant="outline" onClick={() => abrir("aditivo")}>Novo aditivo</Button></>}
     <Dialog open={!!open} onOpenChange={(o) => !o && setOpen("")}><DialogContent className="max-w-2xl">
       <DialogHeader><DialogTitle>{open === "aditivo" ? "Novo aditivo" : "Editar contrato"} · {linha.unidades}</DialogTitle></DialogHeader>
       <div className="grid gap-3 sm:grid-cols-3">

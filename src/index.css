@@ -298,3 +298,13 @@
 .receb-fora_do_boleto { height: 1px; border-radius: 0; background: hsl(var(--gray)); }
 .portal-shell table.receb-grid td.receb-excecao { background: hsl(var(--amberbg)); }
 .portal-shell table.receb-grid .receb-grupo td { background: hsl(var(--muted)); font-weight: 500; }
+
+/* Agenda de reajustes e renovações: cores da marca por situação */
+:root { --agenda-pendente: 9 58% 44%; --agenda-vencer: 39 81% 44%; }
+.agenda-ev { display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:3px; padding:1px 4px; font-size:10px; line-height:16px; text-align:left; border:1px solid transparent; color:hsl(var(--primary-foreground)); }
+.agenda-pendente { background:hsl(var(--agenda-pendente)); }
+.agenda-a_vencer { background:hsl(var(--agenda-vencer)); }
+.agenda-em_andamento { background:hsl(var(--agenda-vencer) / .15); color:hsl(var(--agenda-vencer)); border-color:hsl(var(--agenda-vencer)); }
+.agenda-realizado { background:hsl(var(--success)); }
+.agenda-dispensado { background:hsl(var(--muted-foreground)); }
+.agenda-tag { display:inline-block; border-radius:3px; padding:1px 6px; font-size:11px; }
