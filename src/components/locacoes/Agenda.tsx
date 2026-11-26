@@ -27,7 +27,7 @@ const fmt = (v: number | null | undefined) => (v == null ? "" : Number(v).toLoca
 
 export function useAgenda(edificioId: string) {
   return useQuery({
-    queryKey: ["loc-agenda", edificioId],
+    queryKey: ["loc-agenda", edificioId], enabled: !!edificioId,
     queryFn: async () => {
       const [ev, nt] = await Promise.all([
         db.from("loc_v_agenda_contratos").select("*").eq("edificio_id", edificioId).order("data_evento"),
@@ -139,6 +139,8 @@ export function AgendaReajustes({ edificioId, admin, filtroInicial, onAbrir }: {
   </div>;
 }
 
+const Campo = ({ l, children }: { l: string; children: React.ReactNode }) => <div className="space-y-1"><Label className="text-xs">{l}</Label>{children}</div>;
+
 /** Painel Registrar (somente leitura para quem não é admin). */
 export function PainelRegistrar({ evento, admin, linha, vigencias, edificioId, onClose }: { evento: EventoAgenda | null; admin: boolean; linha: any; vigencias: any[]; edificioId: string; onClose: () => void }) {
   const e = evento;
@@ -185,7 +187,6 @@ export function PainelRegistrar({ evento, admin, linha, vigencias, edificioId, o
     }
     registrar("realizado");
   };
-  const Campo = ({ l, children }: { l: string; children: React.ReactNode }) => <div className="space-y-1"><Label className="text-xs">{l}</Label>{children}</div>;
   const ro = !admin;
   const docSel = <Campo l="Documento"><Select value={f.doc || "nenhum"} onValueChange={(v) => setF({ ...f, doc: v === "nenhum" ? "" : v })} disabled={ro}>
     <SelectTrigger><SelectValue /></SelectTrigger>

@@ -21,6 +21,8 @@ import { BlocoCicloVencimento, BlocoIndiceReajuste, Renovacoes } from "@/compone
 import { Iptu } from "@/components/locacoes/Iptu";
 import { EvolucaoComposicao } from "@/components/locacoes/EvolucaoComposicao";
 import { reajusteRealizado } from "@/lib/leituraDocumento";
+import { AgendaReajustes, BlocoAgendaVisaoGeral, FaixaPendentes, PainelRegistrar, SinoAgenda, contadorAviso, useAgenda } from "@/components/locacoes/Agenda";
+import type { EventoAgenda, FiltroAgenda } from "@/lib/agenda";
 
 const db = supabase as any;
 
@@ -106,6 +108,11 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
   const admin = operar;
   const { data, isLoading, error } = useQuery({ queryKey: ["loc-edificio", edificioId ?? "zen", modo], queryFn: () => carregar(edificioId, true) });
   const [soDivergentes, setSoDivergentes] = useState(true);
+  const [aba, setAba] = useState("geral");
+  const [filtroAgenda, setFiltroAgenda] = useState<{ f: FiltroAgenda; n: number }>({ f: "todos", n: 0 });
+  const [evento, setEvento] = useState<EventoAgenda | null>(null);
+  const agenda = useAgenda(data?.edificio?.id ?? "");
+  const irReajustes = (f: FiltroAgenda) => { setFiltroAgenda((x) => ({ f, n: x.n + 1 })); setAba("reajustes"); };
 
   const d = useMemo(() => {
     if (!data) return null;
@@ -138,10 +145,11 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         subtitle="Gestão de Locações"
         actions={<>
           {d.ultimaData && <div className="rounded-md border bg-card px-4 py-2 text-xs text-muted-foreground">Pagamentos importados até <span className="font-medium text-foreground tabular-nums">{dt(d.ultimaData)}</span></div>}
+          <SinoAgenda edificioId={data.edificio.id} onAbrir={setEvento} />
           {modo === "admin" && <Button variant="outline" size="sm" onClick={() => setComoCliente((v) => !v)}>{comoCliente ? "Voltar para Admin" : "Ver como Cliente"}</Button>}
         </>}
       />
-      <Tabs key={comoCliente ? "cli" : "adm"} defaultValue="geral" className="space-y-4">
+      <Tabs key={comoCliente ? "cli" : "adm"} value={aba} onValueChange={setAba} className="space-y-4">
         <div className="overflow-x-auto"><TabsList>
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
@@ -150,14 +158,14 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
 <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="renovacoes">Renovações</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
+          <TabsTrigger value="reajustes">Reajustes{contadorAviso(agenda.data?.notif) > 0 && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground">{contadorAviso(agenda.data?.notif)}</span>}</TabsTrigger>
           <TabsTrigger value="iptu">IPTU</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução do Aluguel</TabsTrigger>
           <TabsTrigger value="conferencia">Conferência</TabsTrigger>
           {admin && <TabsTrigger value="importar">Importar Pagamentos</TabsTrigger>}
         </TabsList></div>
 
-        <TabsContent value="geral" className="space-y-4"><VisaoGeral data={data} d={d} /></TabsContent>
+        <TabsContent value="geral" className="space-y-4"><FaixaPendentes edificioId={data.edificio.id} onIr={() => irReajustes("anteriores")} /><VisaoGeral data={data} d={d} /><BlocoAgendaVisaoGeral edificioId={data.edificio.id} onIr={irReajustes} /></TabsContent>
 
         <TabsContent value="caixa" className="space-y-4"><FluxoCaixa data={data} linhas={d.linhas} meses={d.meses} ultimoMes={d.ultimoMes} /></TabsContent>
 
@@ -190,11 +198,11 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
           {admin && <div className="mt-4"><ContratosEncerrados encerrados={data.encerrados ?? []} admin={admin} /></div>}
         </TabsContent>
 
-<TabsContent value="renovacoes" className="space-y-4"><Renovacoes linhas={d.linhas} /></TabsContent>
+<TabsContent value="renovacoes" className="space-y-4"><Renovacoes linhas={d.linhas} agenda={agenda.data?.eventos ?? []} /></TabsContent>
 
         <TabsContent value="documentos" className="space-y-4"><Documentos data={data} admin={admin} /></TabsContent>
 
-        <TabsContent value="reajustes"><Reajustes data={data} d={d} /></TabsContent>
+        <TabsContent value="reajustes" className="space-y-4"><AgendaReajustes key={filtroAgenda.n} edificioId={data.edificio.id} admin={admin} filtroInicial={filtroAgenda.f} onAbrir={setEvento} /><Reajustes data={data} d={d} /></TabsContent>
         <TabsContent value="iptu" className="space-y-4"><Iptu data={data} admin={admin} /></TabsContent>
         <TabsContent value="evolucao"><Evolucao data={data} d={d} /></TabsContent>
         {admin && <TabsContent value="importar"><ImportarPagamentos data={data} porContrato={d.porContrato} /></TabsContent>}
@@ -214,6 +222,7 @@ export function PortalEdificio({ edificioId, modo }: { edificioId?: string; modo
         </TabsContent>
 
       </Tabs>
+      <PainelRegistrar evento={evento} admin={admin} linha={evento ? d.porContrato.get(evento.contrato_id) : null} vigencias={data.vigencias} edificioId={data.edificio.id} onClose={() => setEvento(null)} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { tableClasses } from "@/components/locacoes/tabela";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DICA_VALOR_VIGENTE, baseRenovacoes, brl, dt, pct1 } from "@/lib/locacoes";
+import { SituacaoTag } from "@/components/locacoes/Agenda";
+import type { EventoAgenda } from "@/lib/agenda";
 import type { CicloRenovacao, ContratoRenovacao } from "@/lib/locacoes";
 
 export const CICLO_COR: Record<CicloRenovacao, string> = {
@@ -110,7 +112,8 @@ const FILTROS: { chave: CicloRenovacao | "todos"; label: string }[] = [
   { chave: "vigente", label: "Acima de 12 Meses" },
 ];
 
-export function Renovacoes({ linhas }: { linhas: any[] }) {
+export function Renovacoes({ linhas, agenda = [] }: { linhas: any[]; agenda?: EventoAgenda[] }) {
+  const renov = (cid: string) => agenda.filter((e) => e.tipo === "renovacao" && e.contrato_id === cid && e.status !== "dispensado").sort((a, b) => a.data_evento.localeCompare(b.data_evento))[0];
   const base = useMemo(() => baseRenovacoes(linhas), [linhas]);
   const [filtro, setFiltro] = useState<CicloRenovacao | "todos">("todos");
   const lista = filtro === "todos" ? base.lista : base.lista.filter((c) => c.ciclo === filtro);
@@ -161,6 +164,7 @@ export function Renovacoes({ linhas }: { linhas: any[] }) {
         <th className={tableClasses.th}>Vencimento</th>
         <th className={thR}>Dias para o Fim</th>
         <th className={tableClasses.th}>Ciclo</th>
+        <th className={tableClasses.th}>Situação da Renovação</th>
       </tr></thead><tbody>
         {lista.map((c) => {
           const pos = base.lista.indexOf(c) + 1;
@@ -175,13 +179,14 @@ export function Renovacoes({ linhas }: { linhas: any[] }) {
             <td className={cn(tableClasses.td, "tabular-nums")}>{dt(c.fim)}</td>
             <td className={tableClasses.num}>{c.dias ?? "—"}</td>
             <td className={tableClasses.td}><span className={cn("op-tag", CICLO_TAG[c.ciclo])}>{CICLO_LABEL[c.ciclo]}</span></td>
+            <td className={tableClasses.td}>{(() => { const r = renov(c.contrato_id); return r ? <SituacaoTag s={r.status} renov /> : "—"; })()}</td>
           </tr>;
         })}
         <tr className="font-medium">
           <td className={tableClasses.td} colSpan={3}>Total</td>
           <td className={tableClasses.num} title={DICA_VALOR_VIGENTE}>{brl(lista.reduce((s, c) => s + c.valor, 0))}</td>
           <td className={tableClasses.num}>{pct1(base.total ? (lista.reduce((s, c) => s + c.valor, 0) / base.total) * 100 : 0)}</td>
-          <td className={tableClasses.td} colSpan={5}></td>
+          <td className={tableClasses.td} colSpan={6}></td>
         </tr>
       </tbody></table></div>
     </Bloco>
