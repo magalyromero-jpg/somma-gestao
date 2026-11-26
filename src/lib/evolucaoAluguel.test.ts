@@ -28,7 +28,7 @@ describe("Evolução do aluguel", () => {
   });
   it("agrupa movimentos anteriores a 2026 sem Base e não inclui futuro", () => {
     const r=resumoComposicao([mov("Base",100),mov("Reajuste por Índice",10,"Salas","2025-12-01"),mov("Acordos",-2),mov("Saídas",-4,"Salas","2026-07-01"),mov("Acordos",20,"Salas","2026-12-01")],"Total","2026-11-11");
-    expect(r.periodos[0]["Reajuste por Índice"]).toBe(10); expect(r.periodos[1].Acordos).toBe(-2); expect(r.periodos[2].Saídas).toBe(-4); expect(r.atual).toBe(104);
+    expect(r.periodos[0]["Reajuste por Índice"]).toBe(10); expect((r.periodos[1] as any).Acordos).toBe(-2); expect((r.periodos[2] as any).Saídas).toBe(-4); expect(r.atual).toBe(104);
   });
   it("ordena variação por unidade e limita tooltip às cinco maiores contribuições", () => {
     const rs=Array.from({length:7},(_,i)=>({...mov("Acordos",-i),contrato_id:String(i),unidades:`Sala ${i}`}));
